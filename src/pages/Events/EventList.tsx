@@ -12,6 +12,7 @@ import {
   CheckCircle,
   AlertCircle,
   Clock3,
+  Edit,
   Image as ImageIcon
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -260,14 +261,24 @@ export default function EventList() {
                           <span className="text-[8px] font-black text-white">+{event.stats?.availableSlots || 0}</span>
                         </div>
                       </div>
-                      <Link
-                        to={`/event-details/${event._id}`}
-                        className="group/btn flex items-center gap-2 px-4 py-2 bg-brand-500/10 hover:bg-brand-500 rounded-xl text-brand-500 hover:text-white transition-all font-black uppercase italic tracking-widest text-[9px] shadow-sm"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        VIEW INTEL
-                        <ExternalLink size={12} className="group-hover/btn:translate-x-1 transition-transform" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/edit-event/${event._id}`}
+                          className="group/btn flex items-center gap-2 px-3 py-2 bg-brand-500/10 hover:bg-brand-500 rounded-xl text-brand-500 hover:text-white transition-all font-black uppercase italic tracking-widest text-[9px] shadow-sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Edit size={12} className="group-hover/btn:rotate-12 transition-transform" />
+                          EDIT
+                        </Link>
+                        <Link
+                          to={`/event-details/${event._id}`}
+                          className="group/btn flex items-center gap-2 px-3 py-2 bg-success-500/10 hover:bg-success-500 rounded-xl text-success-500 hover:text-white transition-all font-black uppercase italic tracking-widest text-[9px] shadow-sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          VIEW
+                          <ExternalLink size={12} className="group-hover/btn:translate-x-1 transition-transform" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
