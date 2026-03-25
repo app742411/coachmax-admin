@@ -1,0 +1,42 @@
+import React from "react";
+import { useUser } from "../../context/UserContext";
+
+const UserMetaCard: React.FC = () => {
+  const { user } = useUser();
+
+  return (
+    <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
+
+          {/* Profile Image */}
+          <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
+            <img
+              src={
+                user?.adminProfileImg
+                  ? `${import.meta.env.VITE_API_BASE_URL.replace("/api/v1", "")}/uploads/adminProfileImg/${user.adminProfileImg}`
+                  : "/images/user/user-02.jpg"
+              }
+              alt={user?.name || "Admin"}
+              className="object-cover w-full h-full"
+            />
+          </div>
+
+          {/* User Details */}
+          <div className="order-3 xl:order-2">
+            <h4 className="mb-2 text-lg font-semibold text-center text-gray-800 dark:text-white/90 xl:text-left">
+              {user?.name || "Unknown Admin"}
+            </h4>
+
+            <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
+              <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-widest font-black italic">{user?.role || "Admin"}</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default UserMetaCard;
