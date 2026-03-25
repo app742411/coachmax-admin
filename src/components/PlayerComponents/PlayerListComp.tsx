@@ -106,7 +106,7 @@ const PlayerListComp: React.FC = () => {
     setExportLoading(true);
     try {
       const exportData: any = { format };
-      
+
       if (selectedUserIds.length > 0) {
         exportData.userIds = selectedUserIds;
       } else if (filters) {
@@ -264,7 +264,7 @@ const PlayerListComp: React.FC = () => {
             <CalendarIcon size={16} />
             <span>Schedule</span>
           </button>
-          
+
           <div className="relative w-full md:w-64">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               <SearchIcon size={18} />
@@ -534,13 +534,17 @@ const PlayerListComp: React.FC = () => {
       </Modal>
 
       {/* DETAILS MODAL */}
-      <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} className="max-w-2xl">
-        <div className="p-10">
-          <h4 className="text-3xl font-black uppercase italic tracking-tighter text-gray-800 dark:text-white mb-8 border-b pb-6 border-gray-100 dark:border-white/5 flex items-center justify-between">
+      <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} className="max-w-2xl max-h-[92vh] flex flex-col">
+        {/* Fixed Header */}
+        <div className="px-10 pt-10 pb-6 border-b border-gray-100 dark:border-white/5 flex-shrink-0">
+          <h4 className="text-3xl font-black uppercase italic tracking-tighter text-gray-800 dark:text-white flex items-center justify-between">
             <span>Player <span className="text-brand-500 italic">File</span></span>
             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 border px-3 py-1 rounded-full border-gray-100">ID: {selectedUser?._id.slice(-6)}</span>
           </h4>
+        </div>
 
+        {/* Scrollable Content Area */}
+        <div className="flex-grow overflow-y-auto px-10 py-8 custom-scrollbar">
           <div className="flex flex-col md:flex-row gap-10">
             <div className="flex-shrink-0">
               <img
@@ -624,35 +628,37 @@ const PlayerListComp: React.FC = () => {
 
           <div className="mt-10 pt-8 border-t border-gray-100 dark:border-white/5">
             <Label className="text-[10px] uppercase tracking-widest font-black text-gray-400 block mb-3">Self Statement / Comments</Label>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-50/50 dark:bg-white/[0.03] p-6 rounded-2xl border border-gray-100 dark:border-white/5 italic">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-50/50 dark:bg-white/[0.03] p-6 rounded-2xl border border-gray-100 dark:border-white/5 italic text-justify leading-relaxed whitespace-pre-line">
               "{selectedUser?.comments}"
             </p>
           </div>
-          <div className="mt-10 flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => setIsDetailsOpen(false)} className="rounded-xl px-10 uppercase italic tracking-widest text-[10px] font-black border-gray-200">Dismiss</Button>
-            {selectedUser && (
-              <div className="flex gap-2">
-                {(selectedUser.status === "PENDING" || selectedUser.status === "REJECTED") && (
-                  <Button
-                    className="bg-brand-500 hover:bg-brand-600 rounded-xl px-12 uppercase italic tracking-widest text-[10px] font-black shadow-lg shadow-brand-500/20"
-                    onClick={() => { setIsDetailsOpen(false); if (selectedUser) handleApprove(selectedUser._id); }}
-                    disabled={actionLoading}
-                  >
-                    Approve Player
-                  </Button>
-                )}
-                {(selectedUser.status === "PENDING" || selectedUser.status === "APPROVED") && (
-                  <Button
-                    className="bg-error-600 hover:bg-error-700 rounded-xl px-10 uppercase italic tracking-widest text-[10px] font-black shadow-lg shadow-error-500/10"
-                    onClick={() => { setIsDetailsOpen(false); if (selectedUser) openRejectModal(selectedUser); }}
-                    disabled={actionLoading}
-                  >
-                    Reject
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
+        </div>
+
+        {/* Fixed Footer Action Buttons */}
+        <div className="px-10 py-5 border-t border-gray-100 dark:border-white/5 flex gap-3 justify-end flex-shrink-0 bg-gray-50/50 dark:bg-white/05 rounded-b-[28px]">
+          <Button variant="outline" onClick={() => setIsDetailsOpen(false)} className="rounded-xl px-10 uppercase italic tracking-widest text-[10px] font-black border-gray-200">Dismiss</Button>
+          {selectedUser && (
+            <div className="flex gap-2">
+              {(selectedUser.status === "PENDING" || selectedUser.status === "REJECTED") && (
+                <Button
+                  className="bg-brand-500 hover:bg-brand-600 rounded-xl px-12 uppercase italic tracking-widest text-[10px] font-black shadow-lg shadow-brand-500/20"
+                  onClick={() => { setIsDetailsOpen(false); if (selectedUser) handleApprove(selectedUser._id); }}
+                  disabled={actionLoading}
+                >
+                  Approve Player
+                </Button>
+              )}
+              {(selectedUser.status === "PENDING" || selectedUser.status === "APPROVED") && (
+                <Button
+                  className="bg-error-600 hover:bg-error-700 rounded-xl px-10 uppercase italic tracking-widest text-[10px] font-black shadow-lg shadow-error-500/10"
+                  onClick={() => { setIsDetailsOpen(false); if (selectedUser) openRejectModal(selectedUser); }}
+                  disabled={actionLoading}
+                >
+                  Reject
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -664,7 +670,7 @@ const PlayerListComp: React.FC = () => {
         selectedCount={selectedUserIds.length}
         currentFilters={{ status: activeTab, programType, search }}
       />
-      
+
       {/* SCHEDULE MODAL */}
       <TrainingScheduleModal isOpen={isScheduleOpen} onClose={() => setIsScheduleOpen(false)} user={selectedUser} />
     </>
@@ -726,7 +732,7 @@ const ExportDataModal = ({
                 <CheckSquare size={14} />
                 {selectedCount} Players Selected for export
               </p>
-              <button 
+              <button
                 onClick={() => setUseFilters(true)}
                 className="mt-2 text-[8px] font-bold text-gray-400 uppercase tracking-widest hover:text-brand-500 transition-colors"
               >
@@ -738,39 +744,39 @@ const ExportDataModal = ({
               <Label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block">Filter Requirements</Label>
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
-                   <Label className="text-[9px] uppercase font-bold text-gray-400">Status</Label>
-                   <Select 
-                      options={[
-                        { value: "APPROVED", label: "Approved" },
-                        { value: "PENDING", label: "Pending" },
-                        { value: "REJECTED", label: "Rejected" }
-                      ]}
-                      defaultValue={filters.status}
-                      onChange={(val) => setFilters({...filters, status: val})}
-                   />
+                  <Label className="text-[9px] uppercase font-bold text-gray-400">Status</Label>
+                  <Select
+                    options={[
+                      { value: "APPROVED", label: "Approved" },
+                      { value: "PENDING", label: "Pending" },
+                      { value: "REJECTED", label: "Rejected" }
+                    ]}
+                    defaultValue={filters.status}
+                    onChange={(val) => setFilters({ ...filters, status: val })}
+                  />
                 </div>
                 <div className="space-y-1">
-                   <Label className="text-[9px] uppercase font-bold text-gray-400">Program Type</Label>
-                   <Select 
-                      options={[
-                        { value: "", label: "All Programs" },
-                        { value: "ELITE", label: "Elite" },
-                        { value: "DEVELOPMENT", label: "Development" },
-                        { value: "1on1 seson", label: "1on1 Session" }
-                      ]}
-                      defaultValue={filters.programType}
-                      onChange={(val) => setFilters({...filters, programType: val})}
-                   />
+                  <Label className="text-[9px] uppercase font-bold text-gray-400">Program Type</Label>
+                  <Select
+                    options={[
+                      { value: "", label: "All Programs" },
+                      { value: "ELITE", label: "Elite" },
+                      { value: "DEVELOPMENT", label: "Development" },
+                      { value: "1on1 seson", label: "1on1 Session" }
+                    ]}
+                    defaultValue={filters.programType}
+                    onChange={(val) => setFilters({ ...filters, programType: val })}
+                  />
                 </div>
                 <div className="space-y-1">
-                   <Label className="text-[9px] uppercase font-bold text-gray-400">Search Keywords</Label>
-                   <input
-                      type="text"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-xl bg-transparent text-sm focus:ring-2 focus:ring-brand-500/20 outline-none dark:text-white"
-                      placeholder="e.g. Player name..."
-                      value={filters.search}
-                      onChange={(e) => setFilters({...filters, search: e.target.value})}
-                   />
+                  <Label className="text-[9px] uppercase font-bold text-gray-400">Search Keywords</Label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-xl bg-transparent text-sm focus:ring-2 focus:ring-brand-500/20 outline-none dark:text-white"
+                    placeholder="e.g. Player name..."
+                    value={filters.search}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  />
                 </div>
               </div>
             </div>
@@ -799,16 +805,20 @@ const TrainingScheduleModal = ({ isOpen, onClose, user }: { isOpen: boolean; onC
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl">
-      <div className="p-10">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl max-h-[92vh] flex flex-col">
+      {/* Fixed Header */}
+      <div className="px-10 pt-10 pb-6 border-b border-gray-100 dark:border-white/5 flex-shrink-0">
         <h4 className="text-3xl font-black uppercase italic tracking-tighter text-gray-800 dark:text-white mb-2 flex items-center justify-between">
           <span>{user ? `Assign ${user.fullName.split(' ')[0]}'s` : "Term 2"} <span className="text-brand-500 italic">Training Schedule</span></span>
           <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 border px-3 py-1 rounded-full border-gray-100">{user ? user.programType : "AUSTRALIA"} 2026</span>
         </h4>
-        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-8">
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
           Weekly sessions (2-3 times/week) • Holiday clinics highlighted
         </p>
+      </div>
 
+      {/* Scrollable Content */}
+      <div className="flex-grow overflow-y-auto px-10 py-8 custom-scrollbar">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {months.map((m) => (
             <div key={m.name} className="border border-gray-100 dark:border-white/5 rounded-2xl overflow-hidden p-6 bg-gray-50/50 dark:bg-white/05">
@@ -834,8 +844,12 @@ const TrainingScheduleModal = ({ isOpen, onClose, user }: { isOpen: boolean; onC
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-300">Holiday Camp</span>
             </div>
           </div>
-          <Button variant="outline" onClick={onClose} className="rounded-xl px-10 uppercase italic tracking-widest text-[10px] font-black border-gray-200">Close Schedule</Button>
         </div>
+      </div>
+
+      {/* Fixed Footer */}
+      <div className="px-10 py-5 border-t border-gray-100 dark:border-white/5 flex gap-3 justify-end flex-shrink-0 bg-gray-50/50 dark:bg-white/05 rounded-b-[28px]">
+        <Button variant="outline" onClick={onClose} className="rounded-xl px-10 uppercase italic tracking-widest text-[10px] font-black border-gray-200">Close Schedule</Button>
       </div>
     </Modal>
   );

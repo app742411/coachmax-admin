@@ -71,7 +71,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
                 <TableRow key={sponsor._id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
                   <TableCell className="px-5 py-4 text-start">
                     <img
-                      src={`${import.meta.env.VITE_API_BASE_URL}/${sponsor.bannerImg}`}
+                      src={`${import.meta.env.VITE_API_BASE_URL}/${sponsor.image}`}
                       alt={sponsor.title}
                       className="h-12 w-24 object-cover rounded-lg border border-gray-100 dark:border-white/10 shadow-sm"
                       onError={(e) => {

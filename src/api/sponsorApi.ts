@@ -7,7 +7,7 @@ export interface Sponsor {
   title: string;
   subtitle: string;
   link: string;
-  bannerImg: string;
+  image: string;
   isActive?: string | boolean | any;
 }
 
