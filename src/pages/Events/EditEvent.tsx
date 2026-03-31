@@ -5,21 +5,21 @@ import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import AddEventForm from "../../components/EventComponents/AddEventForm";
 
 export default function EditEvent() {
-  const { id } = useParams();
+ const { id } = useParams();
 
-  return (
-    <>
-      <PageMeta
-        title="CoachMax | Edit Event"
-        description="Modify and refine event details to ensure peak operational alignment."
-      />
-      <div className="space-y-6">
-        <PageBreadcrumb pageTitle="Refine Event Details" />
-        
-        <div className="">
-          <AddEventForm eventId={id} />
-        </div>
-      </div>
-    </>
-  );
+ return (
+  <>
+   <PageMeta
+    title="CoachMax | Edit Event"
+    description="Modify and refine event details to ensure peak operational alignment."
+   />
+   <div className="space-y-6">
+    <PageBreadcrumb pageTitle="Refine Event Details" />
+    
+    <div className="">
+     <AddEventForm eventId={id} />
+    </div>
+   </div>
+  </>
+ );
 }

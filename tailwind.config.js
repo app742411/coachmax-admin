@@ -12,8 +12,9 @@ module.exports = {
         danger: "#D02030",     // Red
       },
       fontFamily: {
-        // Optional: add custom fonts
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Arial', 'sans-serif'],
+        raleway: ['Arial', 'sans-serif'],
+        roboto: ['Arial', 'sans-serif'],
       },
     },
   },

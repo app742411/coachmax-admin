@@ -11,27 +11,27 @@ const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Root element not found");
 
 createRoot(rootElement).render(
-    <ThemeProvider>
-      <AppWrapper>
-        <App />
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            success: {
-              style: {
-                background: "#172C53", // your brand primary for success
-                color: "#fff",
-              },
-            },
-            error: {
-              style: {
-                background: "#D02030", // brand red for errors
-                color: "#fff",
-              },
-            },
-          }}
-        />
-      </AppWrapper>
-    </ThemeProvider>
+  <ThemeProvider>
+   <AppWrapper>
+    <App />
+    <Toaster
+     position="top-right"
+     toastOptions={{
+      duration: 4000,
+      success: {
+       style: {
+        background: "#172C53", // your brand primary for success
+        color: "#fff",
+       },
+      },
+      error: {
+       style: {
+        background: "#D02030", // brand red for errors
+        color: "#fff",
+       },
+      },
+     }}
+    />
+   </AppWrapper>
+  </ThemeProvider>
 );

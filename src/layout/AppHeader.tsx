@@ -70,9 +70,17 @@ const AppHeader: React.FC = () => {
           </button>
 
           {/* Logo (Mobile Only) */}
-          <Link to="/" className="lg:hidden">
-            <img className="dark:hidden" src="./images/logo/cm-logo.png" alt="Logo" />
-            <img className="hidden dark:block" src="./images/logo/cm-logo1.png" alt="Logo" />
+          <Link to="/" className="lg:hidden flex items-center">
+            <img
+              className="h-10 w-auto dark:hidden"
+              src="./images/logo/cm-logo.png"
+              alt="Logo"
+            />
+            <img
+              className="h-10 w-auto hidden dark:block"
+              src="./images/logo/cm-logo1.png"
+              alt="Logo"
+            />
           </Link>
 
           {/* 3-Dot More Menu (Mobile) */}

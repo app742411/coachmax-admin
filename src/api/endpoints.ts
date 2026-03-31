@@ -32,7 +32,36 @@ const ENDPOINTS = {
   GET_EVENT_PARTICIPANTS: "/api/admin/getEventParticipants",
   EXPORT_EVENT_PARTICIPANTS: "/api/admin/exportEventParticipants",
 
-  // Add more as needed
+  // Categories & Terms
+  CREATE_CATEGORY: "/api/admin/createCategory",
+  GET_ALL_CATEGORIES: "/api/user/getCategories",
+  UPDATE_CATEGORY: "/api/admin/updateCategory",
+  DELETE_CATEGORY: "/api/admin/deleteCategory",
+  CREATE_TERM: "/api/admin/createTerm",
+  GET_ALL_TERMS: "/api/admin/getAllTerms",
+  UPDATE_TERM: "/api/admin/updateTerm",
+  DELETE_TERM: "/api/admin/deleteTerm",
+
+  // Classes
+  CREATE_CLASS: "/api/admin/createClass",
+  GET_ALL_CLASSES: "/api/admin/getAllClasses",
+  UPDATE_CLASS: "/api/admin/updateClass",
+  GET_CLASS_BY_ID: "/api/admin/getClassById",
+  DELETE_CLASS: "/api/admin/deleteClass",
+  ASSIGN_CLASS: "/api/admin/assignClass",
+  GET_CLASS_PLAYERS: "/api/admin/getClassPlayers",
+
+  // Programs & Coaches (Needed for Class creation)
+  CREATE_PROGRAM: "/api/admin/createProgram",
+  GET_ALL_PROGRAMS: "/api/admin/getAllPrograms",
+  UPDATE_PROGRAM: "/api/admin/updateProgram",
+  DELETE_PROGRAM: "/api/admin/deleteProgram",
+  GET_PROGRAMS_BY_CATEGORY: "/api/user/getProgramsByCategory",
+  GET_ALL_COACHES: "/api/admin/getAllCoaches",
+  CREATE_COACH: "/api/admin/createCoach",
+  UPDATE_COACH: "/api/admin/updateCoach",
+  DELETE_COACH: "/api/admin/deleteCoach",
+  GET_COACH_BY_ID: "/api/admin/getCoachById",
 };
 
 export default ENDPOINTS;

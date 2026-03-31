@@ -43,13 +43,18 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    name: "Players Management",
+    name: "Players",
     icon: <Users size={20} />,
-    subItems: [
-      { name: "Players list", path: "/players" },
-      // { name: "New Players Enquiry", path: "/pending-players" },
-    ],
+    path: "/players",
   },
+  // {
+  //   name: "Players Management",
+  //   icon: <Users size={20} />,
+  //   subItems: [
+  //     { name: "Players list", path: "/players" },
+  //     // { name: "New Players Enquiry", path: "/pending-players" },
+  //   ],
+  // },
   {
     name: "Events & Training",
     icon: <Calendar size={20} />,
@@ -60,13 +65,20 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    name: "Classes",
+    icon: <Calendar size={20} />,
+    path: "/classes",
+  },
+  {
     name: "Training Tracker",
     icon: <Dumbbell size={20} />,
-    subItems: [
-      { name: "Attendance", path: "/attendance" },
-      { name: "Performance", path: "/performance" },
-    ],
+    path: "/training-tracker",
   },
+  // {
+  //   name: "Match Center",
+  //   icon: <Trophy size={20} />,
+  //   path: "/matches",
+  // },
   {
     name: "League Management",
     icon: <Trophy size={20} />,
@@ -80,9 +92,9 @@ const navItems: NavItem[] = [
     icon: <Newspaper size={20} />,
     subItems: [
       { name: "News & Updates", path: "/news" },
-      { name: "Add News", path: "/add-news" },
+      { name: "Add News & Blog", path: "/add-content" },
       { name: "Blogs", path: "/blogs" },
-      { name: "Add Blog", path: "/add-blog" },
+      //  { name: "Add Blog", path: "/add-blog" },
       { name: "Sponsors", path: "/sponsors" },
     ],
   },
@@ -124,6 +136,11 @@ const navItems: NavItem[] = [
       { name: "Chat History", path: "/chat-history" },
     ],
   },
+  {
+    name: "Coaching management",
+    icon: <Settings size={20} />,
+    path: "/coaching-management",
+  },
 ];
 
 const othersItems: NavItem[] = [
@@ -132,9 +149,7 @@ const othersItems: NavItem[] = [
     icon: <Settings size={20} />,
     subItems: [
       { name: "Profile", path: "/profile" },
-      { name: "My Account", path: "/account" },
       { name: "Change Password", path: "/change-password" },
-      { name: "Language", path: "/language" },
       { name: "Notifications", path: "/notifications" },
     ],
   },
@@ -221,7 +236,7 @@ const AppSidebar: React.FC = () => {
                   }`}
               >
                 <span
-                  className={`menu-item-icon-size  ${openSubmenu?.type === menuType && openSubmenu?.index === index
+                  className={`menu-item-icon-size ${openSubmenu?.type === menuType && openSubmenu?.index === index
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
                     }`}
@@ -323,14 +338,14 @@ const AppSidebar: React.FC = () => {
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${isExpanded || isMobileOpen
+    ${isExpanded || isMobileOpen
           ? "w-[290px]"
           : isHovered
             ? "w-[290px]"
             : "w-[90px]"
         }
-        ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0`}
+    ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
+    lg:translate-x-0`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -345,15 +360,15 @@ const AppSidebar: React.FC = () => {
                 className="dark:hidden"
                 src="/images/logo/cm-logo.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={100}
+                height={100}
               />
               <img
                 className="hidden dark:block"
                 src="/images/logo/cm-logo2.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={100}
+                height={100}
               />
             </>
           ) : (
@@ -371,7 +386,7 @@ const AppSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+                className={`mb-4 text-xs flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
                   }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? "Menu" : <HorizontaLDots className="size-6" />}
@@ -380,7 +395,7 @@ const AppSidebar: React.FC = () => {
             </div>
             <div className="">
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+                className={`mb-4 text-xs flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
                   }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? "Others" : <HorizontaLDots />}

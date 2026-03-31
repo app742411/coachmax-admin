@@ -3,15 +3,15 @@ import AuthLayout from "./AuthPageLayout";
 import SignInForm from "../../components/auth/SignInForm";
 
 export default function SignIn() {
-  return (
-    <>
-      <PageMeta
-        title="Coach Max SignIn Dashboard"
-    
-      />
-      <AuthLayout>
-        <SignInForm />
-      </AuthLayout>
-    </>
-  );
+ return (
+  <>
+   <PageMeta
+    title="Coach Max SignIn Dashboard"
+  
+   />
+   <AuthLayout>
+    <SignInForm />
+   </AuthLayout>
+  </>
+ );
 }
