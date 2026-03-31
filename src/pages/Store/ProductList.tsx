@@ -2,7 +2,6 @@ import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import {
-  Plus,
   Search,
   Edit3,
   Trash2,
@@ -100,8 +99,8 @@ const ProductList = () => {
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`px-6 py-2 rounded-xl text-xs font-bold  transition-all ${activeCategory === cat
-                    ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20 scale-105"
-                    : "text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20 scale-105"
+                  : "text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
               >
                 {cat}

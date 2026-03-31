@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { getUsers, processPlayerRequest, exportUsers } from "../../api/userApi";
-import { CalendarIcon, Download, CheckSquare, Square, Trash2 } from "lucide-react";
+import { Download, CheckSquare, Square, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import PageBreadcrumb from "../common/PageBreadcrumb";
 import Select from "../form/Select";
@@ -155,7 +155,7 @@ const PlayerListComp: React.FC = () => {
     }
   };
 
-  const handleUpdatePlayer = async (updatedUser: any) => {
+  const handleUpdatePlayer = async (_updatedUser: any) => {
     // Sync state or re-fetch
     fetchUsers();
     toast.success("Player updated successfully!");

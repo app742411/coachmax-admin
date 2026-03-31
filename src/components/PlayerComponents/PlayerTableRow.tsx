@@ -1,7 +1,7 @@
 import React from "react";
 // import { User } from "../../types/player"; // Decoupled
 import { TableRow, TableCell } from "../ui/table";
-import { CheckSquare, Square, StarIcon, CalendarIcon, PlusCircle } from "lucide-react";
+import { CheckSquare, Square, StarIcon, PlusCircle } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
@@ -27,7 +27,7 @@ const PlayerTableRow: React.FC<PlayerTableRowProps> = ({
   onOpenDetails,
   onApprove,
   onReject,
-  onOpenSchedule,
+  onOpenSchedule: _onOpenSchedule,
   onAssignClass,
   openMenuId,
   setOpenMenuId,

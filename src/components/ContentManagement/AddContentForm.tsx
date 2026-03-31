@@ -42,10 +42,10 @@ const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
 );
 
 interface AddContentFormProps {
-  initialType?: "news" | "blog";
+  type?: "news" | "blog";
 }
 
-const AddContentForm: React.FC<AddContentFormProps> = ({ initialType = "news" }) => {
+const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "news" }) => {
   const [activeTab, setActiveTab] = useState("basic");
   const [contentType, setContentType] = useState<"news" | "blog">(initialType);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);

@@ -9,7 +9,7 @@ import {
   Printer,
   Calendar
 } from "lucide-react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import Button from "../../components/ui/button/Button";
 
 const OrderDetails = () => {
@@ -90,7 +90,7 @@ const OrderDetails = () => {
               <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 text-white">
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold tracking-[0.2em] opacity-80">Order Timeline</span>
-                  <h3 className="text-2xl font-bold tracking-wide ">Order Currently: {status}</h3>
+                  <h3 className="text-2xl font-bold tracking-wide ">Order Currently: Processing</h3>
                   <p className="text-xs font-bold opacity-70">Last update: June 20, 2024 at 14:35 PM</p>
                 </div>
                 <div className="flex items-center gap-3">
