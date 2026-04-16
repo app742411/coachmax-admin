@@ -1,21 +1,9 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import PageMeta from "../../components/common/PageMeta";
-import PageBreadcrumb from "../../components/common/PageBreadcrumb";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
-import Button from "../../components/ui/button/Button";
-import { Modal } from "../../components/ui/modal";
-import { getAllTerms, createTerm, updateTerm, deleteTerm } from "../../api/adminApi";
+import { useMutation } from "@tanstack/react-query";
+import { createTerm } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
-import { Edit, Trash } from "lucide-react";
-import DatePicker from "../../components/form/date-picker";
 
-const TermPage: React.FC = () => {
-    const queryClient = useQueryClient();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-    
+const TermForm: React.FC = () => {
     const [formData, setFormData] = useState({
         name: "",
         year: new Date().getFullYear(),
@@ -23,41 +11,19 @@ const TermPage: React.FC = () => {
         endDate: "",
     });
 
-    const { data: termsData, isLoading: loading } = useQuery({
-        queryKey: ["terms"],
-        queryFn: getAllTerms,
-    });
+    // Validates DD/MM/YYYY
+    const isValidDate = (date: string) => {
+        return /^\d{2}\/\d{2}\/\d{4}$/.test(date);
+    };
 
-    const terms = Array.isArray(termsData) ? termsData : (termsData?.data || []);
-
-    const createMutation = useMutation({
-        mutationFn: createTerm,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["terms"] });
-            toast.success("Term created successfully");
-            setIsModalOpen(false);
-        },
-        onError: () => toast.error("Failed to create term"),
-    });
-
-    const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: any }) => updateTerm(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["terms"] });
-            toast.success("Term updated successfully");
-            setIsModalOpen(false);
-        },
-        onError: () => toast.error("Failed to update term"),
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: deleteTerm,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["terms"] });
-            toast.success("Term deleted successfully");
-        },
-        onError: () => toast.error("Failed to delete term"),
-    });
+    // Helper to force conversion if the input is YYYY-MM-DD
+    const formatToDDMMYYYY = (dateStr: string) => {
+        if (dateStr.includes("-")) {
+            const [year, month, day] = dateStr.split("-");
+            return `${day}/${month}/${year}`;
+        }
+        return dateStr;
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -67,139 +33,109 @@ const TermPage: React.FC = () => {
         }));
     };
 
-    const handleDateChange = (name: string, dateStr: string) => {
-        setFormData(prev => ({ ...prev, [name]: dateStr }));
-    };
-
-    const handleOpenAdd = () => {
-        setFormData({
-            name: "",
-            year: new Date().getFullYear(),
-            startDate: "",
-            endDate: "",
-        });
-        setIsEditing(false);
-        setSelectedId(null);
-        setIsModalOpen(true);
-    };
-
-    const handleOpenEdit = (term: any) => {
-        setFormData({
-            name: term.name || "",
-            year: term.year || new Date().getFullYear(),
-            startDate: term.startDate || "",
-            endDate: term.endDate || "",
-        });
-        setIsEditing(true);
-        setSelectedId(term._id);
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = (id: string) => {
-        if (window.confirm("Are you sure you want to delete this term?")) {
-            deleteMutation.mutate(id);
-        }
-    };
+    const createMutation = useMutation({
+        mutationFn: createTerm,
+        onSuccess: () => {
+            toast.success("Term created successfully");
+            setFormData({
+                name: "",
+                year: new Date().getFullYear(),
+                startDate: "",
+                endDate: "",
+            });
+        },
+        onError: () => toast.error("Failed to create term"),
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (isEditing && selectedId) {
-            updateMutation.mutate({ id: selectedId, data: formData });
-        } else {
-            createMutation.mutate(formData);
+
+        // Convert the strings just in case they are in YYYY-MM-DD
+        const formattedStart = formatToDDMMYYYY(formData.startDate);
+        const formattedEnd = formatToDDMMYYYY(formData.endDate);
+
+        // Validation check
+        if (!isValidDate(formattedStart) || !isValidDate(formattedEnd)) {
+            toast.error("Please enter date in DD/MM/YYYY format");
+            return;
         }
+
+        const payload = {
+            name: formData.name,
+            year: formData.year,
+            startDate: formattedStart, // 👈 Guaranteed DD/MM/YYYY
+            endDate: formattedEnd,     // 👈 Guaranteed DD/MM/YYYY
+        };
+
+        console.log("FINAL PAYLOAD 👉", payload);
+        createMutation.mutate(payload);
     };
 
     return (
-        <>
-            <PageMeta title="CoachMax | Terms" description="Manage coaching terms" />
-            <PageBreadcrumb pageTitle="Terms" />
-
-            <div className="space-y-6">
-                <div className="flex justify-end">
-                    <Button onClick={handleOpenAdd} variant="primary" size="md">
-                        Add Term
-                    </Button>
+        <div className="max-w-md mx-auto p-6 bg-white rounded-xl shadow">
+            <h2 className="text-xl font-semibold mb-4">Add Term</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block mb-1 text-sm font-medium">Term Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="e.g. Summer Term"
+                        className="w-full border rounded-lg px-3 py-2"
+                        required
+                    />
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-                    <div className="max-w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                                <TableRow>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Name</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Year</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Start Date</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">End Date</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 text-center">Actions</TableCell>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                                {loading ? (
-                                    <TableRow><TableCell colSpan={5} className="px-5 py-4 text-center text-gray-500">Loading...</TableCell></TableRow>
-                                ) : terms.length === 0 ? (
-                                    <TableRow><TableCell colSpan={5} className="px-5 py-4 text-center text-gray-500">No terms found.</TableCell></TableRow>
-                                ) : (
-                                    terms.map((term: any) => (
-                                        <TableRow key={term._id}>
-                                            <TableCell className="px-5 py-4 text-gray-800 font-medium text-start text-theme-sm dark:text-white/90">{term.name}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{term.year}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{term.startDate}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{term.endDate}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-500 text-center text-theme-sm dark:text-gray-400">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button onClick={() => handleOpenEdit(term)} className="text-gray-500 hover:text-brand-500"><Edit size={18} /></button>
-                                                    <button onClick={() => handleDelete(term._id)} className="text-gray-500 hover:text-red-500"><Trash size={18} /></button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                <div>
+                    <label className="block mb-1 text-sm font-medium">Year</label>
+                    <input
+                        type="number"
+                        name="year"
+                        value={formData.year}
+                        onChange={handleChange}
+                        className="w-full border rounded-lg px-3 py-2"
+                        required
+                    />
                 </div>
-            </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[500px] p-6 lg:p-10 z-9999999" showCloseButton={true}>
-                <h2 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">{isEditing ? "Edit Term" : "Add New Term"}</h2>
-                <form onSubmit={handleSubmit} className="mt-6">
-                    <div className="mb-4">
-                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Term Name</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-700 dark:bg-gray-800 dark:text-white" placeholder="e.g. Summer Term" required />
-                    </div>
-                    <div className="mb-4">
-                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
-                        <input type="number" name="year" value={formData.year} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-700 dark:bg-gray-800 dark:text-white" required />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="mb-4">
-                            <DatePicker
-                                label="Start Date"
-                                placeholder="YYYY-MM-DD"
-                                defaultDate={formData.startDate}
-                                onChange={(_, dateStr) => handleDateChange("startDate", dateStr)}
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <DatePicker
-                                label="End Date"
-                                placeholder="YYYY-MM-DD"
-                                defaultDate={formData.endDate}
-                                onChange={(_, dateStr) => handleDateChange("endDate", dateStr)}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-3 mt-6">
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                            {createMutation.isPending || updateMutation.isPending ? "Saving..." : (isEditing ? "Update Term" : "Create Term")}
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
-        </>
+                <div>
+                    <label className="block mb-1 text-sm font-medium">Start Date</label>
+                    <input
+                        type="text"
+                        name="startDate"
+                        value={formData.startDate}
+                        onChange={handleChange}
+                        placeholder="DD/MM/YYYY"
+                        className="w-full border rounded-lg px-3 py-2"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block mb-1 text-sm font-medium">End Date</label>
+                    <input
+                        type="text"
+                        name="endDate"
+                        value={formData.endDate}
+                        onChange={handleChange}
+                        placeholder="DD/MM/YYYY"
+                        className="w-full border rounded-lg px-3 py-2"
+                        required
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={createMutation.isPending}
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg disabled:bg-blue-300"
+                >
+                    {createMutation.isPending ? "Saving..." : "Create Term"}
+                </button>
+            </form>
+        </div>
     );
 };
 
-export default TermPage;
+export default TermForm;

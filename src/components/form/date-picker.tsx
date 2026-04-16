@@ -1,56 +1,59 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import Label from "./Label";
 import { CalenderIcon } from "../../icons";
 
 interface DatePickerProps {
- id?: string;
- mode?: "single" | "multiple" | "range" | "time";
- onChange: (selectedDates: Date[], dateStr: string, instance: any) => void;
- defaultDate?: any;
- label?: string;
- placeholder?: string;
+  id?: string;
+  mode?: "single" | "multiple" | "range" | "time";
+  onChange: (selectedDates: Date[], dateStr: string, instance: any) => void;
+  defaultDate?: any;
+  label?: string;
+  placeholder?: string;
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({
- id = "datepicker-" + Math.random().toString(36).substring(2, 9), // AUTO fallback id
- mode = "single",
- onChange,
- defaultDate,
- label,
- placeholder = "Select date",
+  id,
+  mode = "single",
+  onChange,
+  defaultDate,
+  label,
+  placeholder = "DD/MM/YYYY",
 }) => {
- useEffect(() => {
-  const picker = flatpickr(`#${id}`, {
-   mode,
-   static: true,
-   monthSelectorType: "static",
-   dateFormat: "Y-m-d",
-   defaultDate,
-   onChange,
-  });
+  const generatedId = useMemo(() => id || "datepicker-" + Math.random().toString(36).substring(2, 9), [id]);
 
-  return () => {
-   if (picker) {
-    if (Array.isArray(picker)) {
-     picker.forEach(p => p.destroy());
-    } else {
-     picker.destroy();
-    }
-   }
-  };
- }, [id, mode, onChange, defaultDate]);
+  useEffect(() => {
+    const picker = flatpickr(`#${generatedId}`, {
+      mode,
+      static: true,
+      monthSelectorType: "static",
+      dateFormat: "d/m/Y",
+      allowInput: true,
+      defaultDate,
+      onChange,
+    });
 
- return (
-  <div>
-   {label && <Label htmlFor={id}>{label}</Label>}
+    return () => {
+      if (picker) {
+        if (Array.isArray(picker)) {
+          picker.forEach(p => p.destroy());
+        } else {
+          picker.destroy();
+        }
+      }
+    };
+  }, [id, mode, onChange, defaultDate]);
 
-   <div className="relative">
-    <input
-     id={id}
-     placeholder={placeholder}
-     className="
+  return (
+    <div>
+      {label && <Label htmlFor={generatedId}>{label}</Label>}
+
+      <div className="relative">
+        <input
+          id={generatedId}
+          placeholder={placeholder}
+          className="
       h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm 
       shadow-theme-xs placeholder:text-gray-400 
       focus:outline-hidden focus:ring-3 
@@ -60,14 +63,14 @@ const DatePicker: React.FC<DatePickerProps> = ({
       dark:placeholder:text-white/30 dark:border-gray-700 
       dark:focus:border-brand-800
      "
-    />
+        />
 
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
-     <CalenderIcon className="size-6" />
-    </span>
-   </div>
-  </div>
- );
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
+          <CalenderIcon className="size-6" />
+        </span>
+      </div>
+    </div>
+  );
 };
 
 export default DatePicker;

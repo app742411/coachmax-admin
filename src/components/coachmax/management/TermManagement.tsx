@@ -81,6 +81,21 @@ const TermManagement: React.FC = () => {
         setFormData(prev => ({ ...prev, [name]: dateStr }));
     };
 
+    // Validates DD/MM/YYYY
+    const isValidDate = (date: string) => {
+        return /^\d{2}\/\d{2}\/\d{4}$/.test(date);
+    };
+
+    // Helper to force conversion if the input is YYYY-MM-DD
+    const formatToDDMMYYYY = (dateStr: string) => {
+        if (!dateStr) return "";
+        if (dateStr.includes("-")) {
+            const [year, month, day] = dateStr.split("-");
+            return `${day}/${month}/${year}`;
+        }
+        return dateStr;
+    };
+
     const handleOpenAdd = () => {
         setFormData({
             name: "",
@@ -113,10 +128,26 @@ const TermManagement: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        const formattedStart = formatToDDMMYYYY(formData.startDate);
+        const formattedEnd = formatToDDMMYYYY(formData.endDate);
+
+        if (!isValidDate(formattedStart) || !isValidDate(formattedEnd)) {
+            toast.error("Please enter dates in DD/MM/YYYY format");
+            return;
+        }
+
+        const payload = {
+            name: formData.name,
+            year: formData.year,
+            startDate: formattedStart,
+            endDate: formattedEnd
+        };
+
         if (isEditing && selectedId) {
-            updateMutation.mutate({ id: selectedId, data: formData });
+            updateMutation.mutate({ id: selectedId, data: payload });
         } else {
-            createMutation.mutate(formData);
+            createMutation.mutate(payload);
         }
     };
 
