@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
 import Button from "../../ui/button/Button";
 import { Modal } from "../../ui/modal";
@@ -8,12 +9,12 @@ import { Edit, Trash, Calendar } from "lucide-react";
 import DatePicker from "../../form/date-picker";
 
 const TermManagement: React.FC = () => {
-    const [terms, setTerms] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+
+    // ── UI State (Modals & Forms) ──────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [submitting, setSubmitting] = useState(false);
     
     const [formData, setFormData] = useState({
         name: "",
@@ -27,22 +28,46 @@ const TermManagement: React.FC = () => {
         return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
     };
 
-    const fetchTerms = async () => {
-        try {
-            setLoading(true);
-            const res = await getAllTerms();
-            const dataArray = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
-            setTerms(dataArray);
-        } catch (error) {
-            console.error("Error fetching terms:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // ── Queries ─────────────────────────────────────────────────────
 
-    useEffect(() => {
-        fetchTerms();
-    }, []);
+    const { data: termsData, isLoading: loading } = useQuery({
+        queryKey: ["terms"],
+        queryFn: getAllTerms,
+    });
+    const terms = Array.isArray(termsData) ? termsData : (termsData?.data || []);
+
+    // ── Mutations ───────────────────────────────────────────────────
+
+    const createMutation = useMutation({
+        mutationFn: createTerm,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["terms"] });
+            toast.success("Term created successfully");
+            setIsModalOpen(false);
+        },
+        onError: () => toast.error("Failed to create term"),
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => updateTerm(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["terms"] });
+            toast.success("Term updated successfully");
+            setIsModalOpen(false);
+        },
+        onError: () => toast.error("Failed to update term"),
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: deleteTerm,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["terms"] });
+            toast.success("Term deleted");
+        },
+        onError: () => toast.error("Failed to delete term"),
+    });
+
+    // ── Event Handlers ─────────────────────────────────────────────
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -80,34 +105,18 @@ const TermManagement: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm("Are you sure?")) return;
-        try {
-            await deleteTerm(id);
-            toast.success("Term deleted");
-            fetchTerms();
-        } catch (error) {
-            toast.error("Failed to delete");
+    const handleDelete = (id: string) => {
+        if (window.confirm("Are you sure?")) {
+            deleteMutation.mutate(id);
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            setSubmitting(true);
-            if (isEditing && selectedId) {
-                await updateTerm(selectedId, formData);
-                toast.success("Term updated successfully");
-            } else {
-                await createTerm(formData);
-                toast.success("Term created successfully");
-            }
-            setIsModalOpen(false);
-            fetchTerms();
-        } catch (error) {
-            toast.error("Failed to save");
-        } finally {
-            setSubmitting(false);
+        if (isEditing && selectedId) {
+            updateMutation.mutate({ id: selectedId, data: formData });
+        } else {
+            createMutation.mutate(formData);
         }
     };
 
@@ -136,7 +145,7 @@ const TermManagement: React.FC = () => {
                         ) : terms.length === 0 ? (
                             <TableRow><TableCell colSpan={3} className="text-center py-10 text-gray-500">No terms defined.</TableCell></TableRow>
                         ) : (
-                            terms.map((term) => (
+                            terms.map((term: any) => (
                                 <TableRow key={term._id} className="hover:bg-gray-50 transition-colors">
                                     <TableCell className="py-4 font-bold text-sm text-gray-800 dark:text-white/90 uppercase tracking-tight">
                                         <div className="flex flex-col">
@@ -208,7 +217,9 @@ const TermManagement: React.FC = () => {
                     </div>
                     <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
                         <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={submitting} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">{submitting ? "Saving..." : "Commit Term"}</Button>
+                        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">
+                            {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Commit Term"}
+                        </Button>
                     </div>
                 </form>
             </Modal>

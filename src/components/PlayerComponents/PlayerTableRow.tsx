@@ -1,11 +1,90 @@
-import React from "react";
+import React, { useState } from "react";
 // import { User } from "../../types/player"; // Decoupled
 import { TableRow, TableCell } from "../ui/table";
-import { CheckSquare, Square, StarIcon, PlusCircle } from "lucide-react";
+import { CheckSquare, Square, StarIcon, PlusCircle, Edit2, X as CloseIcon, Loader2 } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { EyeIcon, CheckLineIcon, CloseLineIcon, MoreDotIcon } from "../../icons";
+import { useMutation } from "@tanstack/react-query";
+import { updateAdminNote } from "../../api/adminApi";
+import { toast } from "react-hot-toast";
+
+const AdminNoteCell: React.FC<{ playerId: string; initialNote: string }> = ({ playerId, initialNote }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [note, setNote] = useState(initialNote);
+
+  const mutation = useMutation({
+    mutationFn: (newNote: string) => updateAdminNote(playerId, newNote),
+    onSuccess: () => {
+      toast.success("Admin note updated");
+      setIsOpen(false);
+    },
+    onError: () => {
+      toast.error("Failed to update admin note");
+    }
+  });
+
+  const handleSave = () => {
+    mutation.mutate(note);
+  };
+
+  return (
+    <>
+      <div
+        className="group/note flex items-center justify-between gap-2 text-gray-400 font-medium italic cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5 rounded-lg transition-colors py-1 px-2"
+        onClick={() => setIsOpen(true)}
+      >
+        <span className="truncate max-w-[100px] text-[12px]">{note || "Add note..."}</span>
+        <Edit2 size={10} className="text-gray-300 opacity-0 group-hover/note:opacity-100 transition-opacity" />
+      </div>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 text-start">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 border border-gray-100 dark:border-white/5">
+            <div className="p-6 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
+              <h4 className="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="w-1.5 h-6 bg-brand-500 rounded-full"></div>
+                Admin Note
+              </h4>
+              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors text-gray-400">
+                <CloseIcon size={20} />
+              </button>
+            </div>
+            <div className="p-8">
+              <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-3 block">
+                Update Player Note
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="w-full h-32 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all resize-none dark:text-white"
+                placeholder="Enter administrative notes here..."
+                autoFocus
+              ></textarea>
+            </div>
+            <div className="p-6 bg-gray-50 dark:bg-white/[0.02] flex items-center justify-end gap-3">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="px-6 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={mutation.isPending}
+                className="px-8 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-brand-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {mutation.isPending && <Loader2 size={14} className="animate-spin" />}
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 interface PlayerTableRowProps {
   user: any;
@@ -85,16 +164,20 @@ const PlayerTableRow: React.FC<PlayerTableRowProps> = ({
               {user.fullName || "Unnamed Player"}
             </span>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-medium text-gray-400 lowercase">
+              <a
+                href={user.email ? `mailto:${user.email}` : "#"}
+                className="text-[12px] font-medium text-brand-600 dark:text-brand-400 hover:underline lowercase italic tracking-normal normal-case transition-colors"
+                onClick={(e) => !user.email && e.preventDefault()}
+              >
                 {user.email || "no-email@coachmax.app"}
-              </span>
+              </a>
               {user.isOtpVerified && (
                 <Badge size="sm" color="success" variant="light" className="h-3.5 px-1 py-0 text-[8px] border-none font-extrabold">
                   VERIFIED
                 </Badge>
               )}
             </div>
-            <span className="text-[10px] font-bold text-brand-500 mt-0.5">
+            <span className="text-[12px] font-bold text-brand-500 mt-0.5">
               {user.phone || "N/A"}
             </span>
           </div>
@@ -112,17 +195,22 @@ const PlayerTableRow: React.FC<PlayerTableRowProps> = ({
           <span className="font-bold text-gray-800 text-[11px] dark:text-white/90 tracking-tight">
             {user.club || "No Club"}
           </span>
-          <span className="text-[10px] font-medium text-gray-400 mt-0.5">
+          <span className="text-[12px] font-medium text-gray-400 mt-0.5">
             {user.contactName || "No Guardian"}
           </span>
         </div>
       </TableCell>
       <TableCell className="px-5 py-4 text-start">
-        <div className="flex flex-col gap-1">
-          <Badge size="sm" color="success" variant="light" className="font-bold text-[9px] w-fit border border-success-200">
-            {user.program?.name || user.programType || "No Program"}
-          </Badge>
-          <span className="text-[10px] font-bold text-gray-500">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap gap-1">
+            <span className="text-[9px] font-extrabold text-brand-500 bg-brand-50 dark:bg-brand-500/10 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+              {user.category?.name || "No Category"}
+            </span>
+            <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+              {user.program?.name || user.programType || "No Program"}
+            </span>
+          </div>
+          <span className="text-[11px] font-bold text-gray-500 ml-0.5">
             {formatDate(user.dob)}
           </span>
         </div>
@@ -154,6 +242,9 @@ const PlayerTableRow: React.FC<PlayerTableRowProps> = ({
         >
           {user.status || "UNKNOWN"}
         </Badge>
+      </TableCell>
+      <TableCell className="px-5 py-4 text-start">
+        <AdminNoteCell playerId={user._id} initialNote={user.adminNote || user["admin note"] || ""} />
       </TableCell>
       <TableCell className="px-5 py-4 text-end">
         <div className="flex justify-end pr-4">

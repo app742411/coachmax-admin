@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
 import Button from "../../ui/button/Button";
 import { Modal } from "../../ui/modal";
@@ -7,29 +8,54 @@ import { toast } from "react-hot-toast";
 import { Edit, Trash, Tag } from "lucide-react";
 
 const CategoryManagement: React.FC = () => {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: "" });
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const res = await getAllCategories();
-      setCategories(Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []));
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ── Queries ─────────────────────────────────────────────────────
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const { data: categoriesData, isLoading: loading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getAllCategories,
+  });
+  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || categoriesData?.categories || []);
+
+  // ── Mutations ───────────────────────────────────────────────────
+
+  const createMutation = useMutation({
+    mutationFn: createCategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Category created");
+      setIsModalOpen(false);
+    },
+    onError: () => toast.error("Failed to create category"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => updateCategory(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Category updated");
+      setIsModalOpen(false);
+    },
+    onError: () => toast.error("Failed to update category"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Category deleted");
+    },
+    onError: () => toast.error("Failed to delete category"),
+  });
+
+  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
     setFormData({ name: "" });
@@ -45,34 +71,18 @@ const CategoryManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure?")) return;
-    try {
-      await deleteCategory(id);
-      toast.success("Category deleted");
-      fetchCategories();
-    } catch (error) {
-      toast.error("Failed to delete");
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure?")) {
+      deleteMutation.mutate(id);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setSubmitting(true);
-      if (isEditing && selectedId) {
-        await updateCategory(selectedId, formData);
-        toast.success("Category updated");
-      } else {
-        await createCategory(formData);
-        toast.success("Category created");
-      }
-      setIsModalOpen(false);
-      fetchCategories();
-    } catch (error) {
-      toast.error("Failed to save");
-    } finally {
-      setSubmitting(false);
+    if (isEditing && selectedId) {
+      updateMutation.mutate({ id: selectedId, data: formData });
+    } else {
+      createMutation.mutate(formData);
     }
   };
 
@@ -100,7 +110,7 @@ const CategoryManagement: React.FC = () => {
             ) : categories.length === 0 ? (
               <TableRow><TableCell colSpan={2} className="text-center py-10 text-gray-500">No categories recorded.</TableCell></TableRow>
             ) : (
-              categories.map((cat) => (
+              categories.map((cat: any) => (
                 <TableRow key={cat._id} className="hover:bg-gray-50 transition-colors">
                   <TableCell className="py-4 font-bold text-sm text-gray-800 dark:text-white/90">
                     <div className="flex items-center gap-3">
@@ -140,7 +150,9 @@ const CategoryManagement: React.FC = () => {
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={submitting}>{submitting ? "Saving..." : "Commit Data"}</Button>
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Commit Data"}
+            </Button>
           </div>
         </form>
       </Modal>

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
@@ -8,11 +9,8 @@ import { getAllPrograms, createProgram, getAllCategories } from "../../api/admin
 import { toast } from "react-hot-toast";
 
 const ProgramPage: React.FC = () => {
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -25,46 +23,38 @@ const ProgramPage: React.FC = () => {
     return [];
   };
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [progsRes, catsRes] = await Promise.all([
-        getAllPrograms().catch(() => ({ data: [] })),
-        getAllCategories().catch(() => ({ data: [] }))
-      ]);
-      setPrograms(getDataArray(progsRes));
-      setCategories(getDataArray(catsRes));
-    } catch (error) {
-      console.error("Error fetching programs:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: progsData, isLoading: loadingProgs } = useQuery({
+    queryKey: ["programs"],
+    queryFn: getAllPrograms,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: catsData, isLoading: loadingCats } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getAllCategories,
+  });
 
-  const handleCreateProgram = async (e: React.FormEvent) => {
+  const programs = getDataArray(progsData);
+  const categories = getDataArray(catsData);
+  const loading = loadingProgs || loadingCats;
+
+  const createMutation = useMutation({
+    mutationFn: createProgram,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+      toast.success("Program created successfully");
+      setFormData({ name: "", category: "" });
+      setIsModalOpen(false);
+    },
+    onError: () => toast.error("Failed to create program"),
+  });
+
+  const handleCreateProgram = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.category) {
         toast.error("Please fill all fields");
         return;
     }
-
-    try {
-      setSubmitting(true);
-      await createProgram(formData);
-      toast.success("Program created successfully");
-      setFormData({ name: "", category: "" });
-      setIsModalOpen(false);
-      fetchData();
-    } catch (error) {
-      console.error("Error creating program:", error);
-      toast.error("Failed to create program");
-    } finally {
-      setSubmitting(false);
-    }
+    createMutation.mutate(formData);
   };
 
   return (
@@ -96,7 +86,7 @@ const ProgramPage: React.FC = () => {
                 ) : programs.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="px-5 py-4 text-center text-gray-500">No programs found.</TableCell></TableRow>
                 ) : (
-                  programs.map((prog) => (
+                  programs.map((prog: any) => (
                     <TableRow key={prog._id}>
                       <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">{prog._id}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-800 font-medium text-start text-theme-sm dark:text-white/90">{prog.name || prog.title}</TableCell>
@@ -138,7 +128,7 @@ const ProgramPage: React.FC = () => {
                 required
             >
                 <option value="">Select Category</option>
-                {categories.map((c) => (
+                {categories.map((c: any) => (
                     <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
             </select>
@@ -146,7 +136,7 @@ const ProgramPage: React.FC = () => {
 
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={submitting}>{submitting ? "Creating..." : "Create Program"}</Button>
+            <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? "Creating..." : "Create Program"}</Button>
           </div>
         </form>
       </Modal>

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
@@ -8,46 +9,32 @@ import { getAllCategories, createCategory } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 
 const CategoryPage: React.FC = () => {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
-  const fetchCategories = async () => {
-    try {
-      const res = await getAllCategories();
-      const dataArray = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
-      setCategories(dataArray);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      // toast.error("Failed to fetch categories");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: categoriesData, isLoading: loading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getAllCategories,
+  });
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
 
-  const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) return;
-
-    try {
-      setSubmitting(true);
-      await createCategory({ name: newCategoryName });
+  const createMutation = useMutation({
+    mutationFn: (name: string) => createCategory({ name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
       toast.success("Category created successfully");
       setNewCategoryName("");
       setIsModalOpen(false);
-      fetchCategories();
-    } catch (error) {
-      console.error("Error creating category:", error);
-      toast.error("Failed to create category");
-    } finally {
-      setSubmitting(false);
-    }
+    },
+    onError: () => toast.error("Failed to create category"),
+  });
+
+  const handleCreateCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    createMutation.mutate(newCategoryName);
   };
 
   return (
@@ -92,7 +79,7 @@ const CategoryPage: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  categories.map((category) => (
+                  categories.map((category: any) => (
                     <TableRow key={category._id}>
                       <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                         {category._id}
@@ -131,8 +118,8 @@ const CategoryPage: React.FC = () => {
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Creating..." : "Create Category"}
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Creating..." : "Create Category"}
             </Button>
           </div>
         </form>

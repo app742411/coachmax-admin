@@ -33,64 +33,79 @@ import TransactionList from "./pages/Payments/TransactionList";
 import MatchesPage from "./pages/Matches/MatchesPage";
 
 import ClassPage from "./pages/Admin/ClassPage";
+import TrainingClassesPage from "./pages/Admin/TrainingClassesPage";
 import CoachingManagementPage from "./pages/Admin/CoachingManagementPage";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,
+      retry: 1,
+    },
+  },
+});
 
 const App: React.FC = () => {
     return (
-        <Router>
-            <UserProvider>
-                <ScrollToTop />
-                <Routes>
-                    {/* Protected Dashboard Layout */}
-                    <Route element={<ProtectedRoute />}>
-                        <Route element={<AppLayout />}>
-                            <Route index path="/" element={<Home />} />
-                            <Route path="/profile" element={<UserProfiles />} />
-                            <Route path="/users" element={<UserList />} />
-                            <Route path="/players" element={<PlayerList />} />
-                            <Route path="/player-details/:id" element={<PlayerDetails />} />
-                            <Route path="/events" element={<EventList />} />
-                            <Route path="/add-event" element={<AddEvent />} />
-                            <Route path="/edit-event/:id" element={<EditEvent />} />
-                            <Route path="/event-details/:id" element={<EventDetails />} />
-                            <Route path="/news" element={<ContentListPage type="news" />} />
-                            <Route path="/blogs" element={<ContentListPage type="blog" />} />
-                            <Route path="/add-content" element={<AddContentPage type="blog" />} />
-                            <Route path="/sponsors" element={<SponsorManagementPage />} />
-                            <Route path="/gallery" element={<GalleryGrid />} />
-                            <Route path="/add-gallery" element={<AddGalleryPage />} />
-                            <Route path="/products" element={<ProductList />} />
-                            <Route path="/add-product" element={<AddProductPage />} />
-                            <Route path="/edit-product/:id" element={<EditProductPage />} />
-                            <Route path="/orders" element={<OrderList />} />
-                            <Route path="/order-details/:id" element={<OrderDetails />} />
-                            <Route path="/transactions" element={<TransactionList />} />
-                            <Route path="/matches" element={<MatchesPage />} />
-                            <Route path="/categories" element={<CoachingManagementPage />} />
-                            <Route path="/terms" element={<CoachingManagementPage />} />
-                            <Route path="/programs" element={<CoachingManagementPage />} />
-                            <Route path="/coaching-management" element={<CoachingManagementPage />} />
-                            <Route path="/classes" element={<ClassPage />} />
-                            
-                            {/* Training Tracker Unified Page */}
-                            <Route path="/training-tracker" element={<TrainingTrackerPage />} />
-                            <Route path="/attendance" element={<TrainingTrackerPage />} />
-                            <Route path="/performance" element={<TrainingTrackerPage />} />
+        <QueryClientProvider client={queryClient}>
+            <Router>
+                <UserProvider>
+                    <ScrollToTop />
+                    <Routes>
+                        {/* Protected Dashboard Layout */}
+                        <Route element={<ProtectedRoute />}>
+                            <Route element={<AppLayout />}>
+                                <Route index path="/" element={<Home />} />
+                                <Route path="/profile" element={<UserProfiles />} />
+                                <Route path="/users" element={<UserList />} />
+                                <Route path="/players" element={<PlayerList />} />
+                                <Route path="/player-details/:id" element={<PlayerDetails />} />
+                                <Route path="/events" element={<EventList />} />
+                                <Route path="/add-event" element={<AddEvent />} />
+                                <Route path="/edit-event/:id" element={<EditEvent />} />
+                                <Route path="/event-details/:id" element={<EventDetails />} />
+                                <Route path="/news" element={<ContentListPage type="news" />} />
+                                <Route path="/blogs" element={<ContentListPage type="blog" />} />
+                                <Route path="/add-content" element={<AddContentPage type="blog" />} />
+                                <Route path="/sponsors" element={<SponsorManagementPage />} />
+                                <Route path="/gallery" element={<GalleryGrid />} />
+                                <Route path="/add-gallery" element={<AddGalleryPage />} />
+                                <Route path="/products" element={<ProductList />} />
+                                <Route path="/add-product" element={<AddProductPage />} />
+                                <Route path="/edit-product/:id" element={<EditProductPage />} />
+                                <Route path="/orders" element={<OrderList />} />
+                                <Route path="/order-details/:id" element={<OrderDetails />} />
+                                <Route path="/transactions" element={<TransactionList />} />
+                                <Route path="/matches" element={<MatchesPage />} />
+                                <Route path="/categories" element={<CoachingManagementPage />} />
+                                <Route path="/terms" element={<CoachingManagementPage />} />
+                                <Route path="/programs" element={<CoachingManagementPage />} />
+                                <Route path="/coaching-management" element={<CoachingManagementPage />} />
+                                <Route path="/classes" element={<ClassPage />} />
+                                <Route path="/training-classes" element={<TrainingClassesPage />} />
+                                
+                                {/* Training Tracker Unified Page */}
+                                <Route path="/training-tracker" element={<TrainingTrackerPage />} />
+                                <Route path="/attendance" element={<TrainingTrackerPage />} />
+                                <Route path="/performance" element={<TrainingTrackerPage />} />
+                            </Route>
                         </Route>
-                    </Route>
-
-                    {/* Public Routes */}
-                    <Route path="/landing" element={<LandingPage />} />
-                    <Route path="/signin" element={<SignIn />} />
-                    <Route path="/forget-password" element={<ForgetPassword />} />
-                    <Route path="/verify-OTP" element={<OTPVerification />} />
-                    <Route path="/update-password" element={<UpdatePassword />} />
-
-                    {/* Fallback Route */}
-                    <Route path="*" element={<NotFound />} />
-                </Routes>
-            </UserProvider>
-        </Router>
+    
+                        {/* Public Routes */}
+                        <Route path="/landing" element={<LandingPage />} />
+                        <Route path="/signin" element={<SignIn />} />
+                        <Route path="/forget-password" element={<ForgetPassword />} />
+                        <Route path="/verify-OTP" element={<OTPVerification />} />
+                        <Route path="/update-password" element={<UpdatePassword />} />
+    
+                        {/* Fallback Route */}
+                        <Route path="*" element={<NotFound />} />
+                    </Routes>
+                </UserProvider>
+            </Router>
+        </QueryClientProvider>
     );
 }
 

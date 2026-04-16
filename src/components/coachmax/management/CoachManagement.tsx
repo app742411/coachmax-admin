@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
 import Button from "../../ui/button/Button";
 import { Modal } from "../../ui/modal";
@@ -7,12 +8,12 @@ import { toast } from "react-hot-toast";
 import { Edit, Trash, User, Mail, Phone, Lock, ShieldCheck } from "lucide-react";
 
 const CoachManagement: React.FC = () => {
-  const [coaches, setCoaches] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedCoach, setSelectedCoach] = useState<any>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -27,26 +28,51 @@ const CoachManagement: React.FC = () => {
     return [];
   };
 
-  const fetchCoaches = async () => {
-    try {
-      setLoading(true);
-      const res = await getAllCoaches();
-      setCoaches(getDataArray(res));
-    } catch (error) {
-      console.error("Error fetching coaches:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ── Queries ─────────────────────────────────────────────────────
 
-  useEffect(() => {
-    fetchCoaches();
-  }, []);
+  const { data: coachesData, isLoading: loading } = useQuery({
+    queryKey: ["coaches"],
+    queryFn: getAllCoaches,
+  });
+  const coaches = getDataArray(coachesData);
+
+  // ── Mutations ───────────────────────────────────────────────────
+
+  const createMutation = useMutation({
+    mutationFn: createCoach,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coaches"] });
+      toast.success("Coach created");
+      setIsModalOpen(false);
+    },
+    onError: () => toast.error("Failed to create coach"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => updateCoach(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coaches"] });
+      toast.success("Coach updated");
+      setIsModalOpen(false);
+    },
+    onError: () => toast.error("Failed to update coach"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCoach,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coaches"] });
+      toast.success("Coach deleted");
+    },
+    onError: () => toast.error("Failed to delete coach"),
+  });
+
+  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
     setFormData({ fullName: "", email: "", phone: "", password: "" });
     setIsEditing(false);
-    setSelectedCoach(null);
+    setSelectedCoachId(null);
     setIsModalOpen(true);
   };
 
@@ -58,43 +84,29 @@ const CoachManagement: React.FC = () => {
       password: "", 
     });
     setIsEditing(true);
-    setSelectedCoach(coach);
+    setSelectedCoachId(coach._id);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this coach?")) return;
-    try {
-      await deleteCoach(id);
-      toast.success("Coach deleted");
-      fetchCoaches();
-    } catch (error) {
-      toast.error("Failed to delete");
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this coach?")) {
+      deleteMutation.mutate(id);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setSubmitting(true);
-
-      const submissionData = { ...formData };
-      if (isEditing && !submissionData.password) {
+    const submissionData = { ...formData };
+    
+    if (isEditing && selectedCoachId) {
+      if (!submissionData.password) {
         const { password, ...rest } = submissionData;
-        await updateCoach(selectedCoach._id, rest);
-      } else if (isEditing && selectedCoach) {
-        await updateCoach(selectedCoach._id, submissionData);
+        updateMutation.mutate({ id: selectedCoachId, data: rest });
       } else {
-        await createCoach(submissionData);
+        updateMutation.mutate({ id: selectedCoachId, data: submissionData });
       }
-
-      toast.success(isEditing ? "Coach updated" : "Coach created");
-      setIsModalOpen(false);
-      fetchCoaches();
-    } catch (error) {
-      toast.error("Failed to save");
-    } finally {
-      setSubmitting(false);
+    } else {
+      createMutation.mutate(submissionData);
     }
   };
 
@@ -128,7 +140,7 @@ const CoachManagement: React.FC = () => {
             ) : coaches.length === 0 ? (
               <TableRow><TableCell colSpan={3} className="text-center py-20 text-gray-500 font-medium italic">No coaching staff records found.</TableCell></TableRow>
             ) : (
-              coaches.map((coach) => (
+              coaches.map((coach: any) => (
                 <TableRow key={coach._id} className="hover:bg-gray-50 transition-colors">
                   <TableCell className="py-4">
                     <div className="flex items-center gap-3">
@@ -220,7 +232,9 @@ const CoachManagement: React.FC = () => {
           </div>
           <div className="flex justify-end gap-3 mt-10 pt-6 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
-            <Button type="submit" disabled={submitting} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">{submitting ? "Committing..." : "Save Registry"}</Button>
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">
+                {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Save Registry"}
+            </Button>
           </div>
         </form>
       </Modal>

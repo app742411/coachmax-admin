@@ -287,16 +287,17 @@ const PlayerListComp: React.FC = () => {
                 <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Player Detail</TableCell>
                 <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Shirt</TableCell>
                 <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Club & Guardian</TableCell>
-                <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Program & DOB</TableCell>
+                <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Classification</TableCell>
                 <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Skills & Foot</TableCell>
                 <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Status</TableCell>
+                <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Admin Note</TableCell>
                 <TableCell isHeader className="px-5 py-4 font-bold text-xs text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Action</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-20 text-center">
+                  <TableCell colSpan={9} className="py-20 text-center">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent align-[-0.125em]" />
                   </TableCell>
                 </TableRow>
@@ -318,7 +319,7 @@ const PlayerListComp: React.FC = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="px-5 py-16 text-center text-gray-400 font-bold text-[10px]">
+                  <TableCell colSpan={9} className="px-5 py-16 text-center text-gray-400 font-bold text-[10px]">
                     No players found.
                   </TableCell>
                 </TableRow>

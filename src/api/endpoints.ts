@@ -50,6 +50,10 @@ const ENDPOINTS = {
   DELETE_CLASS: "/api/admin/deleteClass",
   ASSIGN_CLASS: "/api/admin/assignClass",
   GET_CLASS_PLAYERS: "/api/admin/getClassPlayers",
+  GET_CLASS_FILTERS_WITH_TIME_SLOTS: "/api/admin/getClassFiltersWithTimeSlots",
+  GET_CLASS_FULL_TABLE: "/api/admin/getClassFullTable",
+  MARK_ATTENDANCE: "/api/admin/markAttendance",
+  MARK_SINGLE_ATTENDANCE: "/api/admin/markSingleAttendance",
 
   // Programs & Coaches (Needed for Class creation)
   CREATE_PROGRAM: "/api/admin/createProgram",
@@ -62,6 +66,9 @@ const ENDPOINTS = {
   UPDATE_COACH: "/api/admin/updateCoach",
   DELETE_COACH: "/api/admin/deleteCoach",
   GET_COACH_BY_ID: "/api/admin/getCoachById",
+  UPDATE_ADMIN_NOTE: "/api/admin/updateAdminNote",
+  EXPORT_CLASS_CSV: "/api/admin/exportClassCSV",
+  GET_ALL_CLASSES_FOR_ASSIGN: "/api/admin/getAllClassesForAssign",
 };
 
 export default ENDPOINTS;

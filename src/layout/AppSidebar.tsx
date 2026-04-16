@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, ReactNode } from "react";
 import { Link, useLocation } from "react-router";
+import { useUser } from "../context/UserContext";
 
 // Assume these icons are imported from an icon library
 import {
@@ -68,6 +69,11 @@ const navItems: NavItem[] = [
     name: "Classes",
     icon: <Calendar size={20} />,
     path: "/classes",
+  },
+  {
+    name: "Training Classes",
+    icon: <Calendar size={20} />,
+    path: "/training-classes",
   },
   {
     name: "Training Tracker",
@@ -162,7 +168,21 @@ interface OpenSubmenu {
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { user } = useUser();
   const location = useLocation();
+
+  const userRole = user?.role || "GUEST";
+
+  const getFilteredItems = (items: NavItem[]) => {
+    if (userRole === "SUPER_ADMIN") return items;
+    if (userRole === "COACH") {
+      return items.filter(item => ["Dashboard", "Training Classes"].includes(item.name));
+    }
+    return items; // Default for other roles
+  };
+
+  const filteredNavItems = getFilteredItems(navItems);
+  const filteredOthersItems = userRole === "COACH" ? [] : othersItems;
 
   const [openSubmenu, setOpenSubmenu] = useState<OpenSubmenu | null>(null);
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
@@ -189,8 +209,8 @@ const AppSidebar: React.FC = () => {
       });
     };
 
-    checkItems(navItems, "main");
-    checkItems(othersItems, "others");
+    checkItems(filteredNavItems, "main");
+    checkItems(filteredOthersItems, "others");
 
     if (!submenuMatched) {
       setOpenSubmenu(null);
@@ -391,17 +411,19 @@ const AppSidebar: React.FC = () => {
               >
                 {isExpanded || isHovered || isMobileOpen ? "Menu" : <HorizontaLDots className="size-6" />}
               </h2>
-              {renderMenuItems(navItems, "main")}
+              {renderMenuItems(filteredNavItems, "main")}
             </div>
-            <div className="">
-              <h2
-                className={`mb-4 text-xs flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-                  }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? "Others" : <HorizontaLDots />}
-              </h2>
-              {renderMenuItems(othersItems, "others")}
-            </div>
+            {filteredOthersItems.length > 0 && (
+              <div className="">
+                <h2
+                  className={`mb-4 text-xs flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+                    }`}
+                >
+                  {isExpanded || isHovered || isMobileOpen ? "Others" : <HorizontaLDots />}
+                </h2>
+                {renderMenuItems(filteredOthersItems, "others")}
+              </div>
+            )}
           </div>
         </nav>
       </div>

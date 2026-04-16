@@ -49,8 +49,41 @@ export const deleteTerm = async (id: string): Promise<any> => {
 };
 
 // CLASSES
-export const getAllClasses = async (): Promise<any> => {
-  const res = await apiClient.get(ENDPOINTS.GET_ALL_CLASSES);
+export interface GetAllClassesParams {
+  category?: string;
+  program?: string;
+  day?: string;
+  time?: string;
+}
+
+export const getAllClasses = async (params?: GetAllClassesParams): Promise<any> => {
+  const res = await apiClient.get(ENDPOINTS.GET_ALL_CLASSES, { params });
+  return res.data;
+};
+
+export interface GetClassFiltersParams {
+  categoryId: string;
+  programId: string;
+  day: string;
+}
+
+export const getClassFiltersWithTimeSlots = async (params: GetClassFiltersParams): Promise<any> => {
+  const res = await apiClient.get(ENDPOINTS.GET_CLASS_FILTERS_WITH_TIME_SLOTS, { params });
+  return res.data;
+};
+
+export const getClassFullTable = async (classId: string): Promise<any> => {
+  const res = await apiClient.get(ENDPOINTS.GET_CLASS_FULL_TABLE, { params: { classId } });
+  return res.data;
+};
+
+export const markAttendance = async (classId: string, data: any): Promise<any> => {
+  const res = await apiClient.post(`${ENDPOINTS.MARK_ATTENDANCE}/${classId}`, data);
+  return res.data;
+};
+
+export const markSingleAttendance = async (classId: string, data: any): Promise<any> => {
+  const res = await apiClient.post(`${ENDPOINTS.MARK_SINGLE_ATTENDANCE}/${classId}`, data);
   return res.data;
 };
 
@@ -135,3 +168,21 @@ export const getCoachById = async (id: string): Promise<any> => {
   return res.data;
 };
 
+// ADMIN NOTES
+export const updateAdminNote = async (playerId: string, adminNote: string): Promise<any> => {
+  const res = await apiClient.put(`${ENDPOINTS.UPDATE_ADMIN_NOTE}/${playerId}`, { adminNote });
+  return res.data;
+};
+
+export const exportClassCSV = async (classId: string): Promise<any> => {
+  const res = await apiClient.get(ENDPOINTS.EXPORT_CLASS_CSV, { 
+    params: { classId },
+    responseType: 'blob' 
+  });
+  return res.data;
+};
+
+export const getAllClassesForAssign = async (params?: GetAllClassesParams): Promise<any> => {
+  const res = await apiClient.get(ENDPOINTS.GET_ALL_CLASSES_FOR_ASSIGN, { params });
+  return res.data;
+};

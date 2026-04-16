@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
-import { getAllClasses, assignClassToPlayer } from "../../api/adminApi";
+import { getAllClassesForAssign, assignClassToPlayer } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { Search } from "lucide-react";
 
@@ -13,46 +14,48 @@ interface AssignClassModalProps {
 }
 
 const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, player, onSuccess }) => {
-  const [classes, setClasses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
 
-  const fetchClasses = async () => {
-    try {
-      setLoading(true);
-      const res = await getAllClasses();
-      const dataArray = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
-      setClasses(dataArray);
-    } catch (error) {
-      console.error("Error fetching classes:", error);
-    } finally {
-      setLoading(false);
-    }
+  const getDataArray = (res: any) => {
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.data)) return res.data;
+    return [];
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchClasses();
-    }
-  }, [isOpen]);
+  // ── Queries ─────────────────────────────────────────────────────
 
-  const handleAssign = async (classId: string) => {
-    try {
-      setSubmitting(true);
-      await assignClassToPlayer(player._id, classId);
-      toast.success(`Class assigned to ${player.fullName}`);
+  const { data: classesData, isLoading: loading } = useQuery({
+    queryKey: ["classes", player?.category?._id || player?.category, player?.program?._id || player?.program],
+    queryFn: () => getAllClassesForAssign({
+      category: player?.category?._id || player?.category,
+      program: player?.program?._id || player?.program
+    }),
+    enabled: isOpen && !!player,
+    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
+  });
+  const classes = getDataArray(classesData);
+
+  // ── Mutations ───────────────────────────────────────────────────
+
+  const assignMutation = useMutation({
+    mutationFn: (classId: string) => assignClassToPlayer(player?._id, classId),
+    onSuccess: () => {
+      // Invalidate both classes (roster might have changed) and specific player records if we had more fine-grained keys
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      // If we had a query for "player_details" or "player_classes", we would invalidate it here
+      toast.success(`Class assigned to ${player?.fullName}`);
       if (onSuccess) onSuccess();
       onClose();
-    } catch (error) {
-      console.error("Error assigning class:", error);
-      toast.error("Failed to assign class");
-    } finally {
-      setSubmitting(false);
-    }
+    },
+    onError: () => toast.error("Failed to assign class"),
+  });
+
+  const handleAssign = (classId: string) => {
+    assignMutation.mutate(classId);
   };
 
-  const filteredClasses = classes.filter(c =>
+  const filteredClasses = classes.filter((c: any) =>
     c.name?.toLowerCase().includes(search.toLowerCase()) ||
     c.term?.name?.toLowerCase().includes(search.toLowerCase())
   );
@@ -63,6 +66,9 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, pl
         <div>
           <h4 className="text-xl font-bold text-gray-900">Assign Class</h4>
           <p className="text-xs text-gray-500 mt-1 font-medium">Player: <span className="text-brand-500">{player?.fullName}</span></p>
+          <p className="text-[12px] text-red-500 mt-2 font-medium italic leading-relaxed">
+            Note: Class assignment is allowed only if the student and class have matching category and program.
+          </p>
         </div>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
       </div>
@@ -85,7 +91,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, pl
           ) : filteredClasses.length === 0 ? (
             <div className="py-10 text-center text-gray-400 text-sm font-medium">No matching classes found.</div>
           ) : (
-            filteredClasses.map((cls) => (
+            filteredClasses.map((cls: any) => (
               <div key={cls._id} className="p-4 bg-white border border-gray-100 rounded-2xl flex items-center justify-between hover:border-brand-500/30 transition-all shadow-sm group">
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-bold text-gray-800">{cls.name}</span>
@@ -97,9 +103,9 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, pl
                 <Button
                   size="sm"
                   onClick={() => handleAssign(cls._id)}
-                  disabled={submitting}
+                  disabled={assignMutation.isPending}
                 >
-                  {submitting ? "..." : "ASSIGN"}
+                  {assignMutation.isPending ? "..." : "ASSIGN"}
                 </Button>
               </div>
             ))

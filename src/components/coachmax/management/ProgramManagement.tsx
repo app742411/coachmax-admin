@@ -1,19 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
 import Button from "../../ui/button/Button";
 import { Modal } from "../../ui/modal";
-import { getAllPrograms, createProgram, updateProgram, deleteProgram, getAllCategories, getProgramsByCategory } from "../../../api/adminApi";
+import { createProgram, updateProgram, deleteProgram, getAllCategories, getProgramsByCategory } from "../../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { Edit, Trash, Filter, Layers } from "lucide-react";
 
 const ProgramManagement: React.FC = () => {
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
   
   const [formData, setFormData] = useState({
@@ -27,53 +25,66 @@ const ProgramManagement: React.FC = () => {
     return [];
   };
 
-  const fetchInitialData = async () => {
-    try {
-      setLoading(true);
-      const catsRes = await getAllCategories().catch(() => ({ data: [] }));
-      const cats = getDataArray(catsRes);
-      setCategories(cats);
+  // ── Queries ─────────────────────────────────────────────────────
 
-      if (cats.length > 0) {
-        const firstCatId = cats[0]._id;
-        setSelectedCategoryFilter(firstCatId);
-        const progsRes = await getProgramsByCategory(firstCatId);
-        setPrograms(getDataArray(progsRes));
-      } else {
-        const progsRes = await getAllPrograms().catch(() => ({ data: [] }));
-        setPrograms(getDataArray(progsRes));
-      }
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchFilteredPrograms = async (categoryId: string) => {
-    try {
-      setLoading(true);
-      const res = await getProgramsByCategory(categoryId);
-      setPrograms(getDataArray(res));
-    } catch (error) {
-      console.error("Error fetching filtered programs:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getAllCategories,
+  });
+  const categories = getDataArray(categoriesData);
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    if (categories.length > 0 && !selectedCategoryFilter) {
+      setSelectedCategoryFilter(categories[0]._id);
+    }
+  }, [categories, selectedCategoryFilter]);
+
+  const { data: programsData, isLoading: loading } = useQuery({
+    queryKey: ["programs", "byCategory", selectedCategoryFilter],
+    queryFn: () => getProgramsByCategory(selectedCategoryFilter),
+    enabled: !!selectedCategoryFilter,
+  });
+  const programs = getDataArray(programsData);
+
+  // ── Mutations ───────────────────────────────────────────────────
+
+  const createMutation = useMutation({
+    mutationFn: createProgram,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["programs", "byCategory", selectedCategoryFilter] });
+      toast.success("Program created");
+      setIsModalOpen(false);
+    },
+    onError: () => toast.error("Failed to create program"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => updateProgram(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["programs", "byCategory", selectedCategoryFilter] });
+      toast.success("Program updated");
+      setIsModalOpen(false);
+    },
+    onError: () => toast.error("Failed to update program"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteProgram,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["programs", "byCategory", selectedCategoryFilter] });
+      toast.success("Program deleted");
+    },
+    onError: () => toast.error("Failed to delete program"),
+  });
+
+  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    setSelectedCategoryFilter(val);
-    fetchFilteredPrograms(val);
+    setSelectedCategoryFilter(e.target.value);
   };
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", category: selectedCategoryFilter }); // Default to current filter
+    setFormData({ name: "", category: selectedCategoryFilter });
     setIsEditing(false);
     setSelectedId(null);
     setIsModalOpen(true);
@@ -89,34 +100,18 @@ const ProgramManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure?")) return;
-    try {
-      await deleteProgram(id);
-      toast.success("Program deleted");
-      fetchFilteredPrograms(selectedCategoryFilter);
-    } catch (error) {
-      toast.error("Failed to delete");
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure?")) {
+      deleteMutation.mutate(id);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setSubmitting(true);
-      if (isEditing && selectedId) {
-        await updateProgram(selectedId, formData);
-        toast.success("Program updated");
-      } else {
-        await createProgram(formData);
-        toast.success("Program created");
-      }
-      setIsModalOpen(false);
-      fetchFilteredPrograms(selectedCategoryFilter);
-    } catch (error) {
-      toast.error("Failed to save");
-    } finally {
-      setSubmitting(false);
+    if (isEditing && selectedId) {
+      updateMutation.mutate({ id: selectedId, data: formData });
+    } else {
+      createMutation.mutate(formData);
     }
   };
 
@@ -135,7 +130,7 @@ const ProgramManagement: React.FC = () => {
               onChange={handleFilterChange}
               className="pl-9 pr-8 py-2 rounded-lg border border-gray-100 bg-gray-50 text-xs font-bold text-gray-600 focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
             >
-              {categories.map((c) => (
+              {categories.map((c: any) => (
                 <option key={c._id} value={c._id}>{c.name}</option>
               ))}
             </select>
@@ -164,7 +159,7 @@ const ProgramManagement: React.FC = () => {
             ) : programs.length === 0 ? (
               <TableRow><TableCell colSpan={3} className="text-center py-20 text-gray-500 font-medium italic">No programs identified in this category.</TableCell></TableRow>
             ) : (
-              programs.map((prog) => (
+              programs.map((prog: any) => (
                 <TableRow key={prog._id} className="hover:bg-gray-50 transition-colors">
                   <TableCell className="py-4 pl-6 font-bold text-sm text-gray-800 dark:text-white/90">
                     <div className="flex items-center gap-3">
@@ -176,7 +171,7 @@ const ProgramManagement: React.FC = () => {
                   </TableCell>
                   <TableCell className="py-4">
                     <span className="px-2 py-1 bg-brand-50 text-brand-600 text-[10px] font-extrabold uppercase rounded shadow-sm border border-brand-100">
-                      {prog.category?.name || categories.find(c => c._id === (prog.category?._id || prog.category))?.name || "Uncategorized"}
+                      {prog.category?.name || categories.find((c: any) => c._id === (prog.category?._id || prog.category))?.name || "Uncategorized"}
                     </span>
                   </TableCell>
                   <TableCell className="py-4 pr-6">
@@ -217,7 +212,7 @@ const ProgramManagement: React.FC = () => {
                 required
               >
                 <option value="">Select Target Category</option>
-                {categories.map((c) => (
+                {categories.map((c: any) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>
@@ -225,7 +220,9 @@ const ProgramManagement: React.FC = () => {
           </div>
           <div className="flex justify-end gap-3 mt-10 pt-6 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
-            <Button type="submit" disabled={submitting} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">{submitting ? "Committing..." : "Deploy Program"}</Button>
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">
+                {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Deploy Program"}
+            </Button>
           </div>
         </form>
       </Modal>
