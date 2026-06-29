@@ -3,6 +3,9 @@ import {
   SignInCredentials,
   SignUpCredentials,
   ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  ResendOtpRequest,
+  VerifyOtpRequest,
   ResetPasswordRequest,
   AuthResponse,
   MessageResponse,
@@ -11,7 +14,7 @@ import {
 } from "../types/auth";
 
 export const login = async (credentials: SignInCredentials): Promise<AuthResponse> => {
-  const response = await apiClient.post<AuthResponse>("/auth/login", credentials);
+  const response = await apiClient.post<AuthResponse>("/api/admin/login", credentials);
   return response.data;
 };
 
@@ -21,16 +24,26 @@ export const registerUser = async (credentials: SignUpCredentials): Promise<Auth
 };
 
 export const logout = async (): Promise<void> => {
-  await apiClient.post("/auth/logout");
+  await apiClient.post("/api/admin/logout");
 };
 
-export const forgotPassword = async (data: ForgotPasswordRequest): Promise<MessageResponse> => {
-  const response = await apiClient.post<MessageResponse>("/auth/forgot-password", data);
+export const forgotPassword = async (data: ForgotPasswordRequest): Promise<ForgotPasswordResponse> => {
+  const response = await apiClient.post<ForgotPasswordResponse>("/api/auth/forgotPassword", data);
+  return response.data;
+};
+
+export const resendOtp = async (data: ResendOtpRequest): Promise<MessageResponse> => {
+  const response = await apiClient.post<MessageResponse>("/api/auth/resendOtp", data);
+  return response.data;
+};
+
+export const verifyOtp = async (data: VerifyOtpRequest): Promise<MessageResponse> => {
+  const response = await apiClient.post<MessageResponse>("/api/auth/verifyOtp", data);
   return response.data;
 };
 
 export const resetPassword = async (data: ResetPasswordRequest): Promise<MessageResponse> => {
-  const response = await apiClient.post<MessageResponse>("/auth/reset-password", data);
+  const response = await apiClient.post<MessageResponse>("/api/auth/resetPassword", data);
   return response.data;
 };
 

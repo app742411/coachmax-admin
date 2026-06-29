@@ -13,6 +13,13 @@ export const getPrograms = async (page = 1, limit = 10): Promise<ProgramsRespons
   return response.data;
 };
 
+export const getProgramsByCategory = async (categoryId: string): Promise<ProgramsResponse> => {
+  const response = await apiClient.get<ProgramsResponse>("/programs", {
+    params: { categoryId },
+  });
+  return response.data;
+};
+
 export const createProgram = async (data: CreateProgramRequest): Promise<ProgramResponse> => {
   const response = await apiClient.post<ProgramResponse>("/programs", data);
   return response.data;
