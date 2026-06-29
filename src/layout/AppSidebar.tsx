@@ -25,6 +25,17 @@ const AppSidebar: React.FC = () => {
     index: number;
   } | null>(null);
 
+  const userStr = localStorage.getItem("user");
+  let userRole = "";
+  try {
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      userRole = user.role;
+    }
+  } catch (e) {
+    console.error("Error parsing user data", e);
+  }
+
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -52,7 +63,7 @@ const AppSidebar: React.FC = () => {
     </svg>
   );
 
-const ShieldIcon = () => (
+  const ShieldIcon = () => (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
@@ -70,33 +81,11 @@ const ShieldIcon = () => (
     </svg>
   );
 
-  const StoreIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-    </svg>
-  );
 
-  const WalletIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-  );
 
   const ChatIcon = () => (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-    </svg>
-  );
-
-  const UsersIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  );
-
-  const KeyIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m-2-2a2 2 0 00-2 2m2-2V4m0 2h3m-3 0h-3M9 19a2 2 0 012-2h2a2 2 0 012 2v2H9v-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10M9 19h6" />
     </svg>
   );
 
@@ -113,7 +102,7 @@ const ShieldIcon = () => (
     </svg>
   );
 
-  const menuSections: MenuSection[] = [
+  const coachMenuSections: MenuSection[] = [
     {
       title: "Main",
       key: "main",
@@ -124,100 +113,98 @@ const ShieldIcon = () => (
           path: "/",
         },
         {
-          name: "Players",
+          name: "My Players",
           icon: <UserIcon />,
-          path: "/players",
+          path: "/my-players",
         },
         {
           name: "Programs",
           icon: <CalendarIcon />,
-          subItems: [
-            { name: "Programs", path: "/programs" },
-            { name: "Academy", path: "/academy" },
-            { name: "School", path: "/schools" },
-            { name: "Holiday Camps", path: "/holiday-camps" },
-            { name: "1on1 Sessions", path: "/1on1-sessions" },
-          ],
+          path: "/programs",
         },
       ],
     },
     {
-      title: "Teams & Competitions",
-      key: "teams_competitions",
+      title: "Team Management",
+      key: "team_management",
       items: [
         {
-          name: "Teams",
+          name: "My Teams",
           icon: <ShieldIcon />,
-          path: "/basic-tables",
+          path: "/my-teams",
+        },
+        {
+          name: "Attendance",
+          icon: <AttendanceIcon />,
+          path: "/attendance",
+        },
+        {
+          name: "Performance",
+          icon: <GridIcon />,
+          path: "/performance",
         },
         {
           name: "Competitions",
           icon: <CompetitionsIcon />,
-          path: "/bar-chart",
-        },
-        {
-          name: "Attendance & Performance",
-          icon: <AttendanceIcon />,
-          subItems: [
-            { name: "Attendance", path: "/attendance" },
-            { name: "Performance", path: "/performance" },
-          ],
+          path: "/competitions",
         },
       ],
     },
     {
-      title: "Events & Operations",
-      key: "events_operations",
+      title: "Training",
+      key: "training",
       items: [
         {
-          name: "Events",
+          name: "Sessions",
           icon: <CalendarIcon />,
-          path: "/line-chart",
+          path: "/sessions",
         },
         {
-          name: "Store",
-          icon: <StoreIcon />,
-          subItems: [
-            { name: "Products", path: "/products" },
-            { name: "Orders", path: "/orders" },
-          ],
+          name: "Schedule",
+          icon: <CalendarIcon />,
+          path: "/schedule",
         },
         {
-          name: "Finance",
-          icon: <WalletIcon />,
-          subItems: [
-            { name: "Overview", path: "/finance-overview" },
-            { name: "Invoices", path: "/invoices" },
-          ],
-        },
-        {
-          name: "Communication",
-          icon: <ChatIcon />,
-          subItems: [
-            { name: "Messages", path: "/messages" },
-            { name: "Announcements", path: "/announcements" },
-          ],
+          name: "Exercises",
+          icon: <GridIcon />,
+          path: "/exercises",
         },
       ],
     },
     {
-      title: "Management",
-      key: "management",
+      title: "Communication",
+      key: "communication",
       items: [
         {
-          name: "Coaches",
+          name: "Messages",
+          icon: <ChatIcon />,
+          path: "/messages",
+        },
+        {
+          name: "Announcements",
+          icon: <ChatIcon />,
+          path: "/announcements",
+        },
+      ],
+    },
+    {
+      title: "Reports",
+      key: "reports",
+      items: [
+        {
+          name: "Player Reports",
           icon: <UserIcon />,
-          path: "/coaches",
+          path: "/player-reports",
         },
         {
-          name: "Coach Assignments",
-          icon: <UsersIcon />,
-          path: "/assignments",
+          name: "Attendance Reports",
+          icon: <AttendanceIcon />,
+          path: "/attendance-reports",
         },
         {
-          name: "Permissions",
-          icon: <KeyIcon />,
-          path: "/permissions",
+          name: "Performance Reports",
+          icon: <GridIcon />,
+          path: "/performance-reports",
         },
       ],
     },
@@ -226,13 +213,101 @@ const ShieldIcon = () => (
       key: "settings",
       items: [
         {
-          name: "Settings",
+          name: "Profile Settings",
           icon: <SettingsIcon />,
-          path: "/form-elements",
+          path: "/profile-settings",
+        },
+        {
+          name: "Availability",
+          icon: <CalendarIcon />,
+          path: "/availability",
+        },
+        {
+          name: "Help & Support",
+          icon: <HelpIcon />,
+          path: "/help-support",
         },
       ],
     },
   ];
+
+  const adminMenuSections: MenuSection[] = [
+    {
+      title: "Main",
+      key: "main",
+      items: [
+        { name: "Dashboard", icon: <GridIcon />, path: "/" },
+        { name: "Players", icon: <UserIcon />, path: "/players" },
+        { 
+          name: "Programs", 
+          icon: <CalendarIcon />, 
+          subItems: [
+            { name: "Academy", path: "/academy" },
+            { name: "Schools", path: "/schools" },
+            { name: "Holiday Camps", path: "/holiday-camps" },
+            { name: "1on1 Sessions", path: "/1on1-sessions" },
+          ]
+        },
+      ],
+    },
+    {
+      title: "Teams & Competitions",
+      key: "teams_competitions",
+      items: [
+        { 
+          name: "Attendance & Performance", 
+          icon: <AttendanceIcon />, 
+          subItems: [
+            { name: "Overview", path: "/attendance-performance" }
+          ]
+        },
+        { 
+          name: "Events", 
+          icon: <CalendarIcon />, 
+          subItems: [
+            { name: "All Events", path: "/events" }
+          ]
+        },
+        { 
+          name: "Store", 
+          icon: <GridIcon />, 
+          subItems: [
+            { name: "Products", path: "/products" }
+          ]
+        },
+        { 
+          name: "Finance", 
+          icon: <GridIcon />, 
+          subItems: [
+            { name: "Overview", path: "/finance" }
+          ]
+        },
+        { 
+          name: "Communication", 
+          icon: <ChatIcon />, 
+          subItems: [
+            { name: "Messages", path: "/communication" }
+          ]
+        },
+      ],
+    },
+    {
+      title: "Management",
+      key: "management",
+      items: [
+        { name: "Coaching Management", icon: <UserIcon />, path: "/coaching-management" },
+      ],
+    },
+    {
+      title: "Settings",
+      key: "settings",
+      items: [
+        { name: "Settings", icon: <SettingsIcon />, path: "/profile-settings" },
+      ],
+    },
+  ];
+
+  const menuSections = ["SUPER_ADMIN", "ADMIN"].includes(userRole) ? adminMenuSections : coachMenuSections;
 
   useEffect(() => {
     let submenuMatched = false;
@@ -289,22 +364,19 @@ const ShieldIcon = () => (
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(sectionKey, index)}
-              className={`menu-item group ${
-                openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
-                  ? "menu-item-active"
-                  : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered
+              className={`menu-item group ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
+                ? "menu-item-active"
+                : "menu-item-inactive"
+                } cursor-pointer ${!isExpanded && !isHovered
                   ? "lg:justify-center"
                   : "lg:justify-start"
-              }`}
+                }`}
             >
               <span
-                className={`menu-item-icon-size ${
-                  openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                }`}
+                className={`menu-item-icon-size ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
+                  ? "menu-item-icon-active"
+                  : "menu-item-icon-inactive"
+                  }`}
               >
                 {nav.icon}
               </span>
@@ -313,12 +385,11 @@ const ShieldIcon = () => (
               )}
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
-                  className={`ml-auto w-4 h-4 transition-transform duration-200 ${
-                    openSubmenu?.sectionKey === sectionKey &&
+                  className={`ml-auto w-4 h-4 transition-transform duration-200 ${openSubmenu?.sectionKey === sectionKey &&
                     openSubmenu?.index === index
-                      ? "rotate-180 text-white"
-                      : "text-slate-400"
-                  }`}
+                    ? "rotate-180 text-white"
+                    : "text-slate-400"
+                    }`}
                 />
               )}
             </button>
@@ -326,16 +397,14 @@ const ShieldIcon = () => (
             nav.path && (
               <Link
                 to={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                }`}
+                className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  }`}
               >
                 <span
-                  className={`menu-item-icon-size ${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
-                  }`}
+                  className={`menu-item-icon-size ${isActive(nav.path)
+                    ? "menu-item-icon-active"
+                    : "menu-item-icon-inactive"
+                    }`}
                 >
                   {nav.icon}
                 </span>
@@ -363,11 +432,10 @@ const ShieldIcon = () => (
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
+                      className={`menu-dropdown-item ${isActive(subItem.path)
+                        ? "menu-dropdown-item-active"
+                        : "menu-dropdown-item-inactive"
+                        }`}
                     >
                       {subItem.name}
                     </Link>
@@ -384,10 +452,9 @@ const ShieldIcon = () => (
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-[#031549] text-gray-300 h-screen transition-all duration-300 ease-in-out z-50 border-r border-[#082269] 
-        ${
-          isExpanded || isMobileOpen
-            ? "w-[290px]"
-            : isHovered
+        ${isExpanded || isMobileOpen
+          ? "w-[290px]"
+          : isHovered
             ? "w-[290px]"
             : "w-[90px]"
         }
@@ -411,11 +478,10 @@ const ShieldIcon = () => (
             {menuSections.map((section) => (
               <div key={section.key}>
                 <h2
-                  className={`mb-3 text-[10px] tracking-wider uppercase font-semibold text-slate-400/70 flex leading-[20px] ${
-                    !isExpanded && !isHovered
-                      ? "lg:justify-center"
-                      : "justify-start"
-                  }`}
+                  className={`mb-3 text-[10px] tracking-wider uppercase font-semibold text-slate-400/70 flex leading-[20px] ${!isExpanded && !isHovered
+                    ? "lg:justify-center"
+                    : "justify-start"
+                    }`}
                 >
                   {isExpanded || isHovered || isMobileOpen ? (
                     section.title
@@ -428,7 +494,7 @@ const ShieldIcon = () => (
             ))}
           </div>
         </nav>
-        
+
         {/* Help & Support fixed at the bottom when sidebar is expanded */}
         {(isExpanded || isHovered || isMobileOpen) && (
           <div className="mt-auto pt-6 border-t border-[#082269]">

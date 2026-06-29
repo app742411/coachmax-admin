@@ -14,10 +14,13 @@ export interface User {
 
 export interface AuthResponse {
   success: boolean;
-  message: string;
-  data: {
+  message?: string;
+  token?: string;
+  admin?: User;
+  user?: User;
+  data?: {
     user: User;
-    accessToken: string;
+    token: string;
     refreshToken: string;
   };
 }
@@ -36,11 +39,31 @@ export interface SignUpCredentials {
 
 export interface ForgotPasswordRequest {
   email: string;
+  role: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  userId?: string;
+  parent_id?: string;
+}
+
+export interface ResendOtpRequest {
+  email: string;
+  role: string;
+}
+
+export interface VerifyOtpRequest {
+  userId: string;
+  role: string;
+  otp: string;
 }
 
 export interface ResetPasswordRequest {
-  token: string;
-  password?: string;
+  userId: string;
+  role: string;
+  newPassword?: string;
 }
 
 export interface MessageResponse {

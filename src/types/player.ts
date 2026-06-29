@@ -1,16 +1,20 @@
-export interface PlayerParentUser {
-  _id: string;
-  name: string;
-  email: string;
-  profileImage: string;
-}
-
 export interface PlayerParent {
   _id: string;
-  userId: PlayerParentUser;
+  fullName: string;
+  email: string;
   phone: string;
   address: string;
-  children: string[];
+  city: string;
+  state: string;
+  postcode: string;
+  country: string;
+  emergencyContact: string;
+  relationship: string;
+}
+
+export interface PlayerCategory {
+  _id: string;
+  name: string;
 }
 
 export interface PlayerProgram {
@@ -18,33 +22,42 @@ export interface PlayerProgram {
   name: string;
 }
 
-export interface PlayerStatistics {
-  goals: number;
-  assists: number;
-  yellowCards: number;
-  redCards: number;
-  matchesPlayed: number;
-}
-
 export interface Player {
   _id: string;
-  parentId: PlayerParent;
-  name: string;
-  skillLevel: string;
-  group: string;
-  currentClub: string;
-  additionalComments: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
   dob: string;
-  medicalConditions: string;
-  jerseyNumber: number;
+  gender: string;
+  profile: string;
+  profileImage: string;
+  parentId: PlayerParent | null;
   preferredFoot: string;
-  height: number;
-  weight: number;
-  programs: PlayerProgram[];
-  statistics: PlayerStatistics;
-  attendancePercentage: number;
-  isDeleted: boolean;
-  deletedAt: string | null;
+  weakFootRating: number;
+  school: string;
+  status: string;
+  category?: PlayerCategory;
+  program?: PlayerProgram;
+  term?: string;
+  jerseyNumber: number;
+  goals: number;
+  assists: number;
+  appearances: number;
+  cleanSheets: number;
+  yellowCards: number;
+  redCards: number;
+  minutesPlayed: number;
+  rejectReason: string | null;
+  approvedBy: string | null;
+  rejectedBy: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  isBlocked: boolean;
+  adminNote: string;
+  assignedClasses: any[];
+  joinedDate: string;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -52,12 +65,9 @@ export interface Player {
 
 export interface PlayersResponse {
   success: boolean;
-  message: string;
-  data: Player[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  users: Player[];
 }

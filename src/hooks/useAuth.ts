@@ -4,6 +4,8 @@ import {
   registerUser,
   logout,
   forgotPassword,
+  resendOtp,
+  verifyOtp,
   resetPassword,
   getProfile,
   updateProfile,
@@ -12,6 +14,9 @@ import {
   SignInCredentials,
   SignUpCredentials,
   ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  ResendOtpRequest,
+  VerifyOtpRequest,
   ResetPasswordRequest,
   AuthResponse,
   MessageResponse,
@@ -25,8 +30,12 @@ export const useLogin = () => {
   return useMutation<AuthResponse, Error, SignInCredentials>({
     mutationFn: login,
     onSuccess: (response) => {
-      localStorage.setItem("token", response.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      const token = response.token || response.data?.token || "";
+      const user = response.admin || response.user || response.data?.user;
+      
+      if (token) localStorage.setItem("token", token);
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+      
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
@@ -39,8 +48,12 @@ export const useRegisterUser = () => {
   return useMutation<AuthResponse, Error, SignUpCredentials>({
     mutationFn: registerUser,
     onSuccess: (response) => {
-      localStorage.setItem("token", response.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      const token = response.token || response.data?.token || "";
+      const user = response.admin || response.user || response.data?.user;
+      
+      if (token) localStorage.setItem("token", token);
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+      
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
@@ -61,8 +74,20 @@ export const useLogout = () => {
 };
 
 export const useForgotPassword = () => {
-  return useMutation<MessageResponse, Error, ForgotPasswordRequest>({
+  return useMutation<ForgotPasswordResponse, Error, ForgotPasswordRequest>({
     mutationFn: forgotPassword,
+  });
+};
+
+export const useResendOtp = () => {
+  return useMutation<MessageResponse, Error, ResendOtpRequest>({
+    mutationFn: resendOtp,
+  });
+};
+
+export const useVerifyOtp = () => {
+  return useMutation<MessageResponse, Error, VerifyOtpRequest>({
+    mutationFn: verifyOtp,
   });
 };
 

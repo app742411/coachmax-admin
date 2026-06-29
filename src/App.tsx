@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import ForgotPassword from "./pages/AuthPages/ForgotPassword";
-import ResetPassword from "./pages/AuthPages/ResetPassword";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
 import Videos from "./pages/UiElements/Videos";
@@ -19,11 +18,12 @@ import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
-import Home from "./pages/Dashboard/Home";
 import PlayersManagement from "./pages/PlayersManagement/PlayersManagement";
 import Academy from "./pages/Academy/Academy";
 import ProgramsManagement from "./pages/Programs/ProgramsManagement";
 import ProductsManagement from "./pages/Store/ProductsManagement";
+import CoachingManagementPage from "./pages/CochingManagement/CoachingManagementPage";
+import RoleBasedDashboard from "./components/auth/RoleBasedDashboard";
 
 export default function App() {
   return (
@@ -33,7 +33,7 @@ export default function App() {
         <Routes>
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
-            <Route index path="/" element={<Home />} />
+            <Route index path="/" element={<RoleBasedDashboard />} />
             <Route path="/players" element={<PlayersManagement />} />
             <Route path="/programs" element={<ProgramsManagement />} />
             <Route path="/academy" element={<Academy programType="Academy" />} />
@@ -41,6 +41,9 @@ export default function App() {
 
             {/* Store */}
             <Route path="/products" element={<ProductsManagement />} />
+
+            {/* Management */}
+            <Route path="/coaching-management" element={<CoachingManagementPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
@@ -70,7 +73,6 @@ export default function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />

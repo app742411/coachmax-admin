@@ -36,12 +36,12 @@ export interface ProgramResponse {
 
 export interface CreateProgramRequest {
   name: string;
-  description: string;
   category: string;
-  capacity: number;
-  pricing: number;
+  description?: string;
+  capacity?: number;
+  pricing?: number;
   coaches?: string[];
-  schedule: {
+  schedule?: {
     startTime: string;
     endTime: string;
   };

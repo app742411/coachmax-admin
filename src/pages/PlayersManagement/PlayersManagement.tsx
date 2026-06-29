@@ -5,7 +5,7 @@ import PlayerStatsCards from "../../components/players/PlayerStatsCards";
 import PlayerFilters from "../../components/players/PlayerFilters";
 import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
-import { usePlayers, useDeletePlayer } from "../../hooks/usePlayers";
+import { usePlayers, useDeletePlayer, useUpdatePlayerStatus } from "../../hooks/usePlayers";
 
 export default function PlayersManagement() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -15,9 +15,13 @@ export default function PlayersManagement() {
   const [statusFilter, setStatusFilter] = useState("All");
   
   const { data: playersResponse, isLoading } = usePlayers(1, 100);
-  const players = playersResponse?.data || [];
+  const players = playersResponse?.users || [];
   
   const deletePlayerMutation = useDeletePlayer();
+  const updatePlayerStatusMutation = useUpdatePlayerStatus();
+  
+  const [playerToReject, setPlayerToReject] = useState<Player | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
@@ -26,22 +30,44 @@ export default function PlayersManagement() {
     }
   };
 
+  const handleApprovePlayer = (player: Player) => {
+    if (window.confirm("Are you sure you want to approve this player?")) {
+      updatePlayerStatusMutation.mutate({ id: player._id, data: { status: "APPROVED" } });
+    }
+  };
+
+  const handleRejectPlayer = (player: Player) => {
+    setPlayerToReject(player);
+    setRejectReason("");
+  };
+
+  const submitReject = () => {
+    if (playerToReject && rejectReason.trim()) {
+      updatePlayerStatusMutation.mutate({
+        id: playerToReject._id,
+        data: { status: "REJECTED", rejectresaon: rejectReason },
+      });
+      setPlayerToReject(null);
+      setRejectReason("");
+    }
+  };
+
   // Filtering Logic
   const filteredPlayers = players.filter((p) => {
-    const email = p.parentId?.userId?.email || "";
+    const email = p.parentId?.email || "";
     const phone = p.parentId?.phone || "";
-    const programStr = p.programs?.map(pg => pg.name).join(", ") || "";
+    const programStr = p.program?.name || "";
     
     const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       phone.includes(searchQuery);
 
     const matchesProgram =
       programFilter === "All" || programStr.toUpperCase().includes(programFilter.toUpperCase());
     
-    // Status is not explicitly in the backend, assuming "Paid" for all for now.
-    const playerStatus = "Paid"; 
+    // Status from backend
+    const playerStatus = p.status || "PENDING"; 
     const matchesStatus =
       statusFilter === "All" || playerStatus.toUpperCase() === statusFilter.toUpperCase();
 
@@ -98,6 +124,8 @@ export default function PlayersManagement() {
               selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
               onSelectPlayer={setSelectedPlayer}
               onDeletePlayer={handleDeletePlayer}
+              onApprovePlayer={handleApprovePlayer}
+              onRejectPlayer={handleRejectPlayer}
             />
           )}
         </div>
@@ -107,6 +135,38 @@ export default function PlayersManagement() {
           <PlayerDetailCard player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
         )}
       </div>
+
+      {playerToReject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg w-full max-w-md p-6 border border-slate-200 dark:border-slate-800">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Reject Player</h3>
+            <p className="text-sm text-slate-500 mb-4">Please provide a reason for rejecting {playerToReject.fullName}.</p>
+            
+            <textarea
+              className="w-full h-24 p-3 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 dark:bg-slate-800 dark:text-white resize-none"
+              placeholder="Enter reason..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setPlayerToReject(null)}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReject}
+                disabled={!rejectReason.trim() || updatePlayerStatusMutation.isPending}
+                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                {updatePlayerStatusMutation.isPending ? "Rejecting..." : "Reject Player"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
