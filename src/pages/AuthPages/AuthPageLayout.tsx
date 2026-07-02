@@ -1,11 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ThemeTogglerTwo from "../../components/common/ThemeTogglerTwo";
+import { useNavigate } from "react-router";
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/");
+    }
+  }, [navigate]);
+
   const [randomImage] = useState(() =>
     Math.random() < 0.5
       ? "/images/grid-image/login1.png"

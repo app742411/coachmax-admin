@@ -2,11 +2,12 @@ import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import AcademyHeader from "../../components/academy/AcademyHeader";
 import DayTabs from "../../components/academy/DayTabs";
-import AttendanceTable from "../../components/academy/AttendanceTable";
+import ClassFullTable from "../../components/academy/ClassFullTable";
 import UnallocatedPlayersCard from "../../components/academy/UnallocatedPlayersCard";
 import WaitlistCard from "../../components/academy/WaitlistCard";
 import TrialsCard from "../../components/academy/TrialsCard";
-import { ClassSchedule, UnallocatedPlayer, WaitlistItem, TrialItem } from "../../types/academy";
+import { UnallocatedPlayer, WaitlistItem, TrialItem } from "../../types/academy";
+import { useClassFiltersWithTimeSlots } from "../../hooks/usePlayers";
 
 const mockUnallocatedPlayers: UnallocatedPlayer[] = [
   {
@@ -80,137 +81,18 @@ const mockTrials: TrialItem[] = [
   },
 ];
 
-const mockSchedules: ClassSchedule[] = [
-  {
-    id: 1,
-    time: "Monday 4:15pm",
-    ageGroup: "U8s",
-    coach: "Robbie",
-    location: "9 Hurdcotte St",
-    players: [
-      {
-        id: 1,
-        playerName: "Siena Zamfirescu",
-        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=80&q=80",
-        dob: "12/06/2015",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 2,
-        playerName: "Isla McKenzie",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-        dob: "03/09/2015",
-        medicalConditions: "Peanut Allergy",
-        attendance: ["present", "present", "present", "none", "absent", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 3,
-        playerName: "Oliver Matthews",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-        dob: "22/01/2015",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "present", "late", "present", "none", "none"],
-      },
-      {
-        id: 4,
-        playerName: "Lucas Martin",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80",
-        dob: "17/03/2015",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 5,
-        playerName: "Harvey Wright",
-        avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=80&q=80",
-        dob: "30/04/2016",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "absent", "present", "present", "none", "none"],
-      },
-      {
-        id: 6,
-        playerName: "Noah Smith",
-        avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=80&q=80",
-        dob: "11/07/2016",
-        medicalConditions: "Asthma",
-        attendance: ["present", "present", "present", "present", "present", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 7,
-        playerName: "Arlo Schrauwen",
-        avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=80&q=80",
-        dob: "08/02/2015",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "late", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 8,
-        playerName: "Daniel Kim",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80",
-        dob: "25/05/2016",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 9,
-        playerName: "Ethan Lee",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-        dob: "19/04/2015",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "late", "present", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 10,
-        playerName: "Liam Patel",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=80",
-        dob: "21/03/2015",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "present", "late", "present", "none", "none"],
-      },
-    ],
-  },
-  {
-    id: 2,
-    time: "Monday 6:00pm",
-    ageGroup: "U10s",
-    coach: "Finley",
-    location: "9 Hurdcotte St",
-    players: [
-      {
-        id: 1,
-        playerName: "Zac Anderson",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-        dob: "09/06/2015",
-        medicalConditions: "Grass Allergy",
-        attendance: ["present", "present", "present", "present", "present", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 2,
-        playerName: "Mason Brown",
-        avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=80&q=80",
-        dob: "02/06/2016",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "present", "present", "present", "none", "none"],
-      },
-      {
-        id: 3,
-        playerName: "Jayden Lee",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80",
-        dob: "18/12/2015",
-        medicalConditions: "None",
-        attendance: ["present", "present", "present", "present", "present", "present", "present", "present", "none", "none"],
-      },
-    ],
-  },
-];
 
 interface AcademyProps {
-  programType?: "Academy" | "School";
+  programType?: string;
 }
 
 export default function Academy({ programType = "Academy" }: AcademyProps) {
   const [activeDay, setActiveDay] = useState("Monday");
+  const [categoryId, setCategoryId] = useState("");
+  const [programId, setProgramId] = useState("");
+
+  const { data: filtersData } = useClassFiltersWithTimeSlots(categoryId, programId, activeDay.toUpperCase());
+  const timeSlots = filtersData?.timeSlots || [];
 
   return (
     <>
@@ -219,15 +101,29 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         description={`Fidelity matched primary CoachMax ${programType.toLowerCase()} programs attendance UI`}
       />
 
-      <AcademyHeader programType={programType} />
-      <DayTabs activeDay={activeDay} onChangeDay={setActiveDay} />
+      <AcademyHeader
+        programType={programType}
+        onCategoryChange={(id) => { setCategoryId(id); }}
+        onProgramChange={(id) => { setProgramId(id); }}
+      />
+      <DayTabs activeDay={activeDay} onChangeDay={(day) => { setActiveDay(day); }} />
 
       <div className="flex flex-col xl:flex-row gap-4 items-start w-full">
         {/* Left Side: Attendance Tables */}
-        <div className="flex-1 w-full min-w-0">
-          {mockSchedules.map((schedule) => (
-            <AttendanceTable key={schedule.id} schedule={schedule} />
-          ))}
+        <div className="flex-1 w-full min-w-0 flex flex-col gap-6">
+          {timeSlots.length > 0 ? (
+            timeSlots.map((slot: any) => (
+              <ClassFullTable
+                key={slot.classId}
+                classId={slot.classId}
+                timeSlotStr={`${slot.startTime} - ${slot.endTime}`}
+              />
+            ))
+          ) : (
+            <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl">
+              No classes scheduled for this day.
+            </div>
+          )}
         </div>
 
         {/* Right Side: Sidebar Cards Panel */}

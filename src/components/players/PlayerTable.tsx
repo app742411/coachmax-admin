@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Player } from "../../types/player";
+import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 interface PlayerTableProps {
   players: Player[];
@@ -8,6 +9,7 @@ interface PlayerTableProps {
   onDeletePlayer?: (player: Player) => void;
   onApprovePlayer?: (player: Player) => void;
   onRejectPlayer?: (player: Player) => void;
+  onAssignClass?: (player: Player) => void;
 }
 
 export default function PlayerTable({
@@ -17,8 +19,10 @@ export default function PlayerTable({
   onDeletePlayer,
   onApprovePlayer,
   onRejectPlayer,
+  onAssignClass,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
 
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdownId(null);
@@ -43,7 +47,7 @@ export default function PlayerTable({
               <th className="py-3 px-3 min-w-[120px]">Contact</th>
               <th className="py-3 px-3 min-w-[160px]">Email</th>
               <th className="py-3 px-3 min-w-[110px]">Phone</th>
-              <th className="py-3 px-4 w-[50px] text-right">Action</th>
+              <th className="py-3 px-4 w-[70px] text-center">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -107,9 +111,9 @@ export default function PlayerTable({
                 <td className="py-4 px-3 font-semibold text-slate-600 dark:text-slate-400">
                   {player.parentId?.phone || "N/A"}
                 </td>
-                <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
+                <td className="py-4 px-4 text-center relative" onClick={(e) => e.stopPropagation()}>
                   <button 
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center"
                     title="More Options"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -147,14 +151,24 @@ export default function PlayerTable({
                           Reject Player
                         </button>
                       )}
+                      {onAssignClass && (
+                        <button 
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAssignClass(player);
+                            setOpenDropdownId(null);
+                          }}
+                        >
+                          Assign to Class
+                        </button>
+                      )}
                       {onDeletePlayer && (
                         <button 
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm("Are you sure you want to delete this player?")) {
-                              onDeletePlayer(player);
-                            }
+                            setDeleteModalPlayer(player);
                             setOpenDropdownId(null);
                           }}
                         >
@@ -170,6 +184,18 @@ export default function PlayerTable({
           </tbody>
         </table>
       </div>
+      <ConfirmDeleteModal
+        isOpen={!!deleteModalPlayer}
+        onClose={() => setDeleteModalPlayer(null)}
+        onConfirm={() => {
+          if (deleteModalPlayer && onDeletePlayer) {
+            onDeletePlayer(deleteModalPlayer);
+          }
+          setDeleteModalPlayer(null);
+        }}
+        title="Delete Player"
+        message="Are you sure you want to delete this player? This action cannot be undone."
+      />
     </div>
   );
 }

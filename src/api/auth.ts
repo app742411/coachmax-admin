@@ -48,7 +48,7 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<Message
 };
 
 export const getProfile = async (): Promise<UserProfileResponse> => {
-  const response = await apiClient.get<UserProfileResponse>("/auth/profile");
+  const response = await apiClient.get<UserProfileResponse>("/api/auth/getMyProfile");
   return response.data;
 };
 
@@ -67,5 +67,10 @@ export const updateProfile = async (
     return response.data;
   }
   const response = await apiClient.patch<UserProfileResponse>("/auth/profile", data);
+  return response.data;
+};
+
+export const changePassword = async (data: { oldPassword: string; newPassword: string }): Promise<MessageResponse> => {
+  const response = await apiClient.post<MessageResponse>("/api/auth/changePassword", data);
   return response.data;
 };

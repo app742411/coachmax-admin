@@ -7,7 +7,7 @@ import Hook = flatpickr.Options.Hook;
 import DateOption = flatpickr.Options.DateOption;
 
 type PropsType = {
-  id: string;
+  id?: string;
   mode?: "single" | "multiple" | "range" | "time";
   onChange?: Hook | Hook[];
   defaultDate?: DateOption;
@@ -16,7 +16,7 @@ type PropsType = {
 };
 
 export default function DatePicker({
-  id,
+  id = "date-picker-" + Math.random().toString(36).substr(2, 9),
   mode,
   onChange,
   label,

@@ -7,7 +7,7 @@ interface Option {
 }
 
 interface MultiSelectProps {
-  label: string;
+  label?: string;
   options: Option[];
   defaultSelected?: string[];
   value?: string[];
@@ -105,12 +105,14 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
   return (
     <div className="w-full" ref={dropdownRef}>
-      <label
-        className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
-        id={`${label}-label`}
-      >
-        {label}
-      </label>
+      {label && (
+        <label
+          className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+          id={`${label}-label`}
+        >
+          {label}
+        </label>
+      )}
 
       <div className="relative z-20 inline-block w-full">
         <div className="relative flex flex-col items-center">

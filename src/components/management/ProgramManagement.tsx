@@ -6,6 +6,7 @@ import { Modal } from "../ui/modal";
 import { createProgram, updateProgram, deleteProgram, getProgramsByCategory, getAllCategories } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { Edit, Trash, Filter, Layers } from "../../icons/lucide-icons";
+import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const ProgramManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -13,6 +14,7 @@ const ProgramManagement: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
+  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -73,6 +75,7 @@ const ProgramManagement: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["programs", "byCategory", selectedCategoryFilter] });
       toast.success("Program deleted");
+      setDeleteModalId(null);
     },
     onError: () => toast.error("Failed to delete program"),
   });
@@ -100,9 +103,13 @@ const ProgramManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure?")) {
-      deleteMutation.mutate(id);
+  const handleDeleteClick = (id: string) => {
+    setDeleteModalId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteModalId) {
+      deleteMutation.mutate(deleteModalId);
     }
   };
 
@@ -177,7 +184,7 @@ const ProgramManagement: React.FC = () => {
                   <TableCell className="py-4 pr-6">
                     <div className="flex items-center justify-center gap-3">
                       <button onClick={() => handleOpenEdit(prog)} title="Modify" className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
-                      <button onClick={() => handleDelete(prog._id)} title="Remove" className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
+                      <button onClick={() => handleDeleteClick(prog._id)} title="Remove" className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -226,6 +233,14 @@ const ProgramManagement: React.FC = () => {
           </div>
         </form>
       </Modal>
+      <ConfirmDeleteModal
+        isOpen={!!deleteModalId}
+        onClose={() => setDeleteModalId(null)}
+        onConfirm={confirmDelete}
+        loading={deleteMutation.isPending}
+        title="Delete Program"
+        message="Are you sure you want to delete this program? This action cannot be undone."
+      />
     </div>
   );
 };

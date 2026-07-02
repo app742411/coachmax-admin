@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { BrowserRouter as Router, Routes, Route, useParams } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import ForgotPassword from "./pages/AuthPages/ForgotPassword";
@@ -21,13 +21,65 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import PlayersManagement from "./pages/PlayersManagement/PlayersManagement";
 import Academy from "./pages/Academy/Academy";
 import ProgramsManagement from "./pages/Programs/ProgramsManagement";
-import ProductsManagement from "./pages/Store/ProductsManagement";
+import ClassesList from "./pages/Classes/ClassesList";
+import ProductList from "./pages/Store/ProductList";
+import AddProductPage, { EditProductPage } from "./pages/Store/AddProductPage";
 import CoachingManagementPage from "./pages/CochingManagement/CoachingManagementPage";
 import RoleBasedDashboard from "./components/auth/RoleBasedDashboard";
+import AddEvent from "./pages/Events/AddEvent";
+import EventList from "./pages/Events/EventList";
+import ContentListPage from "./pages/Content/ContentListPage";
+import AddContentPage from "./pages/Content/AddContentPage";
+import GalleryGrid from "./pages/Gallery/GalleryGrid";
+import AddGalleryPage from "./pages/Gallery/AddGalleryPage";
+import SponsorManagementPage from "./pages/Sponsors/SponsorManagementPage";
+import EditEvent from "./pages/Events/EditEvent";
+import EventDetails from "./pages/Events/EventDetails";
+import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
+import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
+import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
+import { Toaster } from "react-hot-toast";
+
+function DynamicProgramRoute() {
+  const { programType } = useParams<{ programType: string }>();
+  const formattedType = programType
+    ? programType
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ')
+    : 'Academy';
+  return <Academy programType={formattedType} />;
+}
 
 export default function App() {
   return (
     <>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#333',
+            color: '#fff',
+            borderRadius: '10px',
+            padding: '16px',
+            fontWeight: '500',
+            fontSize: '14px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Router>
         <ScrollToTop />
         <Routes>
@@ -36,14 +88,30 @@ export default function App() {
             <Route index path="/" element={<RoleBasedDashboard />} />
             <Route path="/players" element={<PlayersManagement />} />
             <Route path="/programs" element={<ProgramsManagement />} />
-            <Route path="/academy" element={<Academy programType="Academy" />} />
-            <Route path="/schools" element={<Academy programType="School" />} />
-
+            <Route path="/classes" element={<ClassesList />} />
+            <Route path="/program/:programType" element={<DynamicProgramRoute />} />
+            
             {/* Store */}
-            <Route path="/products" element={<ProductsManagement />} />
+            <Route path="/products" element={<ProductList />} />
+            <Route path="/add-product" element={<AddProductPage />} />
+            <Route path="/edit-product/:id" element={<EditProductPage />} />
 
             {/* Management */}
             <Route path="/coaching-management" element={<CoachingManagementPage />} />
+            <Route path="/leagues" element={<LeaguesManagementPage />} />
+            <Route path="/teams" element={<TeamsManagementPage />} />
+            <Route path="/fixtures" element={<FixturesManagementPage />} />
+            <Route path="/events" element={<EventList />} />
+            <Route path="/add-event" element={<AddEvent />} />
+            <Route path="/edit-event/:id" element={<EditEvent />} />
+            <Route path="/event-details/:id" element={<EventDetails />} />
+            <Route path="/news" element={<ContentListPage type="news" />} />
+            <Route path="/add-content" element={<AddContentPage type="blog" />} />
+            <Route path="/gallery" element={<GalleryGrid />} />
+            <Route path="/add-gallery" element={<AddGalleryPage />} />
+            <Route path="/sponsors" element={<SponsorManagementPage />} />
+            <Route path="/edit-event/:id" element={<EditEvent />} />
+            <Route path="/event-details/:id" element={<EventDetails />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

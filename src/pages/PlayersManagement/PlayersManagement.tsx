@@ -5,6 +5,7 @@ import PlayerStatsCards from "../../components/players/PlayerStatsCards";
 import PlayerFilters from "../../components/players/PlayerFilters";
 import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
+import AssignClassModal from "../../components/players/AssignClassModal";
 import { usePlayers, useDeletePlayer, useUpdatePlayerStatus } from "../../hooks/usePlayers";
 
 export default function PlayersManagement() {
@@ -22,6 +23,8 @@ export default function PlayersManagement() {
   
   const [playerToReject, setPlayerToReject] = useState<Player | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  
+  const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
 
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
@@ -50,6 +53,10 @@ export default function PlayersManagement() {
       setPlayerToReject(null);
       setRejectReason("");
     }
+  };
+
+  const handleAssignPlayer = (player: Player) => {
+    setPlayerToAssign(player);
   };
 
   // Filtering Logic
@@ -126,6 +133,7 @@ export default function PlayersManagement() {
               onDeletePlayer={handleDeletePlayer}
               onApprovePlayer={handleApprovePlayer}
               onRejectPlayer={handleRejectPlayer}
+              onAssignClass={handleAssignPlayer}
             />
           )}
         </div>
@@ -135,6 +143,10 @@ export default function PlayersManagement() {
           <PlayerDetailCard player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
         )}
       </div>
+
+      {playerToAssign && (
+        <AssignClassModal player={playerToAssign} onClose={() => setPlayerToAssign(null)} />
+      )}
 
       {playerToReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">

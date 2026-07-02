@@ -3,7 +3,7 @@ import { useProfile } from "../../hooks/useAuth";
 export default function UserMetaCard() {
   const { data: profileData } = useProfile();
 
-  const user = profileData?.data?.user;
+  const user = profileData?.data;
   const displayName = user?.name || "Super Admin";
   const displayRole = user?.role || "Admin";
   const avatarSrc = user?.profileImage || "/images/logo/cm-logo2.png";

@@ -60,8 +60,11 @@ export default function SignUpForm() {
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-        <div>
-          <div className="mb-5 sm:mb-8">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-8 sm:p-10 mb-10">
+          <div className="flex justify-center mb-8">
+            <img src="/images/logo/cm-logo2.png" alt="CoachMax Logo" className="h-12 object-contain" />
+          </div>
+          <div className="mb-5 sm:mb-8 text-center">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Sign Up
             </h1>

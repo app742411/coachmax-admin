@@ -18,7 +18,7 @@ export default function ForgotPasswordForm() {
 
   const [step, setStep] = useState<Step>("SEND_OTP");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("COACH");
+  const [role] = useState("ADMIN");
   const [userId, setUserId] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -123,13 +123,16 @@ export default function ForgotPasswordForm() {
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-        <div>
-          <div className="mb-5 sm:mb-8">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-8 sm:p-10 mb-10">
+          <div className="flex justify-center mb-8">
+            <img src="/images/logo/cm-logo2.png" alt="CoachMax Logo" className="h-12 object-contain" />
+          </div>
+          <div className="mb-5 sm:mb-8 text-center">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Forgot Password
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {step === "SEND_OTP" && "Enter your email and role to receive a verification OTP."}
+              {step === "SEND_OTP" && "Enter your email to receive a verification OTP."}
               {step === "VERIFY_OTP" && "Enter the 6-digit OTP sent to your email."}
               {step === "RESET_PASSWORD" && "Enter your new secure password."}
             </p>
@@ -151,17 +154,7 @@ export default function ForgotPasswordForm() {
             {step === "SEND_OTP" && (
               <form onSubmit={handleSendOtp}>
                 <div className="space-y-6">
-                  <div>
-                    <Label>Role <span className="text-error-500">*</span></Label>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-transparent border rounded-lg border-gray-300 text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-500"
-                    >
-                      <option value="COACH">Coach</option>
-                      <option value="ADMIN">Admin</option>
-                    </select>
-                  </div>
+
                   <div>
                     <Label>Email <span className="text-error-500">*</span></Label>
                     <Input
