@@ -7,6 +7,7 @@ import { getAllTerms, createTerm, updateTerm, deleteTerm } from "../../api/admin
 import { toast } from "react-hot-toast";
 import { Edit, Trash, Calendar } from "../../icons/lucide-icons";
 import DatePicker from "../form/date-picker";
+import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const TermManagement: React.FC = () => {
     const queryClient = useQueryClient();
@@ -15,6 +16,7 @@ const TermManagement: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
     
     const [formData, setFormData] = useState({
         name: "",
@@ -63,6 +65,7 @@ const TermManagement: React.FC = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["terms"] });
             toast.success("Term deleted");
+            setDeleteModalId(null);
         },
         onError: () => toast.error("Failed to delete term"),
     });
@@ -120,9 +123,13 @@ const TermManagement: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id: string) => {
-        if (window.confirm("Are you sure?")) {
-            deleteMutation.mutate(id);
+    const handleDeleteClick = (id: string) => {
+        setDeleteModalId(id);
+    };
+
+    const confirmDelete = () => {
+        if (deleteModalId) {
+            deleteMutation.mutate(deleteModalId);
         }
     };
 
@@ -195,7 +202,7 @@ const TermManagement: React.FC = () => {
                                     <TableCell className="py-4">
                                         <div className="flex items-center justify-center gap-3">
                                             <button onClick={() => handleOpenEdit(term)} className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
-                                            <button onClick={() => handleDelete(term._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
+                                            <button onClick={() => handleDeleteClick(term._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -256,6 +263,14 @@ const TermManagement: React.FC = () => {
                     </div>
                 </form>
             </Modal>
+            <ConfirmDeleteModal
+                isOpen={!!deleteModalId}
+                onClose={() => setDeleteModalId(null)}
+                onConfirm={confirmDelete}
+                loading={deleteMutation.isPending}
+                title="Delete Term"
+                message="Are you sure you want to delete this term? This action cannot be undone."
+            />
         </div>
     );
 };

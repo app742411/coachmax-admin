@@ -1,3 +1,4 @@
+import { useExportUsersCSV } from "../../hooks/usePlayers";
 
 interface PlayerFiltersProps {
   searchQuery: string;
@@ -20,6 +21,8 @@ export default function PlayerFilters({
   statusFilter,
   setStatusFilter,
 }: PlayerFiltersProps) {
+  const exportCSVMutation = useExportUsersCSV();
+
   return (
     <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-5 rounded-2xl shadow-theme-xs mb-6">
       <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between mb-4">
@@ -88,11 +91,15 @@ export default function PlayerFilters({
         </button>
 
         <div className="flex gap-2">
-          <button className="px-3.5 py-1.5 border border-slate-200 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-600 hover:bg-slate-50 flex items-center gap-1.5">
+          <button 
+            onClick={() => exportCSVMutation.mutate(statusFilter === "All" ? "APPROVED" : statusFilter)}
+            disabled={exportCSVMutation.isPending}
+            className="px-3.5 py-1.5 border border-slate-200 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            <span>Export</span>
+            <span>{exportCSVMutation.isPending ? "Exporting..." : "Export"}</span>
           </button>
           <button className="px-3.5 py-1.5 border border-slate-200 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-600 hover:bg-slate-50 flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

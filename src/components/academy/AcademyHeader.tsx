@@ -1,13 +1,109 @@
+import { useEffect, useState } from "react";
+import apiClient from "../../api/apiClient";
 
 interface AcademyHeaderProps {
-  programType?: "Academy" | "School";
+  programType?: string;
+  onCategoryChange?: (categoryId: string) => void;
+  onProgramChange?: (programId: string) => void;
 }
 
-export default function AcademyHeader({ programType = "Academy" }: AcademyHeaderProps) {
+export default function AcademyHeader({ programType = "Academy", onCategoryChange, onProgramChange }: AcademyHeaderProps) {
+  const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
+  const [programs, setPrograms] = useState<{ _id: string; name: string }[]>([]);
+  const [terms, setTerms] = useState<{ _id: string; name: string; year: number }[]>([]);
+  
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedProgram, setSelectedProgram] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedTerm, setSelectedTerm] = useState<string>("");
+
+  // 1. Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const catRes = await apiClient.get("/api/user/getCategories");
+        if (catRes.data && Array.isArray(catRes.data)) {
+          setCategories(catRes.data);
+          // Find the category matching the programType (e.g. "Academy" -> "ACADEMY")
+          const matched = catRes.data.find(c => c.name.toLowerCase() === programType.toLowerCase());
+          if (matched) {
+            setSelectedCategory(matched._id);
+            onCategoryChange?.(matched._id);
+          } else if (catRes.data.length > 0) {
+            setSelectedCategory(catRes.data[0]._id);
+            onCategoryChange?.(catRes.data[0]._id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    };
+    fetchCategories();
+  }, [programType]);
+
+  // 2. Fetch programs when category changes
+  useEffect(() => {
+    if (!selectedCategory) return;
+    const fetchPrograms = async () => {
+      try {
+        const programsRes = await apiClient.get(`/api/user/getProgramsByCategory/${selectedCategory}`);
+        if (programsRes.data && Array.isArray(programsRes.data)) {
+          setPrograms(programsRes.data);
+          if (programsRes.data.length > 0) {
+            setSelectedProgram(programsRes.data[0]._id);
+            onProgramChange?.(programsRes.data[0]._id);
+          } else {
+            setSelectedProgram("");
+            onProgramChange?.("");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch programs by category:", error);
+      }
+    };
+    fetchPrograms();
+  }, [selectedCategory]);
+
+  // 3. Fetch terms
+  useEffect(() => {
+    const fetchTerms = async () => {
+      try {
+        const termsRes = await apiClient.get("/api/admin/getAllTerms");
+        if (termsRes.data && termsRes.data.data && Array.isArray(termsRes.data.data)) {
+          const allTerms = termsRes.data.data;
+          setTerms(allTerms);
+          if (allTerms.length > 0) {
+            const firstTerm = allTerms[0];
+            setSelectedYear(firstTerm.year.toString());
+            setSelectedTerm(firstTerm._id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch terms:", error);
+      }
+    };
+    fetchTerms();
+  }, []);
+
+  const uniqueYears = Array.from(new Set(terms.map((t) => t.year.toString())));
+  const filteredTerms = terms.filter(t => t.year.toString() === selectedYear);
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newYear = e.target.value;
+    setSelectedYear(newYear);
+    const termsForNewYear = terms.filter(t => t.year.toString() === newYear);
+    if (termsForNewYear.length > 0) {
+      setSelectedTerm(termsForNewYear[0]._id);
+    } else {
+      setSelectedTerm("");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 mb-6 xl:flex-row xl:items-center xl:justify-between">
       {/* Title & Dropdowns */}
       <div className="flex flex-wrap items-center gap-3">
+        {/* Programs (Static) */}
         <div className="flex items-center gap-1.5 cursor-pointer">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Programs</h1>
           <svg className="w-4 h-4 text-slate-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17,25 +113,84 @@ export default function AcademyHeader({ programType = "Academy" }: AcademyHeader
 
         <span className="text-slate-300 dark:text-slate-700 text-lg">/</span>
 
-        <div className="flex items-center gap-1.5 cursor-pointer">
-          <span className="text-xl font-bold text-slate-900 dark:text-white">{programType}</span>
-          <svg className="w-4 h-4 text-slate-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Category (Academy/School/Holiday...) */}
+        <div className="relative flex items-center bg-transparent">
+          <select 
+            value={selectedCategory}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              onCategoryChange?.(e.target.value);
+            }}
+            className="appearance-none text-xl font-bold text-[#0047FF] bg-transparent outline-none cursor-pointer pr-6"
+          >
+            {categories.length === 0 && <option value="">{programType}</option>}
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat._id} className="text-base font-normal text-slate-900">
+                {cat.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+              </option>
+            ))}
+          </select>
+          <svg className="absolute right-0 w-4 h-4 text-[#0047FF] pointer-events-none mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
 
         <span className="text-slate-300 dark:text-slate-700 text-lg">/</span>
 
-        <div className="flex items-center gap-1.5 cursor-pointer bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">2026</span>
-          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Sub-category (Programs like Elite Performance) */}
+        <div className="relative flex items-center bg-transparent">
+          <select 
+            value={selectedProgram}
+            onChange={(e) => {
+              setSelectedProgram(e.target.value);
+              onProgramChange?.(e.target.value);
+            }}
+            className="appearance-none text-lg font-semibold text-slate-700 dark:text-slate-300 bg-transparent outline-none cursor-pointer pr-6"
+          >
+            {programs.length === 0 && <option value="">Sub-category</option>}
+            {programs.map((prog) => (
+              <option key={prog._id} value={prog._id} className="text-base font-normal text-slate-900">
+                {prog.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
+              </option>
+            ))}
+          </select>
+          <svg className="absolute right-0 w-4 h-4 text-slate-400 pointer-events-none mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
 
-        <div className="flex items-center gap-1.5 cursor-pointer bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Term 2</span>
-          <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <span className="text-slate-300 dark:text-slate-700 text-lg">/</span>
+
+        {/* Year Dropdown */}
+        <div className="relative flex items-center bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+          <select 
+            value={selectedYear}
+            onChange={handleYearChange}
+            className="appearance-none text-sm font-bold text-slate-700 dark:text-slate-300 bg-transparent outline-none cursor-pointer pr-5"
+          >
+            {uniqueYears.length === 0 && <option value="2026">2026</option>}
+            {uniqueYears.map((year) => (
+              <option key={year} value={year} className="text-base font-normal text-slate-900">{year}</option>
+            ))}
+          </select>
+          <svg className="absolute right-1.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+
+        {/* Term Dropdown */}
+        <div className="relative flex items-center bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+          <select 
+            value={selectedTerm}
+            onChange={(e) => setSelectedTerm(e.target.value)}
+            className="appearance-none text-sm font-bold text-slate-700 dark:text-slate-300 bg-transparent outline-none cursor-pointer pr-5"
+          >
+            {filteredTerms.length === 0 && <option value="">Term 2</option>}
+            {filteredTerms.map((term) => (
+              <option key={term._id} value={term._id} className="text-base font-normal text-slate-900">{term.name}</option>
+            ))}
+          </select>
+          <svg className="absolute right-1.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>

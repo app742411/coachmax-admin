@@ -23,7 +23,7 @@ export default function UserInfoCard() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const user = profileData?.data?.user;
+  const user = profileData?.data;
 
   const {
     register,

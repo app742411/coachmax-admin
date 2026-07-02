@@ -9,6 +9,7 @@ import {
   resetPassword,
   getProfile,
   updateProfile,
+  changePassword,
 } from "../api/auth";
 import {
   SignInCredentials,
@@ -110,9 +111,15 @@ export const useUpdateProfile = () => {
   return useMutation<UserProfileResponse, Error, { data: UpdateProfileRequest; imageFile?: File }>({
     mutationFn: ({ data, imageFile }) => updateProfile(data, imageFile),
     onSuccess: (response) => {
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.setItem("user", JSON.stringify(response.data));
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     },
+  });
+};
+
+export const useChangePassword = () => {
+  return useMutation<MessageResponse, Error, { oldPassword: string; newPassword: string }>({
+    mutationFn: changePassword,
   });
 };

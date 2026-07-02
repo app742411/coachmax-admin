@@ -6,6 +6,7 @@ import { Modal } from "../ui/modal";
 import { getAllCoaches, createCoach, updateCoach, deleteCoach } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { Edit, Trash, User, Mail, Phone, Lock, ShieldCheck } from "../../icons/lucide-icons";
+import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const CoachManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -14,6 +15,7 @@ const CoachManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
+  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -63,6 +65,7 @@ const CoachManagement: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["coaches"] });
       toast.success("Coach deleted");
+      setDeleteModalId(null);
     },
     onError: () => toast.error("Failed to delete coach"),
   });
@@ -88,9 +91,13 @@ const CoachManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this coach?")) {
-      deleteMutation.mutate(id);
+  const handleDeleteClick = (id: string) => {
+    setDeleteModalId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteModalId) {
+      deleteMutation.mutate(deleteModalId);
     }
   };
 
@@ -166,7 +173,7 @@ const CoachManagement: React.FC = () => {
                   <TableCell className="py-4">
                     <div className="flex items-center justify-center gap-3">
                       <button onClick={() => handleOpenEdit(coach)} title="Modify" className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
-                      <button onClick={() => handleDelete(coach._id)} title="Remove" className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
+                      <button onClick={() => handleDeleteClick(coach._id)} title="Remove" className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -238,6 +245,15 @@ const CoachManagement: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteModalId}
+        onClose={() => setDeleteModalId(null)}
+        onConfirm={confirmDelete}
+        loading={deleteMutation.isPending}
+        title="Delete Coach"
+        message="Are you sure you want to delete this coach? This action cannot be undone."
+      />
     </div>
   );
 };

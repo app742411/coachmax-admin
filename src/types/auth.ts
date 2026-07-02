@@ -74,9 +74,7 @@ export interface MessageResponse {
 export interface UserProfileResponse {
   success: boolean;
   message: string;
-  data: {
-    user: User;
-  };
+  data: User;
 }
 
 export interface UpdateProfileRequest {

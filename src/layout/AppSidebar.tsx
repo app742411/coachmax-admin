@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSidebar } from "../context/SidebarContext";
 import { ChevronDownIcon, HorizontaLDots } from "../icons";
+import { Shield, Calendar, Trophy } from "lucide-react";
+import apiClient from "../api/apiClient";
 
 type NavItem = {
   name: string;
@@ -38,6 +40,31 @@ const AppSidebar: React.FC = () => {
 
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const [programsSubItems, setProgramsSubItems] = useState<{ name: string; path: string }[]>([
+    { name: "Academy", path: "/program/academy" },
+    { name: "Schools", path: "/program/schools" },
+    { name: "Holiday Camps", path: "/program/holiday-camps" },
+    { name: "1on1 Sessions", path: "/program/1on1-sessions" },
+  ]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await apiClient.get('/api/user/getCategories');
+        if (response.data && Array.isArray(response.data)) {
+          const formattedCategories = response.data.map((cat: any) => ({
+            name: cat.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            path: `/program/${cat.name.toLowerCase().replace(/\s+/g, '-')}`,
+          }));
+          setProgramsSubItems(formattedCategories);
+        }
+      } catch (error) {
+        console.error("Failed to fetch programs categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const isActive = useCallback(
     (path: string) => location.pathname === path,
@@ -238,15 +265,15 @@ const AppSidebar: React.FC = () => {
       items: [
         { name: "Dashboard", icon: <GridIcon />, path: "/" },
         { name: "Players", icon: <UserIcon />, path: "/players" },
-        { 
-          name: "Programs", 
-          icon: <CalendarIcon />, 
-          subItems: [
-            { name: "Academy", path: "/academy" },
-            { name: "Schools", path: "/schools" },
-            { name: "Holiday Camps", path: "/holiday-camps" },
-            { name: "1on1 Sessions", path: "/1on1-sessions" },
-          ]
+        {
+          name: "Programs",
+          icon: <CalendarIcon />,
+          subItems: programsSubItems
+        },
+        {
+          name: "Classes",
+          icon: <CalendarIcon />,
+          path: "/classes"
         },
       ],
     },
@@ -254,40 +281,57 @@ const AppSidebar: React.FC = () => {
       title: "Teams & Competitions",
       key: "teams_competitions",
       items: [
-        { 
-          name: "Attendance & Performance", 
-          icon: <AttendanceIcon />, 
+        {
+          name: "Leagues",
+          icon: <Trophy size={18} />,
+          path: "/leagues"
+        },
+        {
+          name: "Teams Management",
+          icon: <Shield size={18} />,
+          path: "/teams"
+        },
+        {
+          name: "Fixtures",
+          icon: <Calendar size={18} />,
+          path: "/fixtures"
+        },
+        {
+          name: "Store",
+          icon: <GridIcon />,
           subItems: [
-            { name: "Overview", path: "/attendance-performance" }
+            { name: "Product List", path: "/products" },
+            { name: "Add Product", path: "/add-product" }
           ]
         },
-        { 
-          name: "Events", 
-          icon: <CalendarIcon />, 
-          subItems: [
-            { name: "All Events", path: "/events" }
-          ]
-        },
-        { 
-          name: "Store", 
-          icon: <GridIcon />, 
-          subItems: [
-            { name: "Products", path: "/products" }
-          ]
-        },
-        { 
-          name: "Finance", 
-          icon: <GridIcon />, 
+        {
+          name: "Finance",
+          icon: <GridIcon />,
           subItems: [
             { name: "Overview", path: "/finance" }
           ]
         },
-        { 
-          name: "Communication", 
-          icon: <ChatIcon />, 
+        {
+          name: "Communication",
+          icon: <ChatIcon />,
           subItems: [
             { name: "Messages", path: "/communication" }
           ]
+        },
+      ],
+    },
+    {
+      title: "Events & Training",
+      key: "events_training",
+      items: [
+        {
+          name: "Events",
+          icon: <CalendarIcon />,
+          subItems: [
+            { name: "All Events", path: "/events" },
+            { name: "Add Event", path: "/add-event" },
+            { name: "Training Sessions", path: "/training-sessions" },
+          ],
         },
       ],
     },
@@ -296,13 +340,36 @@ const AppSidebar: React.FC = () => {
       key: "management",
       items: [
         { name: "Coaching Management", icon: <UserIcon />, path: "/coaching-management" },
+        { name: "Sponsors", icon: <GridIcon />, path: "/sponsors" },
+      ],
+    },
+    {
+      title: "Content & Media",
+      key: "media",
+      items: [
+        {
+          name: "News",
+          icon: <GridIcon />,
+          subItems: [
+            { name: "All News", path: "/news" },
+            { name: "Add News", path: "/add-content" },
+          ],
+        },
+        {
+          name: "Gallery",
+          icon: <GridIcon />,
+          subItems: [
+            { name: "View Gallery", path: "/gallery" },
+            { name: "Add Gallery", path: "/add-gallery" },
+          ],
+        },
       ],
     },
     {
       title: "Settings",
       key: "settings",
       items: [
-        { name: "Settings", icon: <SettingsIcon />, path: "/profile-settings" },
+        { name: "Settings", icon: <SettingsIcon />, path: "/profile" }
       ],
     },
   ];
@@ -466,7 +533,7 @@ const AppSidebar: React.FC = () => {
       <div className="py-6 flex justify-center w-full">
         <Link to="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <img src="/images/logo/cm-logo2.png" alt="CoachMax" className="h-12 object-contain" />
+            <img src="/images/logo/newlogo.png" alt="CoachMax" className="h-12 object-contain" />
           ) : (
             <span className="text-white font-bold text-xl">C</span>
           )}

@@ -49,10 +49,10 @@ export default function UserDropdown() {
     });
   };
 
-  const currentUser = profileData?.data?.user || localUser;
+  const currentUser = (profileData?.data as any)?.user || (profileData?.data as any) || localUser;
   const displayName = currentUser?.name || "Super Admin";
   const displayEmail = currentUser?.email || "admin@coachmax.com";
-  const avatarSrc = profileData?.data?.user?.profileImage || "/images/logo/cm-logo2.png";
+  const avatarSrc = (profileData?.data as any)?.user?.profileImage || (profileData?.data as any)?.profileImage || "/images/logo/cm-logo2.png";
 
   return (
     <div className="relative">

@@ -18,3 +18,18 @@ export const updatePlayerStatus = async (
 ): Promise<void> => {
   await apiClient.put(`/api/admin/updateStatus/${id}`, data);
 };
+
+export const exportUsersCSV = async (status: string = "APPROVED"): Promise<void> => {
+  const response = await apiClient.post(
+    "/api/admin/exportUsers",
+    { format: "csv", status },
+    { responseType: "blob" }
+  );
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `players_${status.toLowerCase()}_export.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode?.removeChild(link);
+};
