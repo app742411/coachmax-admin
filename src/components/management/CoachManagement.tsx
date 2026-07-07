@@ -129,11 +129,11 @@ const CoachManagement: React.FC = () => {
 
       <div className="max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
         <Table>
-          <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 shadow-sm border-b">
+          <TableHeader className="sticky top-0 z-10 shadow-sm">
             <TableRow>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 uppercase tracking-wider">Coach Detail</TableCell>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 uppercase tracking-wider">Contact Info</TableCell>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 text-center uppercase tracking-wider">Actions</TableCell>
+              <TableCell isHeader>Coach Detail</TableCell>
+              <TableCell isHeader>Contact Info</TableCell>
+              <TableCell isHeader className="text-center">Actions</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -148,8 +148,8 @@ const CoachManagement: React.FC = () => {
               <TableRow><TableCell colSpan={3} className="text-center py-20 text-gray-500 font-medium italic">No coaching staff records found.</TableCell></TableRow>
             ) : (
               coaches.map((coach: any) => (
-                <TableRow key={coach._id} className="hover:bg-gray-50 transition-colors">
-                  <TableCell className="py-4">
+                <TableRow key={coach._id}>
+                  <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm">
                         <User size={18} />
@@ -160,7 +160,7 @@ const CoachManagement: React.FC = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
+                  <TableCell>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 text-[11px] text-gray-500 font-medium lowercase">
                         <Mail size={12} className="text-gray-300" /> {coach.email || "N/A"}
@@ -170,7 +170,7 @@ const CoachManagement: React.FC = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
+                  <TableCell>
                     <div className="flex items-center justify-center gap-3">
                       <button onClick={() => handleOpenEdit(coach)} title="Modify" className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
                       <button onClick={() => handleDeleteClick(coach._id)} title="Remove" className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>

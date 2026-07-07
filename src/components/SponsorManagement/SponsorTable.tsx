@@ -60,19 +60,18 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
  };
 
  return (
-  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-   <div className="max-w-full overflow-x-auto">
+  <>
     <Table>
-     <TableHeader className="bg-gray-50/50 dark:bg-white/[0.02]">
+     <TableHeader>
       <TableRow>
-       <TableCell isHeader className="px-5 py-4 font-bold text-[10px] text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Banner</TableCell>
-       <TableCell isHeader className="px-5 py-4 font-bold text-[10px] text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Title & Subtitle</TableCell>
-       <TableCell isHeader className="px-5 py-4 font-bold text-[10px] text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Target Link</TableCell>
-       <TableCell isHeader className="px-5 py-4 font-bold text-[10px] text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Status</TableCell>
-       <TableCell isHeader className="px-5 py-4 font-bold text-[10px] text-gray-500 text-start border-b border-gray-100 dark:border-white/[0.05]">Action</TableCell>
+       <TableCell isHeader className="px-5">Banner</TableCell>
+       <TableCell isHeader className="px-5">Title & Subtitle</TableCell>
+       <TableCell isHeader className="px-5">Target Link</TableCell>
+       <TableCell isHeader className="px-5">Status</TableCell>
+       <TableCell isHeader className="px-5">Action</TableCell>
       </TableRow>
      </TableHeader>
-     <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+     <TableBody>
       {loading ? (
        <TableRow>
         <TableCell colSpan={5} className="py-20 text-center">
@@ -81,8 +80,8 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
        </TableRow>
       ) : sponsors.length > 0 ? (
        sponsors.map((sponsor) => (
-        <TableRow key={sponsor._id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
-         <TableCell className="px-5 py-4 text-start">
+        <TableRow key={sponsor._id}>
+         <TableCell className="px-5">
           <img
            src={`${import.meta.env.VITE_API_BASE_URL}/${sponsor.image}`}
            alt={sponsor.title}
@@ -92,7 +91,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
            }}
           />
          </TableCell>
-         <TableCell className="px-5 py-4 text-start">
+         <TableCell className="px-5">
           <div className="flex flex-col">
            <span className="font-bold text-gray-800 text-sm dark:text-white/90  tracking-tighter">
             {sponsor.title}
@@ -102,7 +101,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
            </span>
           </div>
          </TableCell>
-         <TableCell className="px-5 py-4 text-start">
+         <TableCell className="px-5">
           <a
            href={sponsor.link}
            target="_blank"
@@ -112,7 +111,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
            {sponsor.link}
           </a>
          </TableCell>
-         <TableCell className="px-5 py-4 text-start">
+         <TableCell className="px-5">
           <div className="flex items-center gap-2">
            <button
             onClick={() => handleToggleStatus(sponsor._id)}
@@ -136,7 +135,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
            </span>
           </div>
          </TableCell>
-         <TableCell className="px-5 py-4 text-start">
+         <TableCell className="px-5">
           <div className="absolute">
            <button
             onClick={() => setOpenMenuId(openMenuId === sponsor._id ? null : sponsor._id)}
@@ -178,8 +177,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
       )}
      </TableBody>
     </Table>
-   </div>
-   <ConfirmDeleteModal
+    <ConfirmDeleteModal
     isOpen={!!deleteModalId}
     onClose={() => setDeleteModalId(null)}
     onConfirm={confirmDelete}
@@ -187,8 +185,8 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
     title="Delete Sponsor"
     message="Are you sure you want to delete this sponsor? This action cannot be undone."
    />
-  </div>
- );
+   </>
+  );
 };
 
 export default SponsorTable;

@@ -6,6 +6,7 @@ import { getAllTeams, createTeam, updateTeam, deleteTeam, getAllCoaches } from "
 import { toast } from "react-hot-toast";
 import { User, Shield, Image as ImageIcon } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import AssignPlayerToTeamModal from "./AssignPlayerToTeamModal";
 
 const TeamManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -16,6 +17,7 @@ const TeamManagement: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
+  const [assignTeamId, setAssignTeamId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -122,12 +124,6 @@ const TeamManagement: React.FC = () => {
 
   const handleDeleteClick = (id: string) => {
     setDeleteModalId(id);
-  };
-
-  const confirmDelete = () => {
-    if (deleteModalId) {
-      deleteMutation.mutate(deleteModalId);
-    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,8 +277,8 @@ const TeamManagement: React.FC = () => {
 
                       {openDropdownId === team._id && (
                         <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                          <button 
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                          <button
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenEdit(team);
@@ -290,6 +286,16 @@ const TeamManagement: React.FC = () => {
                             }}
                           >
                             Edit Team
+                          </button>
+                          <button
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAssignTeamId(team._id);
+                              setOpenDropdownId(null);
+                            }}
+                          >
+                            Assign Player
                           </button>
                           <button 
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
@@ -422,10 +428,19 @@ const TeamManagement: React.FC = () => {
       <ConfirmDeleteModal
         isOpen={!!deleteModalId}
         onClose={() => setDeleteModalId(null)}
-        onConfirm={confirmDelete}
-        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (deleteModalId) {
+            deleteMutation.mutate(deleteModalId);
+          }
+        }}
         title="Delete Team"
         message="Are you sure you want to delete this team? This action cannot be undone."
+      />
+
+      <AssignPlayerToTeamModal 
+        isOpen={!!assignTeamId}
+        onClose={() => setAssignTeamId(null)}
+        teamId={assignTeamId}
       />
     </div>
   );

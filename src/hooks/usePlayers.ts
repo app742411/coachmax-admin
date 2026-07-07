@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deletePlayer, getPlayers, updatePlayerStatus, exportUsersCSV } from "../api/players";
-import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance } from "../api/adminApi";
+import { deletePlayer, getPlayers, updatePlayerStatus, exportUsersCSV, getPlayerProfile } from "../api/players";
+import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers } from "../api/adminApi";
 import { PlayersResponse } from "../types/player";
 
 export const usePlayers = (page = 1, limit = 10) => {
@@ -93,3 +93,18 @@ export const useMarkBulkAttendance = (classId: string) => {
 };
 
 
+export const useClassPlayers = (classId: string) => {
+  return useQuery({
+    queryKey: ["classPlayers", classId],
+    queryFn: () => getClassPlayers(classId),
+    enabled: !!classId,
+  });
+};
+
+export const usePlayerProfile = (playerId: string | undefined) => {
+  return useQuery({
+    queryKey: ["playerProfile", playerId],
+    queryFn: () => getPlayerProfile(playerId!),
+    enabled: !!playerId,
+  });
+};

@@ -164,6 +164,11 @@ export const markBulkAttendance = async (classId: string, data: { sessionDate: s
   return res.data;
 };
 
+export const getClassPlayers = async (classId: string): Promise<any> => {
+  const res = await apiClient.get(`/api/admin/getClassPlayers/${classId}`);
+  return res.data;
+};
+
 // ================= NEWS =================
 
 export const getAllNews = async (): Promise<any> => {
@@ -222,6 +227,17 @@ export const deleteTeam = async (id: string): Promise<any> => {
   const res = await apiClient.delete(`/api/admin/teams/${id}`);
   return res.data;
 };
+
+export const getAvailablePlayers = async (): Promise<any> => {
+  const res = await apiClient.get('/api/admin/available-players');
+  return res.data;
+};
+
+export const assignPlayerToTeam = async (teamId: string, playerId: string): Promise<any> => {
+  const res = await apiClient.post(`/api/admin/teams/${teamId}/assign`, { playerId });
+  return res.data;
+};
+
 
 // ================= FIXTURES =================
 

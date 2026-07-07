@@ -3,6 +3,7 @@ import PageMeta from "../../components/common/PageMeta";
 import apiClient from "../../api/apiClient";
 import ClassFilters from "../../components/classes/ClassFilters";
 import ClassTable from "../../components/classes/ClassTable";
+import ViewClassPlayersModal from "../../components/classes/ViewClassPlayersModal";
 
 interface ClassItem {
   _id: string;
@@ -29,6 +30,7 @@ export default function ClassesList() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewPlayersClassId, setViewPlayersClassId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -175,6 +177,7 @@ export default function ClassesList() {
             classes={filteredClasses}
             isLoading={isLoading}
             onEditClass={() => { /* TODO: handle edit */ }}
+            onViewPlayers={(cls) => setViewPlayersClassId(cls._id)}
           />
         </div>
       </div>
@@ -283,6 +286,12 @@ export default function ClassesList() {
             </div>
           </div>
         )}
+
+      <ViewClassPlayersModal 
+        isOpen={!!viewPlayersClassId}
+        onClose={() => setViewPlayersClassId(null)}
+        classId={viewPlayersClassId}
+      />
     </>
   );
 }

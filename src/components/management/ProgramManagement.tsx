@@ -148,11 +148,11 @@ const ProgramManagement: React.FC = () => {
 
       <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
         <Table>
-          <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 shadow-sm border-b">
+          <TableHeader className="sticky top-0 z-10 shadow-sm">
             <TableRow>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 uppercase tracking-wider pl-6">Module Title</TableCell>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 uppercase tracking-wider">Classification</TableCell>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 text-center uppercase tracking-wider pr-6">Actions</TableCell>
+              <TableCell isHeader className="pl-6">Module Title</TableCell>
+              <TableCell isHeader>Classification</TableCell>
+              <TableCell isHeader className="text-center pr-6">Actions</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -167,8 +167,8 @@ const ProgramManagement: React.FC = () => {
               <TableRow><TableCell colSpan={3} className="text-center py-20 text-gray-500 font-medium italic">No programs identified in this category.</TableCell></TableRow>
             ) : (
               programs.map((prog: any) => (
-                <TableRow key={prog._id} className="hover:bg-gray-50 transition-colors">
-                  <TableCell className="py-4 pl-6 font-bold text-sm text-gray-800 dark:text-white/90">
+                <TableRow key={prog._id}>
+                  <TableCell className="pl-6">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 border border-indigo-100 shadow-sm">
                         <Layers size={16} />
@@ -176,12 +176,12 @@ const ProgramManagement: React.FC = () => {
                       {prog.name || prog.title}
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
+                  <TableCell>
                     <span className="px-2 py-1 bg-brand-50 text-brand-600 text-[10px] font-extrabold uppercase rounded shadow-sm border border-brand-100">
                       {prog.category?.name || categories.find((c: any) => c._id === (prog.category?._id || prog.category))?.name || "Uncategorized"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-4 pr-6">
+                  <TableCell className="pr-6">
                     <div className="flex items-center justify-center gap-3">
                       <button onClick={() => handleOpenEdit(prog)} title="Modify" className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
                       <button onClick={() => handleDeleteClick(prog._id)} title="Remove" className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>

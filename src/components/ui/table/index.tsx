@@ -33,34 +33,45 @@ interface TableCellProps {
 }
 
 // Table Component
-const Table: React.FC<TableProps> = ({ children, className }) => {
-  return <table className={`min-w-full  ${className}`}>{children}</table>;
+const Table: React.FC<TableProps> = ({ children, className = "" }) => {
+  return (
+    <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
+      <div className="overflow-visible no-scrollbar">
+        <table className={`w-full text-left border-collapse text-xs ${className}`}>{children}</table>
+      </div>
+    </div>
+  );
 };
 
 // TableHeader Component
-const TableHeader: React.FC<TableHeaderProps> = ({ children, className }) => {
-  return <thead className={className}>{children}</thead>;
+const TableHeader: React.FC<TableHeaderProps> = ({ children, className = "" }) => {
+  return <thead className={`bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider ${className}`}>{children}</thead>;
 };
 
 // TableBody Component
-const TableBody: React.FC<TableBodyProps> = ({ children, className }) => {
+const TableBody: React.FC<TableBodyProps> = ({ children, className = "" }) => {
   return <tbody className={className}>{children}</tbody>;
 };
 
 // TableRow Component
-const TableRow: React.FC<TableRowProps> = ({ children, className }) => {
-  return <tr className={className}>{children}</tr>;
+const TableRow: React.FC<TableRowProps> = ({ children, className = "" }) => {
+  return <tr className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${className}`}>{children}</tr>;
 };
 
 // TableCell Component
 const TableCell: React.FC<TableCellProps> = ({
   children,
   isHeader = false,
-  className,
+  className = "",
   colSpan,
 }) => {
   const CellTag = isHeader ? "th" : "td";
-  return <CellTag className={` ${className}`} colSpan={colSpan}>{children}</CellTag>;
+  const baseClasses = isHeader ? "py-3 px-4" : "py-4 px-4";
+  return (
+    <CellTag className={`${baseClasses} ${className}`} colSpan={colSpan}>
+      {children}
+    </CellTag>
+  );
 };
 
 export { Table, TableHeader, TableBody, TableRow, TableCell };

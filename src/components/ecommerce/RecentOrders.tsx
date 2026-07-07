@@ -122,33 +122,21 @@ export default function RecentOrders() {
           </button>
         </div>
       </div>
-      <div className="max-w-full overflow-x-auto">
+      <div className="mt-5">
         <Table>
           {/* Table Header */}
-          <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
+          <TableHeader>
             <TableRow>
-              <TableCell
-                isHeader
-                className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
+              <TableCell isHeader>
                 Products
               </TableCell>
-              <TableCell
-                isHeader
-                className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
+              <TableCell isHeader>
                 Category
               </TableCell>
-              <TableCell
-                isHeader
-                className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
+              <TableCell isHeader>
                 Price
               </TableCell>
-              <TableCell
-                isHeader
-                className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
+              <TableCell isHeader>
                 Status
               </TableCell>
             </TableRow>
@@ -156,10 +144,10 @@ export default function RecentOrders() {
 
           {/* Table Body */}
 
-          <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+          <TableBody>
             {tableData.map((product) => (
-              <TableRow key={product.id} className="">
-                <TableCell className="py-3">
+              <TableRow key={product.id}>
+                <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="h-[50px] w-[50px] overflow-hidden rounded-md">
                       <img
@@ -178,13 +166,13 @@ export default function RecentOrders() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                <TableCell>
                   {product.price}
                 </TableCell>
-                <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                <TableCell>
                   {product.category}
                 </TableCell>
-                <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                <TableCell>
                   <Badge
                     size="sm"
                     color={

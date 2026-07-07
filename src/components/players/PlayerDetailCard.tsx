@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Player } from "../../types/player";
+import { usePlayerProfile } from "../../hooks/usePlayers";
 
 interface PlayerDetailCardProps {
   player: Player;
@@ -10,6 +11,8 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
   const [activeTab, setActiveTab] = useState<
     "Overview" | "Details" | "Development" | "Medical" | "More"
   >("Overview");
+
+  usePlayerProfile(player._id);
 
   const avatar = player.profileImage ? `/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
   const dob = new Date(player.dob);

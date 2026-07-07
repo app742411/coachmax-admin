@@ -170,11 +170,11 @@ const TermManagement: React.FC = () => {
 
             <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
                 <Table>
-                    <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 shadow-sm border-b">
+                    <TableHeader className="sticky top-0 z-10 shadow-sm">
                         <TableRow>
-                            <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 uppercase">Term Detail</TableCell>
-                            <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 uppercase">Timeline</TableCell>
-                            <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 text-center uppercase">Actions</TableCell>
+                            <TableCell isHeader>Term Detail</TableCell>
+                            <TableCell isHeader>Timeline</TableCell>
+                            <TableCell isHeader className="text-center">Actions</TableCell>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -184,22 +184,22 @@ const TermManagement: React.FC = () => {
                             <TableRow><TableCell colSpan={3} className="text-center py-10 text-gray-500">No terms defined.</TableCell></TableRow>
                         ) : (
                             terms.map((term: any) => (
-                                <TableRow key={term._id} className="hover:bg-gray-50 transition-colors">
-                                    <TableCell className="py-4 font-bold text-sm text-gray-800 dark:text-white/90 uppercase tracking-tight">
+                                <TableRow key={term._id}>
+                                    <TableCell>
                                         <div className="flex flex-col">
-                                            <span>{term.name}</span>
+                                            <span className="font-bold text-sm text-gray-800 dark:text-white/90 uppercase tracking-tight">{term.name}</span>
                                             <span className="text-[10px] text-brand-500 font-extrabold">{term.year} Season</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="py-4 font-bold text-xs text-gray-500 tracking-tighter">
-                                        <div className="flex items-center gap-2">
+                                    <TableCell>
+                                        <div className="flex items-center gap-2 font-bold text-xs text-gray-500 tracking-tighter">
                                             <Calendar size={14} className="text-gray-300" />
                                             <span>{formatDate(term.startDate)}</span>
                                             <span className="text-gray-300">→</span>
                                             <span>{formatDate(term.endDate)}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="py-4">
+                                    <TableCell>
                                         <div className="flex items-center justify-center gap-3">
                                             <button onClick={() => handleOpenEdit(term)} className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
                                             <button onClick={() => handleDeleteClick(term._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>

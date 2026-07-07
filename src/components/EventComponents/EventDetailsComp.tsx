@@ -369,17 +369,16 @@ const EventDetailsComp: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
           <Table>
-            <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50">
+            <TableHeader>
               <TableRow>
-                <TableCell isHeader className="px-8 py-5 text-[10px] font-bold  text-gray-400 border-b border-gray-100 dark:border-white/5">Player Detail</TableCell>
-                <TableCell isHeader className="px-8 py-5 text-[10px] font-bold  text-gray-400 border-b border-gray-100 dark:border-white/5">Affiliation</TableCell>
-                <TableCell isHeader className="px-8 py-5 text-[10px] font-bold  text-gray-400 border-b border-gray-100 dark:border-white/5">Skill metrics</TableCell>
-                <TableCell isHeader className="px-8 py-5 text-[10px] font-bold  text-gray-400 border-b border-gray-100 dark:border-white/5 text-center">Registration Status</TableCell>
+                <TableCell isHeader className="px-8">Player Detail</TableCell>
+                <TableCell isHeader className="px-8">Affiliation</TableCell>
+                <TableCell isHeader className="px-8">Skill metrics</TableCell>
+                <TableCell isHeader className="px-8 text-center">Registration Status</TableCell>
               </TableRow>
             </TableHeader>
-            <TableBody className="divide-y divide-gray-50 dark:divide-gray-800">
+            <TableBody>
               {participantsLoading ? (
                 <TableRow>
                   <TableCell colSpan={4} className="py-20 text-center">
@@ -388,8 +387,8 @@ const EventDetailsComp: React.FC = () => {
                 </TableRow>
               ) : participants.length > 0 ? (
                 participants.map((p) => (
-                  <TableRow key={p._id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors group">
-                    <TableCell className="px-8 py-5">
+                  <TableRow key={p._id} className="group">
+                    <TableCell className="px-8">
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <img
@@ -413,7 +412,7 @@ const EventDetailsComp: React.FC = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-8 py-5">
+                    <TableCell className="px-8">
                       <div className="space-y-1">
                         <span className="block text-[11px] font-bold  text-gray-800 dark:text-white truncate max-w-[140px] leading-none">
                           {p.user.club}
@@ -421,7 +420,7 @@ const EventDetailsComp: React.FC = () => {
                         <span className="block text-[9px] font-bold text-gray-400 ">Academy / Affiliation</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-8 py-5">
+                    <TableCell className="px-8">
                       <div className="space-y-2">
                         <Badge size="sm" color="primary" variant="light" className=" font-bold text-[9px] px-3">
                           {p.user.programType}
@@ -434,7 +433,7 @@ const EventDetailsComp: React.FC = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-8 py-5">
+                    <TableCell className="px-8">
                       <div className="flex flex-col items-center">
                         <Badge variant="light" color={p.status === "REGISTERED" ? "success" : "warning"} className=" font-bold text-[9px] tracking-[0.2em] px-5 py-2 rounded-full ring-1 ring-inset ring-current/20">
                           {p.status}
@@ -479,7 +478,6 @@ const EventDetailsComp: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
       </div>
     </div>
   );

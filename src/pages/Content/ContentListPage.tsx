@@ -266,7 +266,7 @@ const ContentListPage = ({ type = "news" }) => {
          </div>
        </div>
 
-       <div className="p-8 bg-brand-500 rounded-3xl shadow-2xl relative overflow-hidden group">
+       <div className="p-8 bg-[#031549] rounded-3xl shadow-2xl relative overflow-hidden group">
          <div className="absolute top-0 right-0 p-4 opacity-10 transform scale-150 rotate-12">
            <Newspaper size={120} />
          </div>

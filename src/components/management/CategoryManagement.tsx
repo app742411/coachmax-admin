@@ -105,10 +105,10 @@ const CategoryManagement: React.FC = () => {
 
       <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
         <Table>
-          <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 shadow-sm border-b">
+          <TableHeader className="sticky top-0 z-10 shadow-sm">
             <TableRow>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 uppercase">Category Name</TableCell>
-              <TableCell isHeader className="font-bold text-xs text-gray-600 py-4 text-center uppercase">Actions</TableCell>
+              <TableCell isHeader>Category Name</TableCell>
+              <TableCell isHeader className="text-center">Actions</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,8 +118,8 @@ const CategoryManagement: React.FC = () => {
               <TableRow><TableCell colSpan={2} className="text-center py-10 text-gray-500">No categories recorded.</TableCell></TableRow>
             ) : (
               categories.map((cat: any) => (
-                <TableRow key={cat._id} className="hover:bg-gray-50 transition-colors">
-                  <TableCell className="py-4 font-bold text-sm text-gray-800 dark:text-white/90">
+                <TableRow key={cat._id}>
+                  <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500">
                         <Tag size={16} />
@@ -127,7 +127,7 @@ const CategoryManagement: React.FC = () => {
                       {cat.name}
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
+                  <TableCell>
                     <div className="flex items-center justify-center gap-3">
                       <button onClick={() => handleOpenEdit(cat)} className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
                       <button onClick={() => handleDeleteClick(cat._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>

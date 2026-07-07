@@ -33,3 +33,8 @@ export const exportUsersCSV = async (status: string = "APPROVED"): Promise<void>
   link.click();
   link.parentNode?.removeChild(link);
 };
+
+export const getPlayerProfile = async (playerId: string): Promise<any> => {
+  const response = await apiClient.get(`/api/user/player/profile/${playerId}`);
+  return response.data;
+};

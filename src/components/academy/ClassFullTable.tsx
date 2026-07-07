@@ -112,14 +112,14 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
       </div>
 
       {/* Attendance Grid Table */}
-      <div className="overflow-x-auto no-scrollbar">
-        <table className="w-full text-left border-collapse text-[11px]">
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-separate border-spacing-0 text-[11px]">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
-              <th className="py-2.5 px-4 w-[40px]">#</th>
-              <th className="py-2.5 px-3 min-w-[130px]">Player</th>
-              <th className="py-2.5 px-3 min-w-[80px]">DOB</th>
-              <th className="py-2.5 px-3 min-w-[120px]">Medical Conditions</th>
+              <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-4 min-w-[40px] w-[40px] border-b border-slate-100 dark:border-slate-800">#</th>
+              <th className="sticky left-[40px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[150px] w-[150px] border-b border-slate-100 dark:border-slate-800">Player</th>
+              <th className="sticky left-[190px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[90px] w-[90px] border-b border-slate-100 dark:border-slate-800">DOB</th>
+              <th className="sticky left-[280px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[130px] w-[130px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Medical Conditions</th>
               {sessions.map((sessionDate: string, idx: number) => {
                 const formatted = formatDateLabel(sessionDate);
                 return (
@@ -130,7 +130,7 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
                       <span className="text-slate-500 font-bold">{formatted.date}</span>
                     </div>
                     {/* Mark All Present button on hover */}
-                    <button 
+                    <button
                       onClick={() => handleMarkAllPresent(sessionDate)}
                       className="absolute inset-0 bg-white/90 dark:bg-slate-900/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Mark all present"
@@ -142,14 +142,14 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
                   </th>
                 );
               })}
-              <th className="py-2.5 px-4 w-[70px] text-center border-l border-slate-100 dark:border-slate-800/40">Actions</th>
+              <th className="sticky right-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-4 min-w-[70px] w-[70px] text-center border-l border-b border-slate-100 dark:border-slate-800 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">Actions</th>
             </tr>
           </thead>
           <tbody>
             {players.length > 0 ? players.map((row: any, idx: number) => (
-              <tr key={row.playerId} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10">
-                <td className="py-2 px-4 font-semibold text-slate-400">{idx + 1}</td>
-                <td className="py-2 px-3">
+              <tr key={row.playerId} className="group border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10">
+                <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 font-semibold text-slate-400 min-w-[40px] w-[40px] border-b border-slate-50 dark:border-slate-800/40">{idx + 1}</td>
+                <td className="sticky left-[40px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 min-w-[150px] w-[150px] border-b border-slate-50 dark:border-slate-800/40">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
                       <span className="text-[10px] font-bold">{row.name.charAt(0)}</span>
@@ -157,8 +157,8 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
                     <span className="font-bold text-slate-700 dark:text-slate-200">{row.name}</span>
                   </div>
                 </td>
-                <td className="py-2 px-3 font-semibold text-slate-500">{new Date(row.dob).toLocaleDateString()}</td>
-                <td className="py-2 px-3">
+                <td className="sticky left-[190px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 font-semibold text-slate-500 min-w-[90px] w-[90px] border-b border-slate-50 dark:border-slate-800/40">{new Date(row.dob).toLocaleDateString()}</td>
+                <td className="sticky left-[280px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 min-w-[130px] w-[130px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
                   <span className={row.adminNote ? "text-rose-600 font-bold" : "text-slate-500 font-semibold"}>
                     {row.adminNote || "None"}
                   </span>
@@ -166,8 +166,8 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
                 {sessions.map((sessionDate: string) => {
                   const status = row.attendance?.[sessionDate] || "NOT_MARKED";
                   return (
-                    <td 
-                      key={sessionDate} 
+                    <td
+                      key={sessionDate}
                       className="py-2 px-1.5 border-l border-slate-50 dark:border-slate-800/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
                       onClick={() => handleToggleAttendance(row.playerId, sessionDate, status)}
                     >
@@ -175,7 +175,7 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
                     </td>
                   );
                 })}
-                <td className="py-2 px-4 text-center border-l border-slate-50 dark:border-slate-800/20">
+                <td className="sticky right-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 text-center border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">
                   <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center">
                     <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />

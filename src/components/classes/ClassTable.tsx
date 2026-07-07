@@ -23,9 +23,10 @@ interface ClassTableProps {
   classes: ClassItem[];
   isLoading: boolean;
   onEditClass?: (cls: ClassItem) => void;
+  onViewPlayers?: (cls: ClassItem) => void;
 }
 
-export default function ClassTable({ classes, isLoading, onEditClass }: ClassTableProps) {
+export default function ClassTable({ classes, isLoading, onEditClass, onViewPlayers }: ClassTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,7 +109,7 @@ export default function ClassTable({ classes, isLoading, onEditClass }: ClassTab
                     </button>
 
                     {openDropdownId === cls._id && (
-                      <div className="absolute right-8 top-10 w-32 bg-white dark:bg-slate-800 rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                         <button 
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                           onClick={(e) => {
@@ -118,6 +119,16 @@ export default function ClassTable({ classes, isLoading, onEditClass }: ClassTab
                           }}
                         >
                           Edit Class
+                        </button>
+                        <button 
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onViewPlayers) onViewPlayers(cls);
+                            setOpenDropdownId(null);
+                          }}
+                        >
+                          View Players
                         </button>
                       </div>
                     )}
