@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import apiClient from "../../api/apiClient";
 import ClassFilters from "../../components/classes/ClassFilters";
@@ -44,6 +44,10 @@ export default function ClassesList() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
 
 
 

@@ -307,14 +307,18 @@ const AppSidebar: React.FC = () => {
           icon: <GridIcon />,
           subItems: [
             { name: "Product List", path: "/products" },
-            { name: "Add Product", path: "/add-product" }
+            { name: "Add Product", path: "/add-product" },
+            { name: "Orders", path: "/orders" }
           ]
         },
         {
           name: "Finance",
           icon: <GridIcon />,
           subItems: [
-            { name: "Overview", path: "/finance" }
+            // { name: "Overview", path: "/finance" },
+            { name: "Bank Details", path: "/bank-details" },
+            { name: "Invoices", path: "/invoices" },
+            { name: "Transactions", path: "/transactions" }
           ]
         },
         {
@@ -361,14 +365,14 @@ const AppSidebar: React.FC = () => {
             { name: "Add News", path: "/add-content" },
           ],
         },
-        {
-          name: "Gallery",
-          icon: <GridIcon />,
-          subItems: [
-            { name: "View Gallery", path: "/gallery" },
-            { name: "Add Gallery", path: "/add-gallery" },
-          ],
-        },
+        // {
+        //   name: "Gallery",
+        //   icon: <GridIcon />,
+        //   subItems: [
+        //     { name: "View Gallery", path: "/gallery" },
+        //     { name: "Add Gallery", path: "/add-gallery" },
+        //   ],
+        // },
       ],
     },
     {

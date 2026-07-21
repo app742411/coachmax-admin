@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile } from "../api/players";
-import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer } from "../api/adminApi";
+import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer } from "../api/adminApi";
 import { PlayersResponse } from "../types/player";
 
 export const usePlayers = (page = 1, limit = 10) => {
@@ -146,6 +146,21 @@ export const useAssignClassesToPlayer = () => {
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || error.message || "Failed to assign classes to player");
+    }
+  });
+};
+
+export const useRemoveClassFromPlayer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, classId }: { userId: string; classId: string }) =>
+      removeClassFromPlayer(userId, classId),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["classFullTable"] });
+      toast.success(data?.message || "Player removed from class successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to remove player from class");
     }
   });
 };

@@ -10,6 +10,7 @@ interface PlayerTableProps {
   onApprovePlayer?: (player: Player) => void;
   onRejectPlayer?: (player: Player) => void;
   onAssignClass?: (player: Player) => void;
+  onGenerateInvoice?: (player: Player) => void;
 }
 
 export default function PlayerTable({
@@ -20,6 +21,7 @@ export default function PlayerTable({
   onApprovePlayer,
   onRejectPlayer,
   onAssignClass,
+  onGenerateInvoice,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
@@ -42,6 +44,7 @@ export default function PlayerTable({
               <th className="py-3 px-3 min-w-[90px]">DOB</th>
               <th className="py-3 px-3 min-w-[140px]">School</th>
               <th className="py-3 px-3 min-w-[60px] text-center">Jersey #</th>
+              <th className="py-3 px-3 min-w-[90px] text-center">Category</th>
               <th className="py-3 px-3 min-w-[90px] text-center">Program</th>
               <th className="py-3 px-3 min-w-[50px] text-center">Foot</th>
               <th className="py-3 px-3 min-w-[120px]">Contact</th>
@@ -92,6 +95,9 @@ export default function PlayerTable({
                   </td>
                   <td className="py-4 px-3 font-semibold text-slate-700 dark:text-slate-300 text-center">
                     {player.jerseyNumber || "N/A"}
+                  </td>
+                  <td className="py-4 px-3 text-center font-bold text-brand-500">
+                    {player.category?.name || "N/A"}
                   </td>
                   <td className="py-4 px-3 text-center font-bold text-slate-600 dark:text-slate-400">
                     {player.program?.name || "N/A"}
@@ -158,6 +164,18 @@ export default function PlayerTable({
                             }}
                           >
                             Assign to Class
+                          </button>
+                        )}
+                        {onGenerateInvoice && (
+                          <button
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onGenerateInvoice(player);
+                              setOpenDropdownId(null);
+                            }}
+                          >
+                            Generate Invoice
                           </button>
                         )}
                         {onDeletePlayer && (

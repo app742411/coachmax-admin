@@ -22,6 +22,7 @@ const mapRegistrationToPlayer = (reg: any): Player => {
     status: reg.status || "PENDING",
     category: reg.category || undefined,
     program: reg.programs && reg.programs.length > 0 ? reg.programs[0] : undefined,
+    paymentStatus: reg.player?.paymentStatus || "PENDING",
     term: reg.player?.term || undefined,
     jerseyNumber: reg.player?.jerseyNumber || 0,
     goals: reg.player?.goals || 0,

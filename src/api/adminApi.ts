@@ -333,6 +333,16 @@ export const assignClassesToPlayer = async (
   return response.data;
 };
 
+export const removeClassFromPlayer = async (
+  userId: string,
+  classId: string
+): Promise<any> => {
+  const response = await apiClient.post(`/admin/removeClass/${userId}`, {
+    classId,
+  });
+  return response.data;
+};
+
 export const getAllocatedPlayers = async (
   category?: string,
   program?: string,

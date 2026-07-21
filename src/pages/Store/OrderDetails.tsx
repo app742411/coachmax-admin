@@ -1,217 +1,219 @@
+import { useParams } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
-import {
-  ArrowLeft,
-  MapPin,
-  Clock,
-  Phone,
-  Clipboard,
-  Printer,
-  Calendar
-} from "lucide-react";
-import { useParams } from "react-router";
-import Button from "../../components/ui/button/Button";
+import { useOrderDetails, useUpdateOrderStatus } from "../../hooks/useOrders";
 
-const OrderDetails = () => {
-  const { id } = useParams();
+export default function OrderDetails() {
+  const { id } = useParams<{ id: string }>();
+  const { data, isLoading, isError } = useOrderDetails(id as string);
+  const updateStatusMutation = useUpdateOrderStatus();
 
-  const orderData = {
-    id: id || "ORD-9281",
-    date: "June 20, 2024",
-    time: "14:32 PM",
-    customer: {
-      name: "Alex Johnson",
-      email: "alex@example.com",
-      phone: "+61 412 345 678",
-      avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=100&auto=format&fit=crop"
-    },
-    items: [
-      { id: 1, name: "CM Training Kit", size: "L", qty: 2, price: "90.00", image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=100&auto=format&fit=crop" },
-      { id: 2, name: "CM Socks/Sleeve", size: "M", qty: 1, price: "15.00", image: "https://images.unsplash.com/photo-1582213704251-872f2d9136ca?q=80&w=100&auto=format&fit=crop" }
-    ],
-    billing: {
-      subtotal: "195.00",
-      tax: "15.00",
-      shipping: "35.00",
-      total: "245.00"
-    },
-    shipping: {
-      address: "CoachMax Academy Grounds, Pitch 4, Main St.",
-      method: "Pickup",
-      schedule: "June 22, 2024 | 10:00 AM - 12:00 PM"
-    }
+  if (isLoading) return <div className="p-8 text-center text-slate-500 font-semibold">Loading order details...</div>;
+  if (isError || !data?.data) return <div className="p-8 text-center text-rose-500 font-semibold">Failed to load order details or order not found.</div>;
+
+  const order = data.data;
+
+  const handleStatusChange = (newStatus: string) => {
+    updateStatusMutation.mutate({ id: order._id, data: { status: newStatus } });
+  };
+
+  const handlePaymentStatusChange = (newPaymentStatus: string) => {
+    updateStatusMutation.mutate({ id: order._id, data: { paymentStatus: newPaymentStatus } });
   };
 
   return (
     <>
-      <PageMeta
-        title={`CoachMax | Order ${orderData.id}`}
-        description="Review and process customer merchandise orders."
-      />
-      <PageBreadcrumb
-        pageTitle={`#${orderData.id}`}
-        items={[
-          { name: "Store", path: "/products" },
-          { name: "Order List", path: "/orders" }
-        ]}
-      />
+      <PageMeta title={`CoachMax | Order ${order.orderNumber || order._id.substring(order._id.length - 8)}`} description="Order Details" />
       <div className="space-y-6">
+        <PageBreadcrumb 
+          pageTitle={`Order Details: ${order.orderNumber || order._id.substring(order._id.length - 8)}`} 
+          items={[{ name: "Store", path: "/products" }, { name: "Orders", path: "/orders" }]} 
+        />
 
-        {/* Header Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          {/* <div className="flex items-center gap-4">
-       <Link to="/orders" className="p-3 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 text-gray-500 hover:text-brand-500 transition-all shadow-sm">
-         <ArrowLeft size={20} />
-       </Link>
-       <PageBreadcrumb 
-        pageTitle={`#${orderData.id}`} 
-        items={[
-         { name: "Store", path: "/products" },
-         { name: "Order List", path: "/orders" }
-        ]} 
-       />
-      </div> */}
-
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-500 hover:text-brand-500 transition-all shadow-sm">
-              <Printer size={16} /> Print Order
-            </button>
-            <Button className="rounded-none px-10 font-bold shadow-xl shadow-brand-500/20 active:scale-95 transition-all text-sm">
-              Update Status
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-          {/* Left Section: Items & Summary */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="bg-brand-500 p-6 rounded-[2.5rem] relative overflow-hidden shadow-2xl shadow-brand-500/20">
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 text-white">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold tracking-[0.2em] opacity-80">Order Timeline</span>
-                  <h3 className="text-2xl font-bold tracking-wide ">Order Currently: Processing</h3>
-                  <p className="text-xs font-bold opacity-70">Last update: June 20, 2024 at 14:35 PM</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button className="px-6 py-3 bg-white/10 backdrop-blur-md rounded-none text-xs font-bold  border border-white/20 active:scale-95 transition-all">Mark as Ready</button>
-                  <button className="px-6 py-3 bg-white rounded-none text-xs font-bold  text-brand-600 shadow-lg active:scale-95 transition-all">Accept Order</button>
-                </div>
+        <div className="bg-white dark:bg-gray-800 rounded-none border border-gray-200 dark:border-gray-700 p-8 shadow-sm">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between border-b border-gray-100 dark:border-gray-700 pb-8 mb-8 gap-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">ORDER</h1>
+              <p className="text-sm font-semibold text-gray-400 mt-1">#{order.orderNumber || order._id.substring(order._id.length - 8)}</p>
+            </div>
+            <div className="flex flex-col items-end text-right">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">Status</span>
+                <select
+                  value={order.status || "PENDING"}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  disabled={updateStatusMutation.isPending}
+                  className={`rounded-none border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold outline-none disabled:opacity-50 ${
+                    order.status === "DELIVERED" ? "text-emerald-600 border-emerald-200 bg-emerald-50" : 
+                    order.status === "CANCELLED" ? "text-rose-600 border-rose-200 bg-rose-50" : 
+                    "text-amber-600 border-amber-200 bg-amber-50"
+                  }`}
+                >
+                  <option value="PENDING">PENDING</option>
+                  <option value="PROCESSING">PROCESSING</option>
+                  <option value="SHIPPED">SHIPPED</option>
+                  <option value="DELIVERED">DELIVERED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
               </div>
-              <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-              <div className="absolute left-1/2 top-0 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+              <div className="flex items-center gap-3 mt-3">
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">Payment</span>
+                <select
+                  value={order.paymentStatus || "PENDING"}
+                  onChange={(e) => handlePaymentStatusChange(e.target.value)}
+                  disabled={updateStatusMutation.isPending}
+                  className={`rounded-none border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold outline-none disabled:opacity-50 ${
+                    order.paymentStatus === "PAID" ? "text-emerald-600 border-emerald-200 bg-emerald-50" : 
+                    order.paymentStatus === "FAILED" ? "text-rose-600 border-rose-200 bg-rose-50" : 
+                    "text-amber-600 border-amber-200 bg-amber-50"
+                  }`}
+                >
+                  <option value="PENDING">PENDING</option>
+                  <option value="PAID">PAID</option>
+                  <option value="FAILED">FAILED</option>
+                  <option value="REFUNDED">REFUNDED</option>
+                </select>
+              </div>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mt-3">Placed: {new Date(order.createdAt).toLocaleDateString()}</p>
+              {order.paymentMethod && <p className="text-sm font-semibold text-gray-500 mt-1">Payment Method: {order.paymentMethod}</p>}
+            </div>
+          </div>
+
+          {/* Customer & Shipping Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Customer (Parent) Info</h3>
+              {order.parent ? (
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      {order.parent.fullName}
+                      {order.parent.relationship && (
+                        <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded uppercase">{order.parent.relationship}</span>
+                      )}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-500">{order.parent.email}</p>
+                    <p className="text-sm font-semibold text-gray-500">Phone: {order.parent.phone}</p>
+                    {order.parent.emergencyContact && <p className="text-sm font-semibold text-gray-500">Emergency: {order.parent.emergencyContact}</p>}
+                  </div>
+                  {(order.parent.address || order.parent.city) && (
+                    <div className="text-sm font-semibold text-gray-500 mt-2">
+                      <p>{order.parent.address}</p>
+                      <p>{order.parent.city}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm font-semibold text-gray-500">N/A</p>
+              )}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Shipping / Invoice Details</h3>
+              
+              <div className="space-y-4">
+                {order.shippingAddress && (
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase">Delivery Address</p>
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mt-1">{order.shippingAddress}</p>
+                  </div>
+                )}
+                
+                {order.invoice && (
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-none border border-slate-100 dark:border-slate-800">
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">Linked Invoice</p>
+                    <p className="text-sm font-bold text-[#0047FF]">{order.invoice.invoiceNumber}</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-1">Due Date: {new Date(order.invoice.dueDate).toLocaleDateString()}</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-1">Status: {order.invoice.status} / {order.invoice.paymentStatus}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Items List */}
+          <div className="mb-10">
+            <div className="grid grid-cols-12 gap-4 border-b border-gray-100 dark:border-gray-700 pb-3 mb-4">
+              <div className="col-span-6 md:col-span-8"><span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Item</span></div>
+              <div className="col-span-3 md:col-span-2 text-right"><span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Qty</span></div>
+              <div className="col-span-3 md:col-span-2 text-right"><span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Price</span></div>
             </div>
 
-            {/* Order Items Table */}
-            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden p-6">
-              <h4 className="text-sm font-bold  text-gray-900 dark:text-white mb-6 border-l-4 border-brand-500 pl-3">Gear Breakdown</h4>
-              <div className="space-y-4">
-                {orderData.items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-none border border-gray-100 dark:border-gray-800 transition-all hover:border-brand-500/30">
-                    <img src={item.image} className="w-16 h-16 object-cover rounded-none" alt={item.name} />
-                    <div className="flex-1 min-w-0">
-                      <h5 className="font-bold text-gray-900 dark:text-white truncate">{item.name}</h5>
-                      <div className="flex items-center gap-4 mt-1">
-                        <span className="text-[10px] font-bold text-gray-400 ">Size: {item.size}</span>
-                        <span className="text-[10px] font-bold text-brand-500 ">Qty: {item.qty}</span>
+            {order.items && order.items.length > 0 ? (
+              <div className="space-y-6">
+                {order.items.map((item: any, idx: number) => {
+                  const productImage = item.product?.images?.[0] 
+                    ? `${import.meta.env.VITE_API_BASE_URL}/${item.product.images[0]}`
+                    : null;
+
+                  return (
+                    <div key={idx} className="grid grid-cols-12 gap-4 items-center">
+                      <div className="col-span-6 md:col-span-8 flex items-start gap-4">
+                        {productImage ? (
+                          <img src={productImage} alt={item.product?.name} className="w-16 h-16 object-cover border border-slate-100 dark:border-slate-700" />
+                        ) : (
+                          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                            <span className="text-[10px] text-slate-400">No Img</span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">{item.product?.name || item.title || "Product"}</p>
+                          {item.product?.category?.name && (
+                            <p className="text-xs font-bold text-brand-500 uppercase mt-0.5">{item.product.category.name}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1.5 text-xs font-semibold text-gray-500">
+                            {item.selectedSize && <span>Size: <strong className="text-gray-700 dark:text-gray-300">{item.selectedSize}</strong></span>}
+                            {item.selectedColor && <span>Color: <strong className="text-gray-700 dark:text-gray-300">{item.selectedColor}</strong></span>}
+                          </div>
+                          {item.description && <p className="text-xs font-semibold text-gray-500 mt-1">{item.description}</p>}
+                        </div>
+                      </div>
+                      <div className="col-span-3 md:col-span-2 text-right">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">x {item.quantity || 1}</p>
+                      </div>
+                      <div className="col-span-3 md:col-span-2 text-right">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">${item.price || item.amount || 0}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs font-bold text-gray-400 block mb-1 ">Price</span>
-                      <span className="text-base font-bold text-brand-600">${item.price}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+            ) : (
+              <p className="text-sm font-semibold text-gray-500">No items found for this order.</p>
+            )}
+          </div>
 
-              {/* Calculations */}
-              <div className="mt-8 pt-8 border-t border-gray-50 dark:border-gray-800 space-y-3 max-w-xs ml-auto">
-                <div className="flex justify-between text-xs font-bold text-gray-400 ">
-                  <span>Sub Total</span>
-                  <span className="text-gray-900 dark:text-white font-bold">${orderData.billing.subtotal}</span>
-                </div>
-                <div className="flex justify-between text-xs font-bold text-gray-400 ">
-                  <span>Tax (GST)</span>
-                  <span className="text-gray-900 dark:text-white font-bold">${orderData.billing.tax}</span>
-                </div>
-                <div className="flex justify-between text-xs font-bold text-gray-400 ">
-                  <span>Shipping/Proc.</span>
-                  <span className="text-gray-900 dark:text-white font-bold">${orderData.billing.shipping}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold text-brand-600 border-t-2 border-brand-500 pt-3">
-                  <span className=" tracking-tighter">Total AUD</span>
-                  <span>${orderData.billing.total}</span>
-                </div>
+          {/* Totals */}
+          <div className="flex justify-end pt-6 border-t border-gray-100 dark:border-gray-700">
+            <div className="w-full md:w-1/3 space-y-3">
+              <div className="flex justify-between items-center text-sm font-semibold text-gray-600 dark:text-gray-400">
+                <span>Subtotal</span>
+                <span>${order.subtotal || order.totalAmount || 0}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-semibold text-gray-600 dark:text-gray-400">
+                <span>Shipping</span>
+                <span>${order.shippingCost || 0}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-semibold text-rose-500">
+                <span>Discount</span>
+                <span>-${order.discount || 0}</span>
+              </div>
+              <div className="flex justify-between items-center text-lg font-bold text-gray-900 dark:text-white pt-3 border-t border-gray-100 dark:border-gray-700">
+                <span>Total</span>
+                <span>${order.totalAmount || 0}</span>
               </div>
             </div>
           </div>
 
-          {/* Right Section: Customer & Delivery */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-              <h4 className="text-sm font-bold  text-gray-900 dark:text-white mb-6 border-l-4 border-brand-500 pl-3">Player Info</h4>
-              <div className="flex gap-4 mb-6">
-                <img src={orderData.customer.avatar} className="w-16 h-16 rounded-none object-cover ring-4 ring-brand-500/10" alt="" />
-                <div>
-                  <h5 className="font-bold text-gray-900 dark:text-white truncate">{orderData.customer.name}</h5>
-                  <p className="text-xs font-bold text-gray-400 lowercase">{orderData.customer.email}</p>
-                  <p className="text-xs font-bold text-brand-500 mt-1 ">Elite Academy Member</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <button className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-none border border-transparent hover:border-brand-500 transition-all group">
-                  <div className="flex items-center gap-3">
-                    <Phone size={18} className="text-brand-500" />
-                    <span className="text-xs font-bold  text-gray-600 dark:text-gray-400 font-bold">{orderData.customer.phone}</span>
-                  </div>
-                  <ArrowLeft size={14} className="text-gray-300 group-hover:text-brand-500 rotate-180 transition-all" />
-                </button>
-                <button className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-none border border-transparent hover:border-brand-500 transition-all group">
-                  <div className="flex items-center gap-3">
-                    <Clipboard size={18} className="text-gray-400" />
-                    <span className="text-xs font-bold text-gray-500 ">Order History</span>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-none text-gray-500 ">12 Total</span>
-                </button>
-              </div>
+          {/* Notes */}
+          {order.notes && (
+            <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-700">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Order Notes</h3>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{order.notes}</p>
             </div>
-
-            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm p-6 overflow-hidden relative">
-              <h4 className="text-sm font-bold  text-gray-900 dark:text-white mb-6 border-l-4 border-brand-500 pl-3">Order Schedule & Location</h4>
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-brand-50 dark:bg-brand-500/10 rounded-none flex shrink-0 items-center justify-center text-brand-500">
-                    <MapPin size={20} />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-bold  text-gray-400">Academy Grounds {orderData.shipping.method}</span>
-                    <p className="text-xs font-bold  text-gray-700 dark:text-gray-300 leading-relaxed">{orderData.shipping.address}</p>
-                    <button className="text-[10px] font-bold text-brand-500 mt-1 hover:underline decoration-2 underline-offset-4">Open on Maps</button>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-brand-50 dark:bg-brand-500/10 rounded-none flex shrink-0 items-center justify-center text-brand-500">
-                    <Calendar size={20} />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-bold  text-gray-400">Scheduled {orderData.shipping.method}</span>
-                    <p className="text-xs font-bold  text-gray-700 dark:text-gray-300 leading-relaxed">{orderData.shipping.schedule}</p>
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-gray-50 dark:border-gray-800">
-                  <button className="w-full py-4 bg-brand-500 text-white rounded-none text-xs font-bold  tracking-[0.1em] shadow-xl shadow-brand-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <Clock size={16} /> Re-schedule {orderData.shipping.method}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </>
   );
-};
-
-export default OrderDetails;
+}

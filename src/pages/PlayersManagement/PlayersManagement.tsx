@@ -6,6 +6,7 @@ import PlayerFilters from "../../components/players/PlayerFilters";
 import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
 import AssignClassModal from "../../components/players/AssignClassModal";
+import GenerateInvoiceModal from "../../components/InvoiceManagement/GenerateInvoiceModal";
 import { usePlayers, useDeletePlayer } from "../../hooks/usePlayers";
 
 export default function PlayersManagement() {
@@ -21,6 +22,7 @@ export default function PlayersManagement() {
   const deletePlayerMutation = useDeletePlayer();
   
   const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
+  const [playerForInvoice, setPlayerForInvoice] = useState<Player | null>(null);
 
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
@@ -33,6 +35,10 @@ export default function PlayersManagement() {
 
   const handleAssignPlayer = (player: Player) => {
     setPlayerToAssign(player);
+  };
+
+  const handleGenerateInvoice = (player: Player) => {
+    setPlayerForInvoice(player);
   };
 
   // Filtering Logic
@@ -108,6 +114,7 @@ export default function PlayersManagement() {
               onSelectPlayer={setSelectedPlayer}
               onDeletePlayer={handleDeletePlayer}
               onAssignClass={handleAssignPlayer}
+              onGenerateInvoice={handleGenerateInvoice}
             />
           )}
         </div>
@@ -122,7 +129,11 @@ export default function PlayersManagement() {
         <AssignClassModal player={playerToAssign} onClose={() => setPlayerToAssign(null)} />
       )}
 
-
+      <GenerateInvoiceModal
+        isOpen={!!playerForInvoice}
+        onClose={() => setPlayerForInvoice(null)}
+        player={playerForInvoice}
+      />
     </>
   );
 }

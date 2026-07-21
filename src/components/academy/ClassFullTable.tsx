@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer } from "../../hooks/usePlayers";
+import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer, useRemoveClassFromPlayer } from "../../hooks/usePlayers";
 import { Modal } from "../ui/modal";
 
 interface ClassFullTableProps {
@@ -18,6 +18,8 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const assignClassesMutation = useAssignClassesToPlayer();
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pendingDropData, setPendingDropData] = useState<any>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const removeClassMutation = useRemoveClassFromPlayer();
 
   if (isLoading) {
     return <div className="p-4 text-center text-sm text-slate-500">Loading class data...</div>;
@@ -110,7 +112,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       const dataStr = e.dataTransfer.getData("application/json");
       if (!dataStr) return;
       const data = JSON.parse(dataStr);
-      
+
       if (data.playerId) {
         // If categories/programs are available on both sides and mismatch, show confirmation
         if (
@@ -148,10 +150,9 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   };
 
   return (
-    <div 
-      className={`border border-slate-100 dark:border-slate-800 overflow-hidden mb-6 shadow-theme-xs bg-white dark:bg-slate-900 transition-colors ${
-        assignClassesMutation.isPending ? "opacity-75" : ""
-      }`}
+    <div
+      className={`border border-slate-100 dark:border-slate-800 overflow-hidden mb-6 shadow-theme-xs bg-white dark:bg-slate-900 transition-colors ${assignClassesMutation.isPending ? "opacity-75" : ""
+        }`}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -164,16 +165,16 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
             </svg>
             <span>{timeSlotStr}</span>
           </div>
-          <div className="flex items-center gap-2 text-[#4facfe] bg-white/10 px-2.5 py-1 rounded-sm">
+          <div className="flex items-center gap-2">
+            <span>{schedule.className}</span>
+          </div>
+          <div className="flex items-center gap-2 text-[#4facfe] bg-white/10 px-2.5 py-1 rounded-sm ml-auto">
             <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             <span>
               {categoryName || schedule.category?.name || "N/A"} / {programName || schedule.program?.name || "N/A"}
             </span>
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <span>{schedule.className}</span>
           </div>
         </div>
       </div>
@@ -218,6 +219,15 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                 <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 font-semibold text-slate-400 min-w-[40px] w-[40px] border-b border-slate-50 dark:border-slate-800/40">{idx + 1}</td>
                 <td className="sticky left-[40px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 min-w-[150px] w-[150px] border-b border-slate-50 dark:border-slate-800/40">
                   <div className="flex items-center gap-2">
+                    <span 
+                      title={row.paymentStatus || "UNKNOWN"}
+                      className={`w-3 h-3 rounded-full shrink-0 border border-white dark:border-slate-800 shadow-sm ${
+                        row.paymentStatus === "PAID" || row.paymentStatus === "APPROVED" ? "bg-emerald-500" : 
+                        row.paymentStatus === "UNPAID" || row.paymentStatus === "REJECTED" ? "bg-rose-500" : 
+                        row.paymentStatus === "TRIAL" ? "bg-blue-500" : 
+                        "bg-amber-500"
+                      }`}
+                    />
                     <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
                       <span className="text-[10px] font-bold">{row.name.charAt(0)}</span>
                     </div>
@@ -242,12 +252,37 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                     </td>
                   );
                 })}
-                <td className="sticky right-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 text-center border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">
-                  <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-none bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center">
-                    <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
+                <td className="sticky right-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 text-center border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] relative">
+                  <div className="flex items-center justify-center">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuId(openMenuId === row.playerId ? null : row.playerId);
+                      }}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-none bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center"
+                    >
+                      <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                  {openMenuId === row.playerId && (
+                    <div className="absolute right-12 top-1/2 -translate-y-1/2 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 py-1.5 overflow-hidden">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(null);
+                          if (window.confirm("Are you sure you want to remove this player from this class?")) {
+                            removeClassMutation.mutate({ userId: row.playerId, classId });
+                          }
+                        }}
+                        disabled={removeClassMutation.isPending}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-50"
+                      >
+                        Remove Class
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             )) : (

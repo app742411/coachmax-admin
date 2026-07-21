@@ -25,6 +25,8 @@ import ProgramsManagement from "./pages/Programs/ProgramsManagement";
 import ClassesList from "./pages/Classes/ClassesList";
 import ProductList from "./pages/Store/ProductList";
 import AddProductPage, { EditProductPage } from "./pages/Store/AddProductPage";
+import OrdersList from "./pages/Store/OrdersList";
+import OrderDetails from "./pages/Store/OrderDetails";
 import CoachingManagementPage from "./pages/CochingManagement/CoachingManagementPage";
 import RoleBasedDashboard from "./components/auth/RoleBasedDashboard";
 import AddEvent from "./pages/Events/AddEvent";
@@ -36,6 +38,10 @@ import AddGalleryPage from "./pages/Gallery/AddGalleryPage";
 import SponsorManagementPage from "./pages/Sponsors/SponsorManagementPage";
 import EditEvent from "./pages/Events/EditEvent";
 import EventDetails from "./pages/Events/EventDetails";
+import BankDetails from "./pages/Finance/BankDetails";
+import InvoiceList from "./pages/Finance/InvoiceList";
+import InvoiceDetails from "./pages/Finance/InvoiceDetails";
+import Transactions from "./pages/Finance/Transactions";
 // import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
 // import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
 // import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
@@ -97,6 +103,8 @@ export default function App() {
             <Route path="/products" element={<ProductList />} />
             <Route path="/add-product" element={<AddProductPage />} />
             <Route path="/edit-product/:id" element={<EditProductPage />} />
+            <Route path="/orders" element={<OrdersList />} />
+            <Route path="/orders/:id" element={<OrderDetails />} />
 
             {/* Management */}
             <Route path="/coaching-management" element={<CoachingManagementPage />} />
@@ -114,6 +122,12 @@ export default function App() {
             <Route path="/sponsors" element={<SponsorManagementPage />} />
             <Route path="/edit-event/:id" element={<EditEvent />} />
             <Route path="/event-details/:id" element={<EventDetails />} />
+            
+            {/* Finance */}
+            <Route path="/bank-details" element={<BankDetails />} />
+            <Route path="/invoices" element={<InvoiceList />} />
+            <Route path="/invoices/:id" element={<InvoiceDetails />} />
+            <Route path="/transactions" element={<Transactions />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
