@@ -6,7 +6,7 @@ interface WaitlistCardProps {
 
 export default function WaitlistCard({ items }: WaitlistCardProps) {
   return (
-    <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-xl shadow-theme-xs mb-5">
+    <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-none shadow-theme-xs mb-5">
       <div className="flex items-center justify-between mb-3.5">
         <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
           Waitlist

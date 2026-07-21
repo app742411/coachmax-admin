@@ -18,7 +18,7 @@ export default function TrialsCard({ items }: TrialsCardProps) {
   };
 
   return (
-    <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-xl shadow-theme-xs flex flex-col">
+    <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-none shadow-theme-xs flex flex-col">
       <div className="flex items-center justify-between mb-3.5">
         <div className="flex items-center gap-1.5">
           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -55,7 +55,7 @@ export default function TrialsCard({ items }: TrialsCardProps) {
               </div>
             </div>
 
-            <button className={`px-2.5 py-1.5 text-[9px] font-bold rounded-lg transition-all shrink-0 ${getStatusButtonClass(item.status)}`}>
+            <button className={`px-2.5 py-1.5 text-[9px] font-bold rounded-none transition-all shrink-0 ${getStatusButtonClass(item.status)}`}>
               {item.status}
             </button>
           </div>

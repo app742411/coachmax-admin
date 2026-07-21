@@ -60,7 +60,7 @@ const OrderDetails = () => {
         {/* Header Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           {/* <div className="flex items-center gap-4">
-       <Link to="/orders" className="p-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 text-gray-500 hover:text-brand-500 transition-all shadow-sm">
+       <Link to="/orders" className="p-3 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 text-gray-500 hover:text-brand-500 transition-all shadow-sm">
          <ArrowLeft size={20} />
        </Link>
        <PageBreadcrumb 
@@ -73,10 +73,10 @@ const OrderDetails = () => {
       </div> */}
 
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-500 hover:text-brand-500 transition-all shadow-sm">
+            <button className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-500 hover:text-brand-500 transition-all shadow-sm">
               <Printer size={16} /> Print Order
             </button>
-            <Button className="rounded-2xl px-10 font-bold shadow-xl shadow-brand-500/20 active:scale-95 transition-all text-sm">
+            <Button className="rounded-none px-10 font-bold shadow-xl shadow-brand-500/20 active:scale-95 transition-all text-sm">
               Update Status
             </Button>
           </div>
@@ -94,8 +94,8 @@ const OrderDetails = () => {
                   <p className="text-xs font-bold opacity-70">Last update: June 20, 2024 at 14:35 PM</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button className="px-6 py-3 bg-white/10 backdrop-blur-md rounded-2xl text-xs font-bold  border border-white/20 active:scale-95 transition-all">Mark as Ready</button>
-                  <button className="px-6 py-3 bg-white rounded-2xl text-xs font-bold  text-brand-600 shadow-lg active:scale-95 transition-all">Accept Order</button>
+                  <button className="px-6 py-3 bg-white/10 backdrop-blur-md rounded-none text-xs font-bold  border border-white/20 active:scale-95 transition-all">Mark as Ready</button>
+                  <button className="px-6 py-3 bg-white rounded-none text-xs font-bold  text-brand-600 shadow-lg active:scale-95 transition-all">Accept Order</button>
                 </div>
               </div>
               <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
@@ -103,12 +103,12 @@ const OrderDetails = () => {
             </div>
 
             {/* Order Items Table */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden p-6">
               <h4 className="text-sm font-bold  text-gray-900 dark:text-white mb-6 border-l-4 border-brand-500 pl-3">Gear Breakdown</h4>
               <div className="space-y-4">
                 {orderData.items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 transition-all hover:border-brand-500/30">
-                    <img src={item.image} className="w-16 h-16 object-cover rounded-xl" alt={item.name} />
+                  <div key={item.id} className="flex items-center gap-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-none border border-gray-100 dark:border-gray-800 transition-all hover:border-brand-500/30">
+                    <img src={item.image} className="w-16 h-16 object-cover rounded-none" alt={item.name} />
                     <div className="flex-1 min-w-0">
                       <h5 className="font-bold text-gray-900 dark:text-white truncate">{item.name}</h5>
                       <div className="flex items-center gap-4 mt-1">
@@ -148,10 +148,10 @@ const OrderDetails = () => {
 
           {/* Right Section: Customer & Delivery */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm p-6">
               <h4 className="text-sm font-bold  text-gray-900 dark:text-white mb-6 border-l-4 border-brand-500 pl-3">Player Info</h4>
               <div className="flex gap-4 mb-6">
-                <img src={orderData.customer.avatar} className="w-16 h-16 rounded-2xl object-cover ring-4 ring-brand-500/10" alt="" />
+                <img src={orderData.customer.avatar} className="w-16 h-16 rounded-none object-cover ring-4 ring-brand-500/10" alt="" />
                 <div>
                   <h5 className="font-bold text-gray-900 dark:text-white truncate">{orderData.customer.name}</h5>
                   <p className="text-xs font-bold text-gray-400 lowercase">{orderData.customer.email}</p>
@@ -159,28 +159,28 @@ const OrderDetails = () => {
                 </div>
               </div>
               <div className="space-y-4">
-                <button className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-transparent hover:border-brand-500 transition-all group">
+                <button className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-none border border-transparent hover:border-brand-500 transition-all group">
                   <div className="flex items-center gap-3">
                     <Phone size={18} className="text-brand-500" />
                     <span className="text-xs font-bold  text-gray-600 dark:text-gray-400 font-bold">{orderData.customer.phone}</span>
                   </div>
                   <ArrowLeft size={14} className="text-gray-300 group-hover:text-brand-500 rotate-180 transition-all" />
                 </button>
-                <button className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-transparent hover:border-brand-500 transition-all group">
+                <button className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-none border border-transparent hover:border-brand-500 transition-all group">
                   <div className="flex items-center gap-3">
                     <Clipboard size={18} className="text-gray-400" />
                     <span className="text-xs font-bold text-gray-500 ">Order History</span>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-gray-500 ">12 Total</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-none text-gray-500 ">12 Total</span>
                 </button>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 overflow-hidden relative">
+            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm p-6 overflow-hidden relative">
               <h4 className="text-sm font-bold  text-gray-900 dark:text-white mb-6 border-l-4 border-brand-500 pl-3">Order Schedule & Location</h4>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-brand-50 dark:bg-brand-500/10 rounded-xl flex shrink-0 items-center justify-center text-brand-500">
+                  <div className="w-10 h-10 bg-brand-50 dark:bg-brand-500/10 rounded-none flex shrink-0 items-center justify-center text-brand-500">
                     <MapPin size={20} />
                   </div>
                   <div className="space-y-1">
@@ -191,7 +191,7 @@ const OrderDetails = () => {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-brand-50 dark:bg-brand-500/10 rounded-xl flex shrink-0 items-center justify-center text-brand-500">
+                  <div className="w-10 h-10 bg-brand-50 dark:bg-brand-500/10 rounded-none flex shrink-0 items-center justify-center text-brand-500">
                     <Calendar size={20} />
                   </div>
                   <div className="space-y-1">
@@ -201,7 +201,7 @@ const OrderDetails = () => {
                 </div>
 
                 <div className="pt-6 border-t border-gray-50 dark:border-gray-800">
-                  <button className="w-full py-4 bg-brand-500 text-white rounded-2xl text-xs font-bold  tracking-[0.1em] shadow-xl shadow-brand-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <button className="w-full py-4 bg-brand-500 text-white rounded-none text-xs font-bold  tracking-[0.1em] shadow-xl shadow-brand-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
                     <Clock size={16} /> Re-schedule {orderData.shipping.method}
                   </button>
                 </div>

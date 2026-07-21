@@ -64,10 +64,10 @@ const GalleryGrid = () => {
            <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
            <input
             placeholder="Search gallery..."
-            className="pl-9 pr-4 py-2 bg-white dark:bg-gray-900 rounded-lg text-xs font-bold border border-gray-100 dark:border-gray-800 focus:border-brand-500 outline-none w-48 shadow-sm"
+            className="pl-9 pr-4 py-2 bg-white dark:bg-gray-900 rounded-none text-xs font-bold border border-gray-100 dark:border-gray-800 focus:border-brand-500 outline-none w-48 shadow-sm"
            />
          </div>
-         <button className="p-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 text-gray-400 hover:text-brand-500 shadow-sm transition-colors">
+         <button className="p-2 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 text-gray-400 hover:text-brand-500 shadow-sm transition-colors">
            <Filter size={18} />
          </button>
         </div>
@@ -76,7 +76,7 @@ const GalleryGrid = () => {
       {/* Masonry Grid */}
       <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
         {filteredItems.map(item => (
-         <div key={item.id} className="relative group rounded-3xl overflow-hidden cursor-crosshair break-inside-avoid shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-800/20">
+         <div key={item.id} className="relative group rounded-none overflow-hidden cursor-crosshair break-inside-avoid shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-800/20">
            <img
             src={item.image}
             className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
@@ -87,19 +87,19 @@ const GalleryGrid = () => {
            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-between p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-               <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl text-white">
+               <div className="p-2 bg-white/10 backdrop-blur-md rounded-none text-white">
                  <Download size={16} />
                </div>
-               <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl text-white">
+               <div className="p-2 bg-white/10 backdrop-blur-md rounded-none text-white">
                  <Maximize2 size={16} />
                </div>
               </div>
-              <button className="p-2 bg-red-500 text-white rounded-xl shadow-lg active:scale-95 transition-all">
+              <button className="p-2 bg-red-500 text-white rounded-none shadow-lg active:scale-95 transition-all">
                <Trash2 size={16} />
               </button>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+            <div className="bg-white/10 backdrop-blur-md p-4 rounded-none transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
               <div className="flex items-center gap-2 mb-1">
                <Camera size={12} className="text-white/80" />
                <span className="text-[10px] font-bold  text-white/90">{item.category}</span>

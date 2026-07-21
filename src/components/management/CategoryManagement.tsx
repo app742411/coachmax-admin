@@ -94,7 +94,7 @@ const CategoryManagement: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-6 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-white/[0.03] rounded-none border border-gray-200 dark:border-white/[0.05] p-6 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between mb-6">
         <div className="space-y-1">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">Academy Categories</h3>
@@ -121,7 +121,7 @@ const CategoryManagement: React.FC = () => {
                 <TableRow key={cat._id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500">
+                      <div className="w-8 h-8 rounded-none bg-brand-50 flex items-center justify-center text-brand-500">
                         <Tag size={16} />
                       </div>
                       {cat.name}
@@ -146,19 +146,19 @@ const CategoryManagement: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Category Name</label>
-            <input 
-              type="text" 
-              value={formData.name} 
-              onChange={(e) => setFormData({ name: e.target.value })} 
-              className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ name: e.target.value })}
+              className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
               placeholder="e.g. Academy"
-              required 
+              required
             />
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-              {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Commit Data"}
+              {createMutation.isPending || updateMutation.isPending ? "Saving..." : (isEditing ? "Update Category" : "Add Category")}
             </Button>
           </div>
         </form>

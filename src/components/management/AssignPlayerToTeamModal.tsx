@@ -67,7 +67,7 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId }: Ass
                 Select Player <span className="text-red-500">*</span>
               </label>
               {isLoading ? (
-                <div className="px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-500">
+                <div className="px-3.5 py-2.5 text-sm border border-gray-200 rounded-none bg-gray-50 text-gray-500">
                   Loading players...
                 </div>
               ) : (
@@ -75,7 +75,7 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId }: Ass
                   required
                   value={selectedPlayer}
                   onChange={(e) => setSelectedPlayer(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-transparent dark:border-gray-700"
+                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-none bg-transparent dark:border-gray-700"
                 >
                   <option value="" disabled>-- Select a player --</option>
                   {players.map((player: any) => (
@@ -95,14 +95,14 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId }: Ass
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-none hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={assignMutation.isPending || !selectedPlayer}
-              className="px-5 py-2 text-sm font-semibold text-white bg-[#0047FF] hover:bg-blue-700 rounded-xl disabled:opacity-50 transition-colors shadow-sm"
+              className="px-5 py-2 text-sm font-semibold text-white bg-[#0047FF] hover:bg-blue-700 rounded-none disabled:opacity-50 transition-colors shadow-sm"
             >
               {assignMutation.isPending ? "Assigning..." : "Assign Player"}
             </button>

@@ -56,7 +56,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
   };
 
   return (
-    <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden mb-6 shadow-theme-xs bg-white dark:bg-slate-900">
+    <div className="border border-slate-100 dark:border-slate-800 overflow-hidden mb-6 shadow-theme-xs bg-white dark:bg-slate-900">
       {/* Table Header Bar */}
       <div className="bg-[#031549] text-white px-5 py-3.5 flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-5 text-xs font-semibold">

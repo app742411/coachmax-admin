@@ -13,11 +13,10 @@ export default function DayTabs({ activeDay, onChangeDay }: DayTabsProps) {
         <button
           key={day}
           onClick={() => onChangeDay(day)}
-          className={`py-3 px-8 rounded-t-lg transition-all ${
-            activeDay === day
-              ? "bg-[#031549] text-white font-bold"
-              : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40"
-          }`}
+          className={`py-3 px-8 transition-all ${activeDay === day
+            ? "bg-[#031549] text-white font-bold"
+            : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+            }`}
         >
           {day}
         </button>

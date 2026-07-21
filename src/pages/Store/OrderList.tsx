@@ -54,8 +54,8 @@ const OrderList = () => {
        { label: "Pickup Ready", value: "3", icon: MapPin, color: "text-green-500", bg: "bg-green-50 dark:bg-green-500/10" },
        { label: "Total Revenue", value: "$1,840", icon: Truck, color: "text-brand-500", bg: "bg-brand-50 dark:bg-brand-500/10" }
       ].map((stat, i) => (
-       <div key={i} className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
-        <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+       <div key={i} className="bg-white dark:bg-gray-900 p-5 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
+        <div className={`p-3 rounded-none ${stat.bg} ${stat.color}`}>
           <stat.icon size={20} />
         </div>
         <div>
@@ -67,18 +67,18 @@ const OrderList = () => {
     </div>
 
     {/* Table Section */}
-    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-gray-50 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
        <div className="relative group w-full sm:w-80">
          <Search size={18} className="absolute left-3 top-3 text-gray-400" />
          <input 
           placeholder="Search Order ID or Name..." 
-          className="pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-transparent focus:border-brand-500 outline-none w-full transition-all"
+          className="pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-none text-sm font-medium border border-transparent focus:border-brand-500 outline-none w-full transition-all"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
          />
        </div>
-       <button className="flex items-center gap-2 px-6 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs font-bold  text-gray-500 hover:text-brand-500 transition-colors">
+       <button className="flex items-center gap-2 px-6 py-3 bg-gray-50 dark:bg-gray-800 rounded-none text-xs font-bold  text-gray-500 hover:text-brand-500 transition-colors">
          <Filter size={16} /> Filter
        </button>
       </div>
@@ -126,7 +126,7 @@ const OrderList = () => {
                <div className="flex items-center justify-end gap-2">
                 <Link 
                  to={`/order-details/${order.id}`} 
-                 className="p-2 bg-brand-50 dark:bg-brand-500/10 text-brand-500 rounded-lg hover:bg-brand-500 hover:text-white transition-all shadow-sm"
+                 className="p-2 bg-brand-50 dark:bg-brand-500/10 text-brand-500 rounded-none hover:bg-brand-500 hover:text-white transition-all shadow-sm"
                 >
                   <Eye size={16} />
                 </Link>
@@ -144,8 +144,8 @@ const OrderList = () => {
       <div className="p-6 bg-gray-50/30 dark:bg-gray-800/30 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
        <span className="text-xs font-bold text-gray-400  ">Showing 5 of 42 orders</span>
        <div className="flex items-center gap-2">
-         <button className="px-4 py-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 text-[10px] font-bold text-gray-500 shadow-sm active:scale-95 transition-all ">Prev</button>
-         <button className="px-4 py-2 bg-brand-500 rounded-lg text-[10px] font-bold text-white shadow-xl shadow-brand-500/20 active:scale-95 transition-all ">Next</button>
+         <button className="px-4 py-2 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 text-[10px] font-bold text-gray-500 shadow-sm active:scale-95 transition-all ">Prev</button>
+         <button className="px-4 py-2 bg-brand-500 rounded-none text-[10px] font-bold text-white shadow-xl shadow-brand-500/20 active:scale-95 transition-all ">Next</button>
        </div>
       </div>
     </div>

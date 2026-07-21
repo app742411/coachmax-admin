@@ -181,7 +181,7 @@ export default function Home() {
           <p className="text-sm text-slate-500 dark:text-slate-400">Welcome back, Super Admin</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-center">
-          <button className="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg shadow-theme-xs hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
+          <button className="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-none shadow-theme-xs hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
             <span>12 - 18 May 2026</span>
             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -193,10 +193,10 @@ export default function Home() {
       {/* Metrics Cards Grid */}
       <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {/* Card 1: Total Players */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Total Players</span>
-            <div className="p-2 bg-[#0047FF]/10 text-[#0047FF] rounded-lg">
+            <div className="p-2 bg-[#0047FF]/10 text-[#0047FF] rounded-none">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -212,10 +212,10 @@ export default function Home() {
         </div>
 
         {/* Card 2: Active Players */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Active Players</span>
-            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg dark:bg-emerald-500/10">
+            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-none dark:bg-emerald-500/10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -231,10 +231,10 @@ export default function Home() {
         </div>
 
         {/* Card 3: Programs */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Programs</span>
-            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg dark:bg-indigo-500/10">
+            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-none dark:bg-indigo-500/10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
@@ -250,10 +250,10 @@ export default function Home() {
         </div>
 
         {/* Card 4: Teams */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Teams</span>
-            <div className="p-2 bg-orange-100 text-orange-600 rounded-lg dark:bg-orange-500/10">
+            <div className="p-2 bg-orange-100 text-orange-600 rounded-none dark:bg-orange-500/10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
@@ -269,10 +269,10 @@ export default function Home() {
         </div>
 
         {/* Card 5: Coaches */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Coaches</span>
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-500/10">
+            <div className="p-2 bg-blue-100 text-blue-600 rounded-none dark:bg-blue-500/10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
@@ -288,7 +288,7 @@ export default function Home() {
         </div>
 
         {/* Card 6: Attendance (This Week) */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Attendance</span>
             {/* Simple circular visual icon */}
@@ -312,14 +312,14 @@ export default function Home() {
       {/* Main Charts & Classes Row */}
       <div className="grid grid-cols-12 gap-6 mb-6">
         {/* Attendance Overview Line Chart */}
-        <div className="col-span-12 xl:col-span-6 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800">
+        <div className="col-span-12 xl:col-span-6 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Attendance Overview</h3>
             <div className="relative">
               <select
                 value={attendanceRange}
                 onChange={(e) => setAttendanceRange(e.target.value)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 outline-none cursor-pointer appearance-none pr-8"
+                className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-none hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 outline-none cursor-pointer appearance-none pr-8"
               >
                 <option value="Last 8 Weeks">Last 8 Weeks</option>
                 <option value="Last Month">Last Month</option>
@@ -338,7 +338,7 @@ export default function Home() {
         </div>
 
         {/* Players by Age Group Donut Chart */}
-        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
+        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-6">Players by Age Group</h3>
           <div className="flex-1 flex flex-col justify-center items-center">
             <div className="w-full max-w-[200px] mb-4">
@@ -362,7 +362,7 @@ export default function Home() {
         </div>
 
         {/* Upcoming Classes */}
-        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
+        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Upcoming Classes</h3>
             <a href="#classes" className="text-xs font-semibold text-[#0047FF] hover:underline">View all</a>
@@ -375,9 +375,9 @@ export default function Home() {
               { title: "U12A - Tuesday 4:15pm", subtitle: "Tomorrow, 4:15pm - 5:15pm" },
               { title: "U12B - Tuesday 6:00pm", subtitle: "Tomorrow, 6:00pm - 7:00pm" },
             ].map((cls, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2.5 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all">
+              <div key={idx} className="flex items-center justify-between p-2.5 border border-slate-100 dark:border-slate-800 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 text-[#0047FF] rounded-lg dark:bg-blue-950/30">
+                  <div className="p-2 bg-blue-50 text-[#0047FF] rounded-none dark:bg-blue-950/30">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -387,7 +387,7 @@ export default function Home() {
                     <p className="text-[10px] text-slate-400 font-medium">{cls.subtitle}</p>
                   </div>
                 </div>
-                <button className="px-2.5 py-1 text-[10px] font-bold text-[#0047FF] bg-blue-50 hover:bg-blue-100 rounded-md transition-all dark:bg-blue-950/20 dark:text-blue-400">
+                <button className="px-2.5 py-1 text-[10px] font-bold text-[#0047FF] bg-blue-50 hover:bg-blue-100 rounded-none transition-all dark:bg-blue-950/20 dark:text-blue-400">
                   Show Park
                 </button>
               </div>
@@ -399,14 +399,14 @@ export default function Home() {
       {/* Row 3: Payments, Enrolments, Activities */}
       <div className="grid grid-cols-12 gap-6 mb-6">
         {/* Payment Overview */}
-        <div className="col-span-12 lg:col-span-5 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
+        <div className="col-span-12 lg:col-span-5 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Payment Overview</h3>
             <div className="relative">
               <select
                 value={paymentRange}
                 onChange={(e) => setPaymentRange(e.target.value)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 outline-none cursor-pointer appearance-none pr-8"
+                className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-none hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 outline-none cursor-pointer appearance-none pr-8"
               >
                 <option value="This Month">This Month</option>
                 <option value="Last Month">Last Month</option>
@@ -420,12 +420,12 @@ export default function Home() {
           </div>
           
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-none">
               <span className="text-[11px] font-semibold text-slate-400 uppercase">Total Collected</span>
               <h4 className="text-lg font-bold text-slate-900 dark:text-white my-0.5">$18,240</h4>
               <span className="text-[10px] text-emerald-600 font-semibold">↑ 12.5% <span className="text-slate-400 font-normal">vs last month</span></span>
             </div>
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-none">
               <span className="text-[11px] font-semibold text-slate-400 uppercase">Outstanding</span>
               <h4 className="text-lg font-bold text-slate-900 dark:text-white my-0.5">$3,240</h4>
               <span className="text-[10px] text-rose-600 font-semibold">↓ 8.3% <span className="text-slate-400 font-normal">vs last month</span></span>
@@ -475,7 +475,7 @@ export default function Home() {
         </div>
 
         {/* Program Enrolment */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-4 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
+        <div className="col-span-12 md:col-span-6 lg:col-span-4 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Program Enrolment</h3>
             <a href="#programs" className="text-xs font-semibold text-[#0047FF] hover:underline">View all</a>
@@ -503,7 +503,7 @@ export default function Home() {
         </div>
 
         {/* Recent Activity */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-3 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
+        <div className="col-span-12 md:col-span-6 lg:col-span-3 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Recent Activity</h3>
             <a href="#activity" className="text-xs font-semibold text-[#0047FF] hover:underline">View all</a>
@@ -562,7 +562,7 @@ export default function Home() {
               },
             ].map((activity, idx) => (
               <div key={idx} className="flex gap-3">
-                <div className={`p-2 rounded-lg shrink-0 w-8 h-8 flex items-center justify-center ${activity.color}`}>
+                <div className={`p-2 rounded-none shrink-0 w-8 h-8 flex items-center justify-center ${activity.color}`}>
                   {activity.icon}
                 </div>
                 <div className="min-w-0">
@@ -578,7 +578,7 @@ export default function Home() {
       </div>
 
       {/* Classes At A Glance Table Section */}
-      <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800">
+      <div className="p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Classes At A Glance</h3>
           <a href="#classes-full" className="text-xs font-semibold text-[#0047FF] hover:underline">View all</a>
@@ -650,7 +650,7 @@ export default function Home() {
                   {/* Class Name */}
                   <td className="py-4 font-bold text-slate-800 dark:text-slate-200">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-blue-50 text-[#0047FF] rounded-md dark:bg-blue-950/20 dark:text-blue-400">
+                      <div className="p-1.5 bg-blue-50 text-[#0047FF] rounded-none dark:bg-blue-950/20 dark:text-blue-400">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>

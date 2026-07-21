@@ -17,13 +17,19 @@ export interface ClassSchedule {
 }
 
 export interface UnallocatedPlayer {
-  id: number;
+  id: string | number;
   name: string;
   avatar: string;
   details: string; // e.g. "U10 - Male"
   rating: number;
   requested: string;
   programCode: string;
+  fullProgramName?: string;
+  categoryName?: string;
+  categoryId?: string;
+  programId?: string;
+  registrationRequestId?: string;
+  paymentStatus?: string;
 }
 
 export interface WaitlistItem {

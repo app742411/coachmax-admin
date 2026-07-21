@@ -36,7 +36,7 @@ export default function SignInForm() {
   return (
     <div className="flex flex-col flex-1 pt-10">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-8 sm:p-10 mb-10">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-sm p-8 sm:p-10 mb-10">
           <div className="flex justify-center mb-8">
             <img src="/images/logo/cm-logo2.png" alt="CoachMax Logo" className="h-12 object-contain" />
           </div>
@@ -52,8 +52,8 @@ export default function SignInForm() {
 
 
             {apiError && (
-              <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-lg text-sm">
-                {apiError.message || "Failed to sign in. Please check your credentials."}
+              <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-none text-sm">
+                {(apiError as any)?.response?.data?.message || apiError.message || "Failed to sign in. Please check your credentials."}
               </div>
             )}
 

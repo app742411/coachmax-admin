@@ -90,7 +90,7 @@ const CoachDashboard: React.FC = () => {
           <p className="text-sm text-slate-500 dark:text-slate-400">Welcome back, Coach {user.name}!</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-center">
-          <Link to="/schedule" className="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg shadow-theme-xs hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
+          <Link to="/schedule" className="flex items-center gap-2.5 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-none shadow-theme-xs hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
             <span>Manage Schedule</span>
             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -102,10 +102,10 @@ const CoachDashboard: React.FC = () => {
       {/* Metrics Cards Grid */}
       <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Total Assigned Players */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Assigned Players</span>
-            <div className="p-2 bg-[#0047FF]/10 text-[#0047FF] rounded-lg">
+            <div className="p-2 bg-[#0047FF]/10 text-[#0047FF] rounded-none">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
             </div>
           </div>
@@ -118,10 +118,10 @@ const CoachDashboard: React.FC = () => {
         </div>
 
         {/* Card 2: Weekly Training Slots */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Weekly Slots</span>
-            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg dark:bg-indigo-500/10">
+            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-none dark:bg-indigo-500/10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             </div>
           </div>
@@ -134,10 +134,10 @@ const CoachDashboard: React.FC = () => {
         </div>
 
         {/* Card 3: Avg Attendance */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Avg Attendance</span>
-            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg dark:bg-emerald-500/10">
+            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-none dark:bg-emerald-500/10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
             </div>
           </div>
@@ -150,10 +150,10 @@ const CoachDashboard: React.FC = () => {
         </div>
 
         {/* Card 4: Performance Index */}
-        <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
+        <div className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between hover:shadow-xl transition-all">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Performance Index</span>
-            <div className="p-2 bg-orange-100 text-orange-600 rounded-lg dark:bg-orange-500/10">
+            <div className="p-2 bg-orange-100 text-orange-600 rounded-none dark:bg-orange-500/10">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
             </div>
           </div>
@@ -169,14 +169,14 @@ const CoachDashboard: React.FC = () => {
       {/* Main Charts Row */}
       <div className="grid grid-cols-12 gap-6 mb-6">
         {/* Attendance Overview Line Chart */}
-        <div className="col-span-12 xl:col-span-6 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800">
+        <div className="col-span-12 xl:col-span-6 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Team Attendance Overview</h3>
             <div className="relative">
               <select
                 value={attendanceRange}
                 onChange={(e) => setAttendanceRange(e.target.value)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 outline-none cursor-pointer appearance-none pr-8"
+                className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-none hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 outline-none cursor-pointer appearance-none pr-8"
               >
                 <option value="Last 8 Weeks">Last 8 Weeks</option>
                 <option value="Last Month">Last Month</option>
@@ -192,7 +192,7 @@ const CoachDashboard: React.FC = () => {
         </div>
 
         {/* Performance Index Donut Chart */}
-        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
+        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-6">Performance Distribution</h3>
           <div className="flex-1 flex flex-col justify-center items-center">
             <div className="w-full max-w-[200px] mb-4">
@@ -216,7 +216,7 @@ const CoachDashboard: React.FC = () => {
         </div>
 
         {/* Upcoming Classes */}
-        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
+        <div className="col-span-12 md:col-span-6 xl:col-span-3 p-6 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Upcoming Sessions</h3>
             <Link to="/schedule" className="text-xs font-semibold text-[#0047FF] hover:underline">View all</Link>
@@ -227,11 +227,11 @@ const CoachDashboard: React.FC = () => {
               { title: "Junior Dev Group B", subtitle: "Wednesday, 3:30pm - 5:00pm", location: "Field 3" },
               { title: "High-Performance School", subtitle: "Friday, 2:00pm - 3:30pm", location: "School Turf" },
             ].map((cls, idx) => (
-              <div key={idx} className="flex flex-col gap-2 p-3 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all">
+              <div key={idx} className="flex flex-col gap-2 p-3 border border-slate-100 dark:border-slate-800 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{cls.title}</h4>
                   {idx === 0 && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-md">Live</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-none">Live</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
@@ -243,7 +243,7 @@ const CoachDashboard: React.FC = () => {
                       <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                       {cls.location}
                    </div>
-                   <Link to="/attendance" className="px-2.5 py-1 text-[10px] font-bold text-white bg-[#0047FF] hover:bg-blue-600 rounded-md transition-all">
+                   <Link to="/attendance" className="px-2.5 py-1 text-[10px] font-bold text-white bg-[#0047FF] hover:bg-blue-600 rounded-none transition-all">
                      Log Attendance
                    </Link>
                 </div>

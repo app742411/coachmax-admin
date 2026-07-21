@@ -35,14 +35,14 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
         <div className="flex gap-3 w-full">
           <Button
             variant="outline"
-            className="flex-1 rounded-xl"
+            className="flex-1 rounded-none"
             onClick={onClose}
             disabled={loading}
           >
             Cancel
           </Button>
           <Button
-            className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white border-0 shadow-lg shadow-red-600/20"
+            className="flex-1 rounded-none bg-red-600 hover:bg-red-700 text-white border-0 shadow-lg shadow-red-600/20"
             onClick={onConfirm}
             disabled={loading}
           >

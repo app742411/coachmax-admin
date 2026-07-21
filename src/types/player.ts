@@ -41,6 +41,7 @@ export interface Player {
   category?: PlayerCategory;
   program?: PlayerProgram;
   term?: string;
+  paymentStatus?: string;
   jerseyNumber: number;
   goals: number;
   assists: number;

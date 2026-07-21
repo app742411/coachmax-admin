@@ -122,7 +122,7 @@ export default function ProgramsManagement() {
         </div>
         <button
           onClick={openAdd}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0047FF] hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0047FF] hover:bg-blue-700 text-white text-sm font-semibold rounded-none transition-colors shadow-sm"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -139,7 +139,7 @@ export default function ProgramsManagement() {
           { label: "School", value: programs.filter(p => p.category === "School").length, color: "bg-purple-500/10 text-purple-600 dark:text-purple-400" },
           { label: "Other", value: programs.filter(p => !["Academy","School"].includes(p.category)).length, color: "bg-orange-500/10 text-orange-600 dark:text-orange-400" },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+          <div key={stat.label} className="bg-white dark:bg-gray-900 rounded-none border border-gray-200 dark:border-gray-800 p-5">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{stat.label}</p>
             <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
           </div>
@@ -147,7 +147,7 @@ export default function ProgramsManagement() {
       </div>
 
       {/* Table Card */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-200 dark:border-gray-800 overflow-hidden">
         {/* Table Toolbar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-base font-semibold text-gray-800 dark:text-white">All Programs</h2>
@@ -160,7 +160,7 @@ export default function ProgramsManagement() {
               placeholder="Search programs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-none bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
             />
           </div>
         </div>
@@ -184,7 +184,7 @@ export default function ProgramsManagement() {
                   <tr key={i} className="animate-pulse">
                     {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j} className="px-5 py-4">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-none w-3/4" />
                       </td>
                     ))}
                   </tr>
@@ -233,7 +233,7 @@ export default function ProgramsManagement() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => openEdit(program)}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-none transition-colors"
                           title="Edit"
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -243,7 +243,7 @@ export default function ProgramsManagement() {
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(program._id)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-none transition-colors"
                           title="Delete"
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -270,7 +270,7 @@ export default function ProgramsManagement() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-none disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Prev
               </button>
@@ -278,7 +278,7 @@ export default function ProgramsManagement() {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${
+                  className={`w-8 h-8 text-xs font-medium rounded-none transition-colors ${
                     p === page
                       ? "bg-[#0047FF] text-white"
                       : "text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -290,7 +290,7 @@ export default function ProgramsManagement() {
               <button
                 onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
                 disabled={page === pagination.pages}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-none disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Next
               </button>
@@ -302,7 +302,7 @@ export default function ProgramsManagement() {
       {/* Add / Edit Modal */}
       {modalMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-none shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-800">
               <div>
@@ -315,7 +315,7 @@ export default function ProgramsManagement() {
               </div>
               <button
                 onClick={closeModal}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-none transition-colors"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -327,7 +327,7 @@ export default function ProgramsManagement() {
             <form onSubmit={handleSubmit(onSubmit)}>
               <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
                 {mutationError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
+                  <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-none text-sm">
                     {mutationError.message || "Something went wrong."}
                   </div>
                 )}
@@ -340,7 +340,7 @@ export default function ProgramsManagement() {
                   <input
                     type="text"
                     placeholder="e.g. Elite Academy U11"
-                    className={`w-full px-3.5 py-2.5 text-sm border rounded-xl bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.name ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
+                    className={`w-full px-3.5 py-2.5 text-sm border rounded-none bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.name ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
                     {...register("name", { required: "Program name is required" })}
                   />
                   {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
@@ -352,7 +352,7 @@ export default function ProgramsManagement() {
                     Category <span className="text-red-500">*</span>
                   </label>
                   <select
-                    className={`w-full px-3.5 py-2.5 text-sm border rounded-xl bg-transparent text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.category ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
+                    className={`w-full px-3.5 py-2.5 text-sm border rounded-none bg-transparent text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.category ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
                     {...register("category", { required: "Category is required" })}
                   >
                     <option value="">Select category</option>
@@ -373,7 +373,7 @@ export default function ProgramsManagement() {
                       type="number"
                       min={0}
                       placeholder="e.g. 20"
-                      className={`w-full px-3.5 py-2.5 text-sm border rounded-xl bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.capacity ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
+                      className={`w-full px-3.5 py-2.5 text-sm border rounded-none bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.capacity ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
                       {...register("capacity", { required: "Required", min: { value: 0, message: "Must be ≥ 0" } })}
                     />
                     {errors.capacity && <p className="mt-1 text-xs text-red-500">{errors.capacity.message}</p>}
@@ -387,7 +387,7 @@ export default function ProgramsManagement() {
                       min={0}
                       step="0.01"
                       placeholder="e.g. 150"
-                      className={`w-full px-3.5 py-2.5 text-sm border rounded-xl bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.pricing ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
+                      className={`w-full px-3.5 py-2.5 text-sm border rounded-none bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.pricing ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
                       {...register("pricing", { required: "Required", min: { value: 0, message: "Must be ≥ 0" } })}
                     />
                     {errors.pricing && <p className="mt-1 text-xs text-red-500">{errors.pricing.message}</p>}
@@ -402,7 +402,7 @@ export default function ProgramsManagement() {
                     </label>
                     <input
                       type="time"
-                      className={`w-full px-3.5 py-2.5 text-sm border rounded-xl bg-transparent text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.startTime ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
+                      className={`w-full px-3.5 py-2.5 text-sm border rounded-none bg-transparent text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.startTime ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
                       {...register("startTime", { required: "Start time is required" })}
                     />
                     {errors.startTime && <p className="mt-1 text-xs text-red-500">{errors.startTime.message}</p>}
@@ -413,7 +413,7 @@ export default function ProgramsManagement() {
                     </label>
                     <input
                       type="time"
-                      className={`w-full px-3.5 py-2.5 text-sm border rounded-xl bg-transparent text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.endTime ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
+                      className={`w-full px-3.5 py-2.5 text-sm border rounded-none bg-transparent text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 ${errors.endTime ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}
                       {...register("endTime", {
                         required: "End time is required",
                         validate: (val, formValues) =>
@@ -432,7 +432,7 @@ export default function ProgramsManagement() {
                   <textarea
                     rows={3}
                     placeholder="Brief description of the program..."
-                    className="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 resize-none"
+                    className="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-none bg-transparent text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 dark:bg-gray-800 resize-none"
                     {...register("description")}
                   />
                 </div>
@@ -443,14 +443,14 @@ export default function ProgramsManagement() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="px-5 py-2 text-sm font-semibold text-white bg-[#0047FF] hover:bg-blue-700 disabled:opacity-60 rounded-xl transition-colors"
+                  className="px-5 py-2 text-sm font-semibold text-white bg-[#0047FF] hover:bg-blue-700 disabled:opacity-60 rounded-none transition-colors"
                 >
                   {isPending ? (modalMode === "add" ? "Creating..." : "Saving...") : (modalMode === "add" ? "Create Program" : "Save Changes")}
                 </button>
@@ -463,7 +463,7 @@ export default function ProgramsManagement() {
       {/* Delete Confirm Modal */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6">
+          <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-none shadow-2xl p-6">
             <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-500/10">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-600 dark:text-red-400">
                 <path d="M12 9V13M12 17H12.01M5.07183 19H18.9282C20.4678 19 21.4301 17.3333 20.6603 16L13.7321 4C12.9623 2.66667 11.0377 2.66667 10.2679 4L3.33975 16C2.56998 17.3333 3.53223 19 5.07183 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -476,14 +476,14 @@ export default function ProgramsManagement() {
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirmId(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-none hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirmId)}
                 disabled={deleteMutation.isPending}
-                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-xl transition-colors"
+                className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-none transition-colors"
               >
                 {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </button>

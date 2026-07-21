@@ -19,11 +19,11 @@ export default function ViewClassPlayersModal({
   const totalPlayers = data?.totalPlayers || 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-3xl" showCloseButton={true}>
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-none" showCloseButton={true}>
       <div className="flex flex-col h-full max-h-[85vh] p-8">
         
         {/* Top Info Card */}
-        <div className="border border-slate-100 dark:border-slate-800 rounded-3xl p-5 mb-8 bg-white dark:bg-slate-900 shadow-sm flex items-center flex-wrap gap-y-4">
+        <div className="border border-slate-100 dark:border-slate-800 rounded-none p-5 mb-8 bg-white dark:bg-slate-900 shadow-sm flex items-center flex-wrap gap-y-4">
           <div className="flex-1 min-w-[150px] px-2 border-r border-slate-100 dark:border-slate-800 last:border-0">
             <span className="text-[10px] font-bold text-slate-400 tracking-[0.1em] uppercase">Session ID</span>
             <div className="font-bold text-slate-900 dark:text-white text-base mt-1.5">{classData?.name || "summer class"}</div>
@@ -57,7 +57,7 @@ export default function ViewClassPlayersModal({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-auto custom-scrollbar border border-slate-50 dark:border-slate-800 rounded-2xl">
+        <div className="flex-1 overflow-auto custom-scrollbar border border-slate-50 dark:border-slate-800 rounded-none">
           {isLoading ? (
             <div className="p-8 text-center text-slate-500 font-semibold">Loading roster...</div>
           ) : isError ? (
@@ -85,7 +85,7 @@ export default function ViewClassPlayersModal({
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4 pl-4">
-                        <div className="w-10 h-10 shrink-0 bg-[#101828] dark:bg-slate-700 text-white rounded-xl flex items-center justify-center text-xs font-bold shadow-sm">
+                        <div className="w-10 h-10 shrink-0 bg-[#101828] dark:bg-slate-700 text-white rounded-none flex items-center justify-center text-xs font-bold shadow-sm">
                           {player.jerseyNumber || "-"}
                         </div>
                         <div className="font-bold text-slate-700 dark:text-slate-200 text-[13px]">
@@ -102,12 +102,12 @@ export default function ViewClassPlayersModal({
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
                         {player.preferredFoot && (
-                          <span className="bg-[#eff6ff] text-[#3b82f6] dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase">
+                          <span className="bg-[#eff6ff] text-[#3b82f6] dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-none text-[10px] font-bold tracking-wider uppercase">
                             {player.preferredFoot}
                           </span>
                         )}
                         {player.skillLevel && (
-                          <span className="bg-[#fef2f2] text-[#ef4444] dark:bg-red-900/30 dark:text-red-400 px-3 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase">
+                          <span className="bg-[#fef2f2] text-[#ef4444] dark:bg-red-900/30 dark:text-red-400 px-3 py-1 rounded-none text-[10px] font-bold tracking-wider uppercase">
                             LVL {player.skillLevel}
                           </span>
                         )}

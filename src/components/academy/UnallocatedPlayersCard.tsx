@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { UnallocatedPlayer } from "../../types/academy";
+import PlayersListModal from "./PlayersListModal";
 
 interface UnallocatedPlayersCardProps {
   players: UnallocatedPlayer[];
 }
 
 export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCardProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const renderStars = (count: number) => {
     return (
       <div className="flex gap-0.5 text-amber-500">
@@ -23,7 +27,7 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
   };
 
   return (
-    <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-xl shadow-theme-xs mb-5 flex flex-col">
+    <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-none shadow-theme-xs mb-5 flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -33,14 +37,32 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
             {players.length}
           </span>
         </div>
-        <a href="#unallocated" className="text-[10px] font-semibold text-[#0047FF] hover:underline">
+        <button 
+          onClick={() => setIsModalOpen(true)} 
+          className="text-[10px] font-semibold text-[#0047FF] hover:underline bg-transparent border-none cursor-pointer"
+        >
           View all
-        </a>
+        </button>
       </div>
 
       <div className="space-y-3.5 mb-4">
         {players.map((p) => (
-          <div key={p.id} className="flex gap-3 items-start justify-between">
+          <div 
+            key={p.id} 
+            className="flex gap-3 items-start justify-between cursor-move hover:bg-slate-50 dark:hover:bg-slate-800/50 p-1 -mx-1 rounded"
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("application/json", JSON.stringify({
+                playerId: p.id,
+                registrationRequestId: p.registrationRequestId,
+                paymentStatus: p.paymentStatus || "TRIAL",
+                categoryId: p.categoryId,
+                programId: p.programId,
+                categoryName: p.categoryName,
+                programName: p.fullProgramName
+              }));
+            }}
+          >
             <div className="flex gap-2 min-w-0">
               <img
                 src={p.avatar}
@@ -64,7 +86,7 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
                 {p.requested}
               </span>
               <div className="mt-1 flex justify-end">
-                <span className="text-[8px] font-bold text-[#0047FF] bg-blue-50 px-1 py-0.5 rounded uppercase dark:bg-blue-950/20 dark:text-blue-400">
+                <span className="text-[8px] font-bold text-[#0047FF] bg-blue-50 px-1 py-0.5 rounded-none uppercase dark:bg-blue-950/20 dark:text-blue-400">
                   {p.programCode}
                 </span>
               </div>
@@ -74,7 +96,7 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
       </div>
 
       {/* Drag area */}
-      <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-center gap-2">
+      <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-none p-3 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-center gap-2">
         <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11.57V10c0-1.105-.895-2-2-2S5 8.895 5 10v1.57c0 1.253.208 2.457.59 3.58m1.282.59A13.917 13.917 0 0012 11.57V10a5 5 0 0110 0v1.57c0 1.253-.208 2.457-.59 3.58m-1.283.59A13.917 13.917 0 0014 11.57V10m0 0a2 2 0 10-4 0M12 2v4M12 6H8m4 0h4" />
         </svg>
@@ -83,6 +105,12 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
           or click to view all
         </span>
       </div>
+      <PlayersListModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Unallocated Players"
+        players={players}
+      />
     </div>
   );
 }

@@ -1,14 +1,23 @@
-import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance } from "../../hooks/usePlayers";
+import { useState } from "react";
+import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer } from "../../hooks/usePlayers";
+import { Modal } from "../ui/modal";
 
 interface ClassFullTableProps {
   classId: string;
   timeSlotStr: string;
+  categoryId?: string;
+  programId?: string;
+  categoryName?: string;
+  programName?: string;
 }
 
-export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableProps) {
+export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName }: ClassFullTableProps) {
   const { data: schedule, isLoading } = useClassFullTable(classId);
   const markSingleMutation = useMarkSingleAttendance(classId);
   const markBulkMutation = useMarkBulkAttendance(classId);
+  const assignClassesMutation = useAssignClassesToPlayer();
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [pendingDropData, setPendingDropData] = useState<any>(null);
 
   if (isLoading) {
     return <div className="p-4 text-center text-sm text-slate-500">Loading class data...</div>;
@@ -91,8 +100,61 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
     };
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    try {
+      const dataStr = e.dataTransfer.getData("application/json");
+      if (!dataStr) return;
+      const data = JSON.parse(dataStr);
+      
+      if (data.playerId) {
+        // If categories/programs are available on both sides and mismatch, show confirmation
+        if (
+          categoryId && programId && data.categoryId && data.programId &&
+          (categoryId !== data.categoryId || programId !== data.programId)
+        ) {
+          setPendingDropData(data);
+          setIsConfirmModalOpen(true);
+        } else {
+          // Direct assignment
+          assignClassesMutation.mutate({
+            playerId: data.playerId,
+            classIds: [classId],
+            paymentStatus: data.paymentStatus,
+            registrationRequestId: data.registrationRequestId,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to parse drop data", err);
+    }
+  };
+
+  const confirmAssignment = () => {
+    if (pendingDropData) {
+      assignClassesMutation.mutate({
+        playerId: pendingDropData.playerId,
+        classIds: [classId],
+        paymentStatus: pendingDropData.paymentStatus,
+        registrationRequestId: pendingDropData.registrationRequestId,
+      });
+      setIsConfirmModalOpen(false);
+      setPendingDropData(null);
+    }
+  };
+
   return (
-    <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden mb-6 shadow-theme-xs bg-white dark:bg-slate-900">
+    <div 
+      className={`border border-slate-100 dark:border-slate-800 overflow-hidden mb-6 shadow-theme-xs bg-white dark:bg-slate-900 transition-colors ${
+        assignClassesMutation.isPending ? "opacity-75" : ""
+      }`}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {/* Table Header Bar */}
       <div className="bg-[#031549] text-white px-5 py-3.5 flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-5 text-xs font-semibold">
@@ -102,10 +164,15 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
             </svg>
             <span>{timeSlotStr}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-[#4facfe] bg-white/10 px-2.5 py-1 rounded-sm">
             <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
+            <span>
+              {categoryName || schedule.category?.name || "N/A"} / {programName || schedule.program?.name || "N/A"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
             <span>{schedule.className}</span>
           </div>
         </div>
@@ -176,7 +243,7 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
                   );
                 })}
                 <td className="sticky right-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 text-center border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">
-                  <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center">
+                  <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-none bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center">
                     <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                     </svg>
@@ -193,6 +260,30 @@ export default function ClassFullTable({ classId, timeSlotStr }: ClassFullTableP
           </tbody>
         </table>
       </div>
+
+      <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} className="max-w-md p-6">
+        <div className="w-full">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 uppercase tracking-wider">Confirm Assignment</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+            Player requested for <strong>{pendingDropData?.categoryName} - {pendingDropData?.programName}</strong> but you tried to assign them to a class in another Program/Category. Do you want to proceed with this assignment?
+          </p>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={() => setIsConfirmModalOpen(false)}
+              className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmAssignment}
+              disabled={assignClassesMutation.isPending}
+              className="px-6 py-2 text-sm font-bold bg-[#0047FF] text-white rounded-none hover:bg-blue-700 transition-colors shadow-theme-xs disabled:opacity-50"
+            >
+              {assignClassesMutation.isPending ? "Assigning..." : "Assign Player"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

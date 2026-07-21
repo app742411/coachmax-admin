@@ -22,7 +22,12 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
   const skillNum = player.weakFootRating || 3;
 
   return (
-    <div className="w-full xl:w-[420px] shrink-0 bg-white border border-slate-100 rounded-2xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 p-6 sticky top-24 self-start">
+    <>
+      <div 
+        className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm transition-opacity" 
+        onClick={onClose}
+      />
+      <div className="fixed top-0 right-0 z-50 h-screen w-full sm:w-[420px] bg-white border-l border-slate-100 shadow-2xl dark:bg-slate-900 dark:border-slate-800 p-6 overflow-y-auto transform transition-transform duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
             <img
@@ -148,7 +153,7 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
               <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">
                 Player Ratings
               </h4>
-              <select className="px-2 py-1 text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded outline-none cursor-pointer">
+              <select className="px-2 py-1 text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-none outline-none cursor-pointer">
                 <option>Current Season</option>
               </select>
             </div>
@@ -187,17 +192,17 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
               Additional Information
             </h4>
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
                 <span className="text-[10px] text-slate-400 block mb-0.5">Registration Date</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
                   {new Date(player.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
                 <span className="text-[10px] text-slate-400 block mb-0.5">Elite Goals (Total)</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">{player.goals || 0}</span>
               </div>
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
                 <span className="text-[10px] text-slate-400 block mb-0.5">Current Season</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">{player.appearances || 0} matches</span>
               </div>
@@ -222,6 +227,7 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
           <span>{activeTab} module details are currently empty.</span>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

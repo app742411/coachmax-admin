@@ -29,7 +29,7 @@ export default function ClassTimeSlots({ categoryId, programId, day }: ClassTime
         timeSlots.map((slot: any, index: number) => (
           <button
             key={slot.classId || index}
-            className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:border-[#0047FF] hover:text-[#0047FF] dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 transition-colors rounded-lg shadow-theme-xs"
+            className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:border-[#0047FF] hover:text-[#0047FF] dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 transition-colors rounded-none shadow-theme-xs"
           >
             {slot.startTime} - {slot.endTime}
           </button>

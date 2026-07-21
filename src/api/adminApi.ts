@@ -23,11 +23,13 @@ export const ENDPOINTS = {
   CREATE_CATEGORY: "/api/admin/createCategory",
   UPDATE_CATEGORY: "/api/admin/updateCategory",
   DELETE_CATEGORY: "/api/admin/deleteCategory",
+  GET_REGISTRATION_REQUESTS: "/api/admin/registration-requests",
   GET_ALL_TERMS: "/api/admin/getAllTerms",
   CREATE_TERM: "/api/admin/createTerm",
   UPDATE_TERM: "/api/admin/updateTerm",
   DELETE_TERM: "/api/admin/deleteTerm",
   CREATE_NEWS: "/api/admin/news",
+  ASSIGN_CLASSES_TO_PLAYER: "/api/admin/player/:playerId/assign-classes",
   TEAMS: "/api/admin/getAllTeams",
   FIXTURES: "/api/admin/fixtures",
   GET_ALL_LEAGUES: "/api/admin/leagues",
@@ -294,4 +296,52 @@ export const updateLeague = async (id: string, data: any): Promise<any> => {
 export const deleteLeague = async (id: string): Promise<any> => {
   const res = await apiClient.delete(`${ENDPOINTS.LEAGUES}/${id}`);
   return res.data;
+};
+
+export const getRegistrationRequests = async (page = 1, limit = 10): Promise<any> => {
+  const response = await apiClient.get(ENDPOINTS.GET_REGISTRATION_REQUESTS, {
+    params: { page, limit },
+  });
+  return response.data;
+};
+
+export const getUnallocatedPlayers = async (
+  category?: string,
+  program?: string,
+  search?: string
+): Promise<any> => {
+  const params: any = { allocationStatus: "UNALLOCATED" };
+  if (category) params.category = category;
+  if (program) params.program = program;
+  if (search) params.search = search;
+  const response = await apiClient.get("/api/admin/players/search", { params });
+  return response.data;
+};
+
+export const assignClassesToPlayer = async (
+  playerId: string,
+  classIds: string[],
+  paymentStatus: string,
+  registrationRequestId?: string
+): Promise<any> => {
+  const url = ENDPOINTS.ASSIGN_CLASSES_TO_PLAYER.replace(":playerId", playerId);
+  const payload: any = { classIds, paymentStatus };
+  if (registrationRequestId) {
+    payload.registrationRequestId = registrationRequestId;
+  }
+  const response = await apiClient.patch(url, payload);
+  return response.data;
+};
+
+export const getAllocatedPlayers = async (
+  category?: string,
+  program?: string,
+  search?: string
+): Promise<any> => {
+  const params: any = { allocationStatus: "ALLOCATED" };
+  if (category) params.category = category;
+  if (program) params.program = program;
+  if (search) params.search = search;
+  const response = await apiClient.get("/api/admin/players/search", { params });
+  return response.data;
 };

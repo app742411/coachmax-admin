@@ -99,6 +99,14 @@ const TermManagement: React.FC = () => {
         return dateStr;
     };
 
+    const getDaysBetween = (start: string, end: string) => {
+        if (!start || !end) return null;
+        const s = new Date(start);
+        const e = new Date(end);
+        if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+        return Math.ceil(Math.abs(e.getTime() - s.getTime()) / (1000 * 3600 * 24));
+    };
+
     const handleOpenAdd = () => {
         setFormData({
             name: "",
@@ -159,7 +167,7 @@ const TermManagement: React.FC = () => {
     };
 
     return (
-        <div className="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-6 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-white/[0.03] rounded-none border border-gray-200 dark:border-white/[0.05] p-6 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between mb-6">
                 <div className="space-y-1">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">Academy Terms</h3>
@@ -197,6 +205,11 @@ const TermManagement: React.FC = () => {
                                             <span>{formatDate(term.startDate)}</span>
                                             <span className="text-gray-300">→</span>
                                             <span>{formatDate(term.endDate)}</span>
+                                            {getDaysBetween(term.startDate, term.endDate) !== null && (
+                                                <span className="ml-2 px-2 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-extrabold uppercase rounded-none shadow-sm border border-brand-100">
+                                                    {getDaysBetween(term.startDate, term.endDate)} days
+                                                </span>
+                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -216,15 +229,15 @@ const TermManagement: React.FC = () => {
                 <h4 className="text-xl font-bold mb-2">{isEditing ? "Modify Term" : "Schedule New Term"}</h4>
                 <p className="text-xs text-gray-500 mb-6 font-medium">Coordinate the seasonal training timeline.</p>
                 <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-4 gap-4 mb-4">
-                        <div className="col-span-3">
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="col-span-2">
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Term Name</label>
                             <input 
                                 type="text" 
                                 name="name" 
                                 value={formData.name} 
                                 onChange={handleChange} 
-                                className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all" 
+                                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all" 
                                 placeholder="Summer Term"
                                 required 
                             />
@@ -236,7 +249,7 @@ const TermManagement: React.FC = () => {
                                 name="year" 
                                 value={formData.year} 
                                 onChange={handleChange} 
-                                className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all" 
+                                className="w-full rounded-none border border-gray-100 bg-gray-50 px-3 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all" 
                                 required 
                             />
                         </div>
@@ -257,7 +270,7 @@ const TermManagement: React.FC = () => {
                     </div>
                     <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
                         <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">
+                        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
                             {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Commit Term"}
                         </Button>
                     </div>

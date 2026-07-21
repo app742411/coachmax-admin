@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { useSidebar } from "../context/SidebarContext";
 import { ChevronDownIcon, HorizontaLDots } from "../icons";
-import { Shield, Calendar, Trophy } from "lucide-react";
+import { useSidebar } from "../context/SidebarContext";
 import apiClient from "../api/apiClient";
 
 type NavItem = {
@@ -264,7 +263,14 @@ const AppSidebar: React.FC = () => {
       key: "main",
       items: [
         { name: "Dashboard", icon: <GridIcon />, path: "/" },
-        { name: "Players", icon: <UserIcon />, path: "/players" },
+        {
+          name: "Players Management",
+          icon: <UserIcon />,
+          subItems: [
+            { name: "New Registration Request", path: "/new-registration-request" },
+            { name: "Players", path: "/players" }
+          ]
+        },
         {
           name: "Programs",
           icon: <CalendarIcon />,
@@ -281,21 +287,21 @@ const AppSidebar: React.FC = () => {
       title: "Teams & Competitions",
       key: "teams_competitions",
       items: [
-        {
-          name: "Leagues",
-          icon: <Trophy size={18} />,
-          path: "/leagues"
-        },
-        {
-          name: "Teams Management",
-          icon: <Shield size={18} />,
-          path: "/teams"
-        },
-        {
-          name: "Fixtures",
-          icon: <Calendar size={18} />,
-          path: "/fixtures"
-        },
+        // {
+        //   name: "Leagues",
+        //   icon: <Trophy size={18} />,
+        //   path: "/leagues"
+        // },
+        // {
+        //   name: "Teams Management",
+        //   icon: <Shield size={18} />,
+        //   path: "/teams"
+        // },
+        // {
+        //   name: "Fixtures",
+        //   icon: <Calendar size={18} />,
+        //   path: "/fixtures"
+        // },
         {
           name: "Store",
           icon: <GridIcon />,
@@ -330,7 +336,7 @@ const AppSidebar: React.FC = () => {
           subItems: [
             { name: "All Events", path: "/events" },
             { name: "Add Event", path: "/add-event" },
-            { name: "Training Sessions", path: "/training-sessions" },
+            // { name: "Training Sessions", path: "/training-sessions" },
           ],
         },
       ],
@@ -567,7 +573,7 @@ const AppSidebar: React.FC = () => {
           <div className="mt-auto pt-6 border-t border-[#082269]">
             <Link
               to="/help"
-              className="flex items-center gap-3 px-3 py-3 rounded-lg text-theme-sm text-slate-400 hover:bg-white/5 hover:text-white transition-all"
+              className="flex items-center gap-3 px-3 py-3 rounded-none text-theme-sm text-slate-400 hover:bg-white/5 hover:text-white transition-all"
             >
               <HelpIcon />
               <span>Help & Support</span>

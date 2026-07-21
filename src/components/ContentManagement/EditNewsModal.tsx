@@ -125,7 +125,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
               onUpload={(files: File[]) => setImageFile(files[0])} 
               previewUrl={newsItem?.image}
             />
-            <div className="mt-3 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-xl flex items-center gap-2 text-brand-600 dark:text-brand-400">
+            <div className="mt-3 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-none flex items-center gap-2 text-brand-600 dark:text-brand-400">
               <ImageIcon size={14} />
               <span className="text-[10px] font-bold">Leave empty to keep existing image. Recommended: 1200x630</span>
             </div>
@@ -133,7 +133,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
           <div className="col-span-2">
             <Label>Description</Label>
             <textarea 
-              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
+              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
               rows={6}
               placeholder="Enter news description..."
               name="description"
@@ -148,14 +148,14 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
             type="button" 
             variant="outline" 
             onClick={onClose}
-            className="rounded-xl px-8 font-bold text-gray-500 border-gray-200"
+            className="rounded-none px-8 font-bold text-gray-500 border-gray-200"
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
             disabled={loading}
-            className="rounded-xl px-8 font-bold shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
+            className="rounded-none px-8 font-bold shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
           >
             {loading ? "Updating..." : "Update News"}
           </Button>

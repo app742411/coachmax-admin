@@ -23,11 +23,11 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
-  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
-    <div className="p-2 bg-brand-50 dark:bg-brand-500/10 rounded-lg text-brand-500">
+  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
+    <div className="p-2 bg-white/10 rounded-none text-white">
       <Icon size={18} />
     </div>
-    <h5 className="text-lg font-bold text-gray-800 dark:text-gray-100">{title}</h5>
+    <h5 className="text-lg font-bold text-white">{title}</h5>
   </div>
 );
 
@@ -37,7 +37,7 @@ interface FormCardProps {
 }
 
 const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
-  <div className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
+  <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
     {children}
   </div>
 );
@@ -125,9 +125,9 @@ const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "ne
         
         {/* Left: Sidebar Navigation */}
         <div className="w-full xl:w-72 flex-shrink-0">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 sticky top-24 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-4 sticky top-24 shadow-sm">
             <div className="flex items-center gap-3 px-3 mb-6 pb-4 border-b border-gray-50 dark:border-gray-800/50">
-              <div className="p-2.5 bg-brand-500 rounded-xl text-white shadow-lg shadow-brand-500/30">
+              <div className="p-2.5 bg-brand-500 rounded-none text-white shadow-lg shadow-brand-500/30">
                 <Newspaper size={20} strokeWidth={2.5} />
               </div>
               <div>
@@ -140,7 +140,7 @@ const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "ne
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-bold text-sm ${
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-none transition-all font-bold text-sm ${
                     activeTab === tab.id
                       ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20 translate-x-1"
                       : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -156,7 +156,7 @@ const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "ne
                 <span className="text-xs font-bold text-gray-400 ">Live Preview</span>
                 <Eye size={16} className="text-gray-400" />
               </div>
-              <div className="aspect-video bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center justify-center p-4">
+              <div className="aspect-video bg-gray-50 dark:bg-gray-800/50 rounded-none border border-gray-100 dark:border-gray-800 flex items-center justify-center p-4">
                 <p className="text-[10px] text-gray-400 font-bold text-center leading-relaxed">Headline: {formData.title || "Untiled Story..."}</p>
               </div>
             </div>
@@ -248,7 +248,7 @@ const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "ne
                     <DropzoneComponent 
                       onUpload={(files: File[]) => setImageFile(files[0])} 
                     />
-                    <div className="mt-3 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-xl flex items-center gap-2 text-brand-600 dark:text-brand-400">
+                    <div className="mt-3 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-none flex items-center gap-2 text-brand-600 dark:text-brand-400">
                       <ImageIcon size={14} />
                       <span className="text-[10px] font-bold ">Recommended: 1200x630 (Social Sharing Display)</span>
                     </div>
@@ -264,7 +264,7 @@ const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "ne
                   <div>
                     <Label>{contentType === "news" ? "Description" : "Short Excerpt (Brief Summary)"}</Label>
                     <textarea 
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
                       rows={contentType === "news" ? 10 : 3}
                       placeholder={contentType === "news" ? "Enter news description..." : "A short punchy intro to grab attention..."}
                       name={contentType === "news" ? "description" : "excerpt"}
@@ -276,7 +276,7 @@ const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "ne
                   <div>
                     <Label>Full Content Body</Label>
                     <textarea 
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400 min-h-[400px]"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400 min-h-[400px]"
                       placeholder="Compose your full article here. Use paragraphs and rich formatting ideas..."
                       name="content"
                       value={formData.content}
@@ -293,13 +293,13 @@ const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "ne
               <Button 
                 type="button" 
                 variant="outline" 
-                className="rounded-xl px-8 font-bold text-gray-500 border-gray-200"
+                className="rounded-none px-8 font-bold text-gray-500 border-gray-200"
               >
                 Cancel Draft
               </Button>
               <Button 
                 type="submit" 
-                className="rounded-xl px-12 font-bold  shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
+                className="rounded-none px-12 font-bold  shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
               >
                 Publish Now
               </Button>

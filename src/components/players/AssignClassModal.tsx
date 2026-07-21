@@ -32,7 +32,7 @@ export default function AssignClassModal({ player, onClose }: AssignClassModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg w-full max-w-md p-6 border border-slate-200 dark:border-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-none shadow-lg w-full max-w-md p-6 border border-slate-200 dark:border-slate-800">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Assign to Class</h3>
         <p className="text-sm text-slate-500 mb-4">
           Select a class for {player.fullName} ({player.program?.name || "No Program"}).
@@ -48,7 +48,7 @@ export default function AssignClassModal({ player, onClose }: AssignClassModalPr
               <div
                 key={cls._id}
                 onClick={() => setSelectedClassId(cls._id)}
-                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                className={`p-3 border rounded-none cursor-pointer transition-colors ${
                   selectedClassId === cls._id
                     ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10"
                     : "border-slate-200 dark:border-slate-700 hover:border-brand-300 dark:hover:border-brand-500/50"
@@ -56,7 +56,7 @@ export default function AssignClassModal({ player, onClose }: AssignClassModalPr
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className="font-semibold text-slate-800 dark:text-slate-200">{cls.name}</span>
-                  <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-none">
                     {cls.status}
                   </span>
                 </div>
@@ -72,14 +72,14 @@ export default function AssignClassModal({ player, onClose }: AssignClassModalPr
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-none transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleAssign}
             disabled={!selectedClassId || assignMutation.isPending}
-            className="px-4 py-2 text-sm font-semibold text-white bg-[#0047FF] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-semibold text-white bg-[#0047FF] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-none transition-colors"
           >
             {assignMutation.isPending ? "Assigning..." : "Assign"}
           </button>

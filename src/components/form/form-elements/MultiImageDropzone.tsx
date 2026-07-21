@@ -59,10 +59,10 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
     <div className="space-y-4">
       {/* Dropzone Area */}
       {!hasReachedMax && (
-        <div className="transition border border-gray-300 border-dashed cursor-pointer dark:hover:border-brand-500 dark:border-gray-700 rounded-xl hover:border-brand-500">
+        <div className="transition border border-gray-300 border-dashed cursor-pointer dark:hover:border-brand-500 dark:border-gray-700 rounded-none hover:border-brand-500">
           <div
             {...getRootProps()}
-            className={`dropzone flex flex-col items-center justify-center rounded-xl p-6 lg:p-8
+            className={`dropzone flex flex-col items-center justify-center rounded-none p-6 lg:p-8
           ${
             isDragActive
               ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
@@ -91,7 +91,7 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
       {files.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {files.map((file, idx) => (
-            <div key={file.name + idx} className="relative group rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-50 dark:bg-gray-800">
+            <div key={file.name + idx} className="relative group rounded-none overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-50 dark:bg-gray-800">
               <img 
                 src={file.preview} 
                 alt={`preview ${idx}`} 

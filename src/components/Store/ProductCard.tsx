@@ -10,8 +10,8 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const images = product.images && product.images.length > 0 
-    ? product.images 
+  const images = product.images && product.images.length > 0
+    ? product.images
     : ["/images/placeholder-image.png"];
 
   const handlePrevImage = (e: React.MouseEvent) => {
@@ -35,7 +35,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
   };
 
   return (
-    <div className="group bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 relative flex flex-col h-full">
+    <div className="group bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 relative flex flex-col h-full">
 
       {/* Out of Stock Label */}
       {product.availabilityStatus === "OUT_OF_STOCK" && (
@@ -51,32 +51,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
 
       {/* Status Toggle / Actions Overlay */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
-        <Link to={`/edit-product/${product._id}`} className="p-2 bg-white text-gray-800 rounded-xl shadow-xl hover:bg-brand-500 hover:text-white transition-all">
+        <Link to={`/edit-product/${product._id}`} className="p-2 bg-white text-gray-800 rounded-none shadow-xl hover:bg-brand-500 hover:text-white transition-all">
           <Edit3 size={16} />
         </Link>
-        <button className="p-2 bg-white text-red-500 rounded-xl shadow-xl hover:bg-red-500 hover:text-white transition-all">
+        <button className="p-2 bg-white text-red-500 rounded-none shadow-xl hover:bg-red-500 hover:text-white transition-all">
           <Trash2 size={16} />
         </button>
       </div>
 
       <div className="h-64 bg-gray-50 dark:bg-gray-800 flex items-center justify-center relative overflow-hidden">
-        <img 
-          src={getImageUrl(images[currentImageIndex])} 
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-          alt={product.name} 
+        <img
+          src={getImageUrl(images[currentImageIndex])}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          alt={product.name}
         />
-        
+
         {/* Image Carousel Controls */}
         {images.length > 1 && (
           <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button 
-              onClick={handlePrevImage} 
+            <button
+              onClick={handlePrevImage}
               className="p-1.5 bg-white/80 dark:bg-black/50 text-gray-800 dark:text-white rounded-full hover:bg-white dark:hover:bg-black transition-colors shadow-md"
             >
               <ChevronLeft size={20} />
             </button>
-            <button 
-              onClick={handleNextImage} 
+            <button
+              onClick={handleNextImage}
               className="p-1.5 bg-white/80 dark:bg-black/50 text-gray-800 dark:text-white rounded-full hover:bg-white dark:hover:bg-black transition-colors shadow-md"
             >
               <ChevronRight size={20} />
@@ -88,8 +88,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
         {images.length > 1 && (
           <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
             {images.map((_: any, idx: number) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex ? "w-4 bg-brand-500" : "w-1.5 bg-gray-300 dark:bg-gray-600"}`}
               />
             ))}

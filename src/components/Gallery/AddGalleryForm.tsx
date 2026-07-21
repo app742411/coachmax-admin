@@ -19,12 +19,12 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
- <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
-  <div className="p-2 bg-brand-50 dark:bg-brand-500/10 rounded-lg text-brand-500">
-   <Icon size={18} />
+  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
+    <div className="p-2 bg-white/10 rounded-none text-white">
+      <Icon size={18} />
+    </div>
+    <h5 className="text-lg font-bold text-white">{title}</h5>
   </div>
-  <h5 className="text-lg font-bold text-gray-800 dark:text-gray-100">{title}</h5>
- </div>
 );
 
 interface FormCardProps {
@@ -33,7 +33,7 @@ interface FormCardProps {
 }
 
 const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
- <div className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
+ <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
   {children}
  </div>
 );
@@ -108,7 +108,7 @@ const AddGalleryForm = () => {
        <div className="col-span-2">
          <Label>Brief Description</Label>
          <textarea 
-          className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
+          className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
           rows={3}
           placeholder="Capture the spirit of the event in a few words..."
           name="description"
@@ -125,7 +125,7 @@ const AddGalleryForm = () => {
        <DropzoneComponent 
         onUpload={(files: File[]) => setFormData(prev => ({...prev, images: files as any}))} 
        />
-       <div className="flex items-center gap-2 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-xl text-brand-600 dark:text-brand-400">
+       <div className="flex items-center gap-2 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-none text-brand-600 dark:text-brand-400">
          <Shield size={14} />
          <span className="text-[10px] font-bold ">Safe Cloud Storage: Images are optimized for mobile delivery.</span>
        </div>
@@ -137,13 +137,13 @@ const AddGalleryForm = () => {
      <Button 
       type="button" 
       variant="outline" 
-      className="rounded-xl px-10 font-bold text-gray-500 border-gray-200"
+      className="rounded-none px-10 font-bold text-gray-500 border-gray-200"
      >
       Cancel
      </Button>
      <Button 
       type="submit" 
-      className="rounded-xl px-16 font-bold  shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
+      className="rounded-none px-16 font-bold  shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
      >
       Create Gallery
      </Button>

@@ -36,12 +36,12 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
- <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
-  <div className="p-2 bg-brand-50 dark:bg-brand-500/10 rounded-lg text-brand-500">
-   <Icon size={18} />
+  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
+    <div className="p-2 bg-white/10 rounded-none text-white">
+      <Icon size={18} />
+    </div>
+    <h5 className="text-lg font-bold text-white">{title}</h5>
   </div>
-  <h5 className="text-lg font-bold text-gray-800 dark:text-gray-100">{title}</h5>
- </div>
 );
 
 interface FormCardProps {
@@ -50,7 +50,7 @@ interface FormCardProps {
 }
 
 const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
- <div className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
+ <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
   {children}
  </div>
 );
@@ -238,7 +238,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
      <FormCard>
       <SectionHeader icon={Info} title="Extended Description" />
       <textarea 
-        className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
+        className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
         placeholder="Detailed product specifics, material info, or sizing guide..."
         rows={8}
         name="description"
@@ -313,7 +313,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
      <div className="flex flex-col gap-3">
        <Button 
         type="submit" 
-        className="w-full rounded-2xl py-4 font-bold  shadow-2xl shadow-brand-500/30 active:scale-95 transition-all text-base"
+        className="w-full rounded-none py-4 font-bold  shadow-2xl shadow-brand-500/30 active:scale-95 transition-all text-base"
        >
         {isEdit ? "Update Merchandise" : "Publish to Store"}
        </Button>

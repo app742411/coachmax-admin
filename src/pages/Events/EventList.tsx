@@ -150,7 +150,7 @@ export default function EventList() {
                         return (
                             <div
                                 key={event._id}
-                                className="group bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer"
+                                className="group bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer"
                                 onClick={() => navigate(`/event-details/${event._id}`)}
                             >
                                 <div className="h-48 bg-gray-100 dark:bg-gray-800 relative ring-1 ring-inset ring-black/5 overflow-hidden">
@@ -184,7 +184,7 @@ export default function EventList() {
                                                 e.stopPropagation();
                                                 setOpenStatusMenuId(openStatusMenuId === event._id ? null : event._id);
                                             }}
-                                            className="p-2 dropdown-toggle bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-xl text-gray-800 dark:text-gray-100 shadow-xl hover:text-brand-500 transition-all border border-transparent hover:border-brand-500/20"
+                                            className="p-2 dropdown-toggle bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-none text-gray-800 dark:text-gray-100 shadow-xl hover:text-brand-500 transition-all border border-transparent hover:border-brand-500/20"
                                         >
                                             <MoreVertical size={16} strokeWidth={2.5} />
                                         </button>
@@ -197,21 +197,21 @@ export default function EventList() {
                                                 <p className="text-[10px] font-bold text-gray-400 p-2 border-b border-gray-50 dark:border-gray-800 mb-1 ">Event Governance</p>
                                                 <DropdownItem
                                                     onClick={() => handleStatusChange(event._id, "UPCOMING")}
-                                                    className="flex items-center gap-2 p-2 rounded-xl text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                                    className="flex items-center gap-2 p-2 rounded-none text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                                                 >
                                                     <Clock3 size={14} />
                                                     <span className="text-xs font-bold  tracking-tighter">Set Upcoming</span>
                                                 </DropdownItem>
                                                 <DropdownItem
                                                     onClick={() => handleStatusChange(event._id, "ONGOING")}
-                                                    className="flex items-center gap-2 p-2 rounded-xl text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 transition-colors"
+                                                    className="flex items-center gap-2 p-2 rounded-none text-success-500 hover:bg-success-50 dark:hover:bg-success-500/10 transition-colors"
                                                 >
                                                     <AlertCircle size={14} />
                                                     <span className="text-xs font-bold  tracking-tighter">Live Ongoing</span>
                                                 </DropdownItem>
                                                 <DropdownItem
                                                     onClick={() => handleStatusChange(event._id, "COMPLETED")}
-                                                    className="flex items-center gap-2 p-2 rounded-xl text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                    className="flex items-center gap-2 p-2 rounded-none text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                                 >
                                                     <CheckCircle size={14} />
                                                     <span className="text-xs font-bold  tracking-tighter">Completed</span>
@@ -229,13 +229,13 @@ export default function EventList() {
 
                                     <div className="space-y-3 pt-4 border-t border-gray-50 dark:border-gray-800/50">
                                         <div className="flex items-center gap-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                                            <div className="p-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            <div className="p-1.5 bg-gray-50 dark:bg-gray-800 rounded-none">
                                                 <MapPin size={14} className="text-brand-500" />
                                             </div>
                                             <span className="truncate">{event.venueName}, {event.address}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                                            <div className="p-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            <div className="p-1.5 bg-gray-50 dark:bg-gray-800 rounded-none">
                                                 <Calendar size={14} className="text-brand-500" />
                                             </div>
                                             <span>{formatDate(event.startDate)} - {formatDate(event.endDate)}</span>
@@ -289,14 +289,14 @@ export default function EventList() {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={(e) => handleDeleteClick(event._id, e)}
-                                                    className="group/btn flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500 rounded-xl text-red-500 hover:text-white transition-all font-bold text-[9px] shadow-sm"
+                                                    className="group/btn flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500 rounded-none text-red-500 hover:text-white transition-all font-bold text-[9px] shadow-sm"
                                                 >
                                                     <Trash2 size={12} className="group-hover/btn:scale-110 transition-transform" />
                                                     DELETE
                                                 </button>
                                                 <Link
                                                     to={`/edit-event/${event._id}`}
-                                                    className="group/btn flex items-center gap-2 px-3 py-2 bg-brand-500/10 hover:bg-brand-500 rounded-xl text-brand-500 hover:text-white transition-all font-bold  text-[9px] shadow-sm"
+                                                    className="group/btn flex items-center gap-2 px-3 py-2 bg-brand-500/10 hover:bg-brand-500 rounded-none text-brand-500 hover:text-white transition-all font-bold  text-[9px] shadow-sm"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     <Edit size={12} className="group-hover/btn:rotate-12 transition-transform" />
@@ -304,7 +304,7 @@ export default function EventList() {
                                                 </Link>
                                                 <Link
                                                     to={`/event-details/${event._id}`}
-                                                    className="group/btn flex items-center gap-2 px-3 py-2 bg-success-500/10 hover:bg-success-500 rounded-xl text-success-500 hover:text-white transition-all font-bold  text-[9px] shadow-sm"
+                                                    className="group/btn flex items-center gap-2 px-3 py-2 bg-success-500/10 hover:bg-success-500 rounded-none text-success-500 hover:text-white transition-all font-bold  text-[9px] shadow-sm"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     VIEW

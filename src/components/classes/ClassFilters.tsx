@@ -5,6 +5,8 @@ interface ClassFiltersProps {
   setStatusFilter?: (val: string) => void;
 }
 
+import Select from "../form/Select";
+
 export default function ClassFilters({
   searchQuery,
   setSearchQuery,
@@ -26,23 +28,24 @@ export default function ClassFilters({
             placeholder="Search classes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full sm:w-[280px] rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-4 text-sm text-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-theme-xs dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+            className="w-full sm:w-[280px] rounded-none border border-slate-200 bg-white py-2 pl-10 pr-4 text-sm text-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-theme-xs dark:border-slate-800 dark:bg-slate-900 dark:text-white"
           />
         </div>
       </div>
       
       {/* Optional dropdowns could go here on the right, like PlayerFilters */}
       {setStatusFilter && (
-        <div className="flex gap-2">
-          <select 
+        <div className="w-40 flex gap-2">
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-theme-xs dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-          >
-            <option value="All">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { label: "All Statuses", value: "All" },
+              { label: "Active", value: "ACTIVE" },
+              { label: "Inactive", value: "INACTIVE" }
+            ]}
+            className="w-full"
+          />
         </div>
       )}
     </div>

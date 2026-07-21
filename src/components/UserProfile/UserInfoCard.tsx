@@ -91,18 +91,18 @@ export default function UserInfoCard() {
 
   if (isLoading) {
     return (
-      <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6 animate-pulse">
-        <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+      <div className="p-5 border border-gray-200 rounded-none dark:border-gray-800 lg:p-6 animate-pulse">
+        <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-none mb-4"></div>
         <div className="space-y-3">
-          <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded-none"></div>
+          <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded-none"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
+    <div className="p-5 border border-gray-200 rounded-none dark:border-gray-800 lg:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
@@ -161,7 +161,7 @@ export default function UserInfoCard() {
 
         <button
           onClick={openModal}
-          className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
+          className="flex w-full items-center justify-center gap-2 rounded-none border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
         >
           <svg
             className="fill-current"
@@ -183,7 +183,7 @@ export default function UserInfoCard() {
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
-        <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
+        <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-none bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
               Edit Personal Information
@@ -195,7 +195,7 @@ export default function UserInfoCard() {
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
             <div className="custom-scrollbar h-[420px] overflow-y-auto px-2 pb-3">
               {updateProfileMutation.isError && (
-                <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-lg text-sm">
+                <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-none text-sm">
                   {updateProfileMutation.error.message || "Failed to update profile."}
                 </div>
               )}
@@ -225,7 +225,7 @@ export default function UserInfoCard() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                      className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-500 rounded-none hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                     >
                       Change Photo
                     </button>

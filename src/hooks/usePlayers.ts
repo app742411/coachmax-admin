@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deletePlayer, getPlayers, updatePlayerStatus, exportUsersCSV, getPlayerProfile } from "../api/players";
-import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers } from "../api/adminApi";
+import toast from "react-hot-toast";
+import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile } from "../api/players";
+import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer } from "../api/adminApi";
 import { PlayersResponse } from "../types/player";
 
 export const usePlayers = (page = 1, limit = 10) => {
@@ -14,26 +15,27 @@ export const useDeletePlayer = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deletePlayer(id),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["players"] });
+      toast.success(data?.message || "Player deleted successfully");
     },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to delete player");
+    }
   });
 };
 
-export const useUpdatePlayerStatus = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { status: "APPROVED" | "REJECTED"; rejectresaon?: string } }) =>
-      updatePlayerStatus(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["players"] });
-    },
-  });
-};
+
 
 export const useExportUsersCSV = () => {
   return useMutation({
     mutationFn: (status?: string) => exportUsersCSV(status),
+    onSuccess: (data: any) => {
+      toast.success(data?.message || "Export successful");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Export failed");
+    }
   });
 };
 
@@ -50,9 +52,13 @@ export const useAssignClass = () => {
   return useMutation({
     mutationFn: ({ playerId, classId }: { playerId: string; classId: string }) =>
       assignClass(playerId, { classId }),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["players"] });
+      toast.success(data?.message || "Class assigned successfully");
     },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to assign class");
+    }
   });
 };
 
@@ -76,9 +82,13 @@ export const useMarkSingleAttendance = (classId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => markSingleAttendance(classId, data),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
+      toast.success(data?.message || "Attendance marked");
     },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to mark attendance");
+    }
   });
 };
 
@@ -86,9 +96,13 @@ export const useMarkBulkAttendance = (classId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { sessionDate: string; records: { player: string; status: string }[] }) => markBulkAttendance(classId, data),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
+      toast.success(data?.message || "Bulk attendance marked");
     },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to mark bulk attendance");
+    }
   });
 };
 
@@ -106,5 +120,32 @@ export const usePlayerProfile = (playerId: string | undefined) => {
     queryKey: ["playerProfile", playerId],
     queryFn: () => getPlayerProfile(playerId!),
     enabled: !!playerId,
+  });
+};
+
+
+export const useAssignClassesToPlayer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      playerId,
+      classIds,
+      paymentStatus,
+      registrationRequestId,
+    }: {
+      playerId: string;
+      classIds: string[];
+      paymentStatus: string;
+      registrationRequestId?: string;
+    }) => assignClassesToPlayer(playerId, classIds, paymentStatus, registrationRequestId),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["unallocatedPlayers"] });
+      queryClient.invalidateQueries({ queryKey: ["allocatedPlayers"] });
+      queryClient.invalidateQueries({ queryKey: ["classFullTable"] });
+      toast.success(data?.message || "Player allocated to classes and enrolled successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to assign classes to player");
+    }
   });
 };

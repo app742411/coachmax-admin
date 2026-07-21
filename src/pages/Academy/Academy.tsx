@@ -4,49 +4,17 @@ import AcademyHeader from "../../components/academy/AcademyHeader";
 import DayTabs from "../../components/academy/DayTabs";
 import ClassFullTable from "../../components/academy/ClassFullTable";
 import UnallocatedPlayersCard from "../../components/academy/UnallocatedPlayersCard";
+import AllocatedPlayersCard from "../../components/academy/AllocatedPlayersCard";
 import WaitlistCard from "../../components/academy/WaitlistCard";
 import TrialsCard from "../../components/academy/TrialsCard";
-import { UnallocatedPlayer, WaitlistItem, TrialItem } from "../../types/academy";
+import SidebarPlayersFilter from "../../components/academy/SidebarPlayersFilter";
+import { WaitlistItem, TrialItem } from "../../types/academy";
 import { useClassFiltersWithTimeSlots } from "../../hooks/usePlayers";
-
-const mockUnallocatedPlayers: UnallocatedPlayer[] = [
-  {
-    id: 1,
-    name: "Alex Johnson",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80",
-    details: "U10 - Male",
-    rating: 2,
-    requested: "Mon 4:30pm, Thu 4:30pm",
-    programCode: "AC",
-  },
-  {
-    id: 2,
-    name: "Zac Anderson",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-    details: "U10 - Male",
-    rating: 3,
-    requested: "Mon 4:15pm",
-    programCode: "AC",
-  },
-  {
-    id: 3,
-    name: "Noah Thompson",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80",
-    details: "U9 - Male",
-    rating: 4,
-    requested: "Mon 4:15pm",
-    programCode: "AC",
-  },
-  {
-    id: 4,
-    name: "Liam Carter",
-    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=80&q=80",
-    details: "U9 - Male",
-    rating: 3,
-    requested: "Tue 6:00pm",
-    programCode: "AC",
-  },
-];
+import { useUnallocatedPlayers } from "../../hooks/useUnallocatedPlayers";
+import { useAllocatedPlayers } from "../../hooks/useAllocatedPlayers";
+import AddClassModal from "../../components/classes/AddClassModal";
+import TermManagement from "../../components/management/TermManagement";
+import { Modal } from "../../components/ui/modal";
 
 const mockWaitlist: WaitlistItem[] = [
   { id: 1, classTitle: "U8 - Monday 4:15pm Development", count: 1 },
@@ -87,12 +55,37 @@ interface AcademyProps {
 }
 
 export default function Academy({ programType = "Academy" }: AcademyProps) {
-  const [activeDay, setActiveDay] = useState("Monday");
+  const [activeDay, setActiveDay] = useState(() => ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()]);
   const [categoryId, setCategoryId] = useState("");
+  const [categoryName, setCategoryName] = useState("");
   const [programId, setProgramId] = useState("");
+  const [programName, setProgramName] = useState("");
+  const [, setYear] = useState("");
+  
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [isTermModalOpen, setIsTermModalOpen] = useState(false);
 
   const { data: filtersData } = useClassFiltersWithTimeSlots(categoryId, programId, activeDay.toUpperCase());
   const timeSlots = filtersData?.timeSlots || [];
+  
+  const [sidebarCategory, setSidebarCategory] = useState("");
+  const [sidebarProgram, setSidebarProgram] = useState("");
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [playerType, setPlayerType] = useState<"BOTH" | "ALLOCATED" | "UNALLOCATED">("UNALLOCATED");
+
+  const { data: unallocatedPlayers } = useUnallocatedPlayers(
+    sidebarCategory, 
+    sidebarProgram, 
+    sidebarSearch, 
+    playerType === "BOTH" || playerType === "UNALLOCATED"
+  );
+  
+  const { data: allocatedPlayers } = useAllocatedPlayers(
+    sidebarCategory, 
+    sidebarProgram, 
+    sidebarSearch,
+    playerType === "BOTH" || playerType === "ALLOCATED"
+  );
 
   return (
     <>
@@ -103,8 +96,19 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
       <AcademyHeader
         programType={programType}
-        onCategoryChange={(id) => { setCategoryId(id); }}
-        onProgramChange={(id) => { setProgramId(id); }}
+        onCategoryChange={(id, name) => { 
+          setCategoryId(id); 
+          if (name) setCategoryName(name); 
+        }}
+        onProgramChange={(id, name) => { 
+          setProgramId(id); 
+          if (name) setProgramName(name); 
+        }}
+        onYearChange={(year) => { setYear(year); }}
+        onOpenCreateClass={() => setIsClassModalOpen(true)}
+        onOpenTermSettings={() => setIsTermModalOpen(true)}
+        playerType={playerType}
+        onPlayerTypeChange={setPlayerType}
       />
       <DayTabs activeDay={activeDay} onChangeDay={(day) => { setActiveDay(day); }} />
 
@@ -116,23 +120,56 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
               <ClassFullTable
                 key={slot.classId}
                 classId={slot.classId}
+                categoryId={categoryId}
+                categoryName={categoryName}
+                programId={programId}
+                programName={programName}
                 timeSlotStr={`${slot.startTime} - ${slot.endTime}`}
               />
             ))
           ) : (
-            <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl">
+            <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-none">
               No classes scheduled for this day.
             </div>
           )}
         </div>
 
         {/* Right Side: Sidebar Cards Panel */}
-        <div className="w-full xl:w-[350px] shrink-0">
-          <UnallocatedPlayersCard players={mockUnallocatedPlayers} />
+        <div className="w-full xl:w-[350px] shrink-0 flex flex-col gap-4">
+          <SidebarPlayersFilter
+            category={sidebarCategory}
+            program={sidebarProgram}
+            search={sidebarSearch}
+            onCategoryChange={setSidebarCategory}
+            onProgramChange={setSidebarProgram}
+            onSearchChange={setSidebarSearch}
+          />
+          {(playerType === "BOTH" || playerType === "UNALLOCATED") && (
+            <UnallocatedPlayersCard players={unallocatedPlayers || []} />
+          )}
+          {(playerType === "BOTH" || playerType === "ALLOCATED") && (
+            <AllocatedPlayersCard players={allocatedPlayers || []} />
+          )}
           <WaitlistCard items={mockWaitlist} />
           <TrialsCard items={mockTrials} />
         </div>
       </div>
+
+      <AddClassModal 
+        isOpen={isClassModalOpen} 
+        onClose={() => setIsClassModalOpen(false)} 
+        onSuccess={() => { /* re-fetch could be handled via query invalidation if needed */ }} 
+      />
+
+      <Modal
+        isOpen={isTermModalOpen}
+        onClose={() => setIsTermModalOpen(false)}
+        className="max-w-5xl mx-auto"
+      >
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-none shadow-sm">
+          <TermManagement />
+        </div>
+      </Modal>
     </>
   );
 }

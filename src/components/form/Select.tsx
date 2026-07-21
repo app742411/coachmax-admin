@@ -1,17 +1,21 @@
-import { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { ChevronDown, LucideIcon } from "lucide-react";
 
-interface Option {
-  value: string;
+export interface SelectOption {
   label: string;
+  value: string | number;
 }
 
-interface SelectProps {
-  options: Option[];
+export interface SelectProps {
+  options: SelectOption[];
   placeholder?: string;
   onChange: (value: string) => void;
   className?: string;
   defaultValue?: string;
   value?: string;
+  icon?: LucideIcon;
+  iconSize?: number;
+  triggerClassName?: string;
 }
 
 const Select: React.FC<SelectProps> = ({
@@ -21,46 +25,82 @@ const Select: React.FC<SelectProps> = ({
   className = "",
   defaultValue = "",
   value,
+  icon: Icon,
+  iconSize = 14,
+  triggerClassName,
 }) => {
-  // Manage the selected value if no value prop is passed (uncontrolled), otherwise use value (controlled)
   const [internalValue, setInternalValue] = useState<string>(defaultValue);
-  
-  const selectedValue = value !== undefined ? value : internalValue;
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value;
-    setInternalValue(newValue);
-    onChange(newValue); // Trigger parent handler
+  const selectedValue = value !== undefined ? value : internalValue;
+  const selectedOption = options.find((opt) => String(opt.value) === String(selectedValue));
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleSelect = (val: string) => {
+    setInternalValue(val);
+    onChange(val);
+    setIsOpen(false);
   };
 
   return (
-    <select
-      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 ${selectedValue
-          ? "text-gray-800 dark:text-white/90"
-          : "text-gray-400 dark:text-gray-400"
-        } ${className}`}
-      value={selectedValue}
-      onChange={handleChange}
-    >
-      {/* Placeholder option */}
-      <option
-        value=""
-        disabled
-        className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
+    <div className={`relative ${className}`} ref={containerRef}>
+      {/* Select Trigger */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={triggerClassName || "w-full flex items-center justify-between appearance-none rounded-none border border-gray-100 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 focus:bg-white focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] outline-none transition-all shadow-theme-xs cursor-pointer group"}
       >
-        {placeholder}
-      </option>
-      {/* Map over options */}
-      {options.map((option) => (
-        <option
-          key={option.value}
-          value={option.value}
-          className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
-        >
-          {option.label}
-        </option>
-      ))}
-    </select>
+        <div className="flex items-center gap-2 overflow-hidden">
+          {Icon && <Icon size={iconSize} className="text-gray-400 shrink-0 group-hover:text-brand-500 transition-colors" />}
+          <span className="truncate">
+            {selectedOption ? selectedOption.label : <span className="text-gray-400">{placeholder}</span>}
+          </span>
+        </div>
+        <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {/* Select Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute z-50 min-w-full mt-1 bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-none overflow-hidden max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+          <ul className="py-1">
+            {options.map((option, index) => (
+              <li key={index}>
+                <button
+                  type="button"
+                  onClick={() => handleSelect(String(option.value))}
+                  className={`w-full text-left px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors
+                    ${
+                      String(selectedValue) === String(option.value)
+                        ? "bg-[#0047FF] text-white"
+                        : "text-slate-700 dark:text-slate-300 hover:bg-[#0047FF] hover:text-white dark:hover:bg-[#0047FF] dark:hover:text-white"
+                    }
+                  `}
+                >
+                  {option.label}
+                </button>
+              </li>
+            ))}
+            {options.length === 0 && (
+              <li className="px-4 py-3 text-xs text-center text-gray-400">
+                No options
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -174,7 +174,7 @@ const LeagueManagement: React.FC = () => {
             placeholder="Search leagues..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 bg-white dark:bg-slate-800 dark:text-white transition-colors shadow-sm"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-none outline-none focus:border-brand-500 bg-white dark:bg-slate-800 dark:text-white transition-colors shadow-sm"
           />
         </div>
         <Button onClick={handleOpenAdd} size="sm">Add League</Button>
@@ -206,7 +206,7 @@ const LeagueManagement: React.FC = () => {
                   <tr key={league._id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-brand-50 overflow-hidden flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm shrink-0">
+                        <div className="w-10 h-10 rounded-none bg-brand-50 overflow-hidden flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm shrink-0">
                           {league.logo ? (
                             <img src={getImageUrl(league.logo) as string} alt={league.name} className="w-full h-full object-cover" />
                           ) : (
@@ -221,7 +221,7 @@ const LeagueManagement: React.FC = () => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-bold tracking-tight">
-                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded border border-slate-200 dark:border-slate-700 uppercase">
+                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-none border border-slate-200 dark:border-slate-700 uppercase">
                               {league.season || "N/A"}
                           </span>
                       </div>
@@ -234,7 +234,7 @@ const LeagueManagement: React.FC = () => {
                     </td>
                     <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
                       <button 
-                        className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded shadow-sm hover:shadow transition-colors"
+                        className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-none shadow-sm hover:shadow transition-colors"
                         title="More Options"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -247,7 +247,7 @@ const LeagueManagement: React.FC = () => {
                       </button>
 
                       {openDropdownId === league._id && (
-                        <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                           <button 
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                             onClick={(e) => {
@@ -279,9 +279,9 @@ const LeagueManagement: React.FC = () => {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-3xl shadow-2xl" noBackgroundBlur={true}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-none shadow-2xl" noBackgroundBlur={true}>
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-xl text-brand-500">
+          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-brand-500">
              <Trophy size={22} />
           </div>
           <div>
@@ -297,7 +297,7 @@ const LeagueManagement: React.FC = () => {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
                 placeholder="e.g. Summer Championship League"
                 required
               />
@@ -309,7 +309,7 @@ const LeagueManagement: React.FC = () => {
                 type="text"
                 value={formData.season}
                 onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
                 placeholder="e.g. 2026"
                 required
               />
@@ -320,7 +320,7 @@ const LeagueManagement: React.FC = () => {
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all resize-none h-24"
+                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all resize-none h-24"
                 placeholder="League description..."
                 required
               />
@@ -335,7 +335,7 @@ const LeagueManagement: React.FC = () => {
                     ref={startDateRef}
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full rounded-xl border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
+                    className="w-full rounded-none border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
                     required
                   />
                   <div 
@@ -360,7 +360,7 @@ const LeagueManagement: React.FC = () => {
                     ref={endDateRef}
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full rounded-xl border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
+                    className="w-full rounded-none border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
                     required
                   />
                   <div 
@@ -381,7 +381,7 @@ const LeagueManagement: React.FC = () => {
           </div>
 
           <div className="md:col-span-5">
-             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm h-full flex flex-col items-center justify-center">
+             <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-6 shadow-sm h-full flex flex-col items-center justify-center">
                 <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-6 text-center">League Logo</label>
                 <div 
                   onClick={() => fileInputRef.current?.click()}
@@ -413,7 +413,7 @@ const LeagueManagement: React.FC = () => {
           
           <div className="md:col-span-12 flex justify-end gap-3 mt-4 pt-6 border-t border-gray-100 dark:border-gray-800">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
-            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
                 {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Save League"}
             </Button>
           </div>

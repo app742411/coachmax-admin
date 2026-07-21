@@ -36,7 +36,7 @@ const ProductList = () => {
         const params = new URLSearchParams();
         if (searchQuery.trim()) params.append("search", searchQuery.trim());
         if (activeCategoryId !== "All") params.append("categoryId", activeCategoryId);
-        
+
         const url = params.toString() ? `/api/user/store/products?${params.toString()}` : "/api/user/store/products";
         const prodRes = await apiClient.get(url);
         const prods = prodRes.data.data || prodRes.data || [];
@@ -80,13 +80,13 @@ const ProductList = () => {
         {/* Header Section */}
 
         {/* Filters & Tools */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-gray-900 p-4 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-gray-900 p-4 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
             {categories.map((cat) => (
               <button
                 key={cat._id}
                 onClick={() => setActiveCategoryId(cat._id)}
-                className={`px-6 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeCategoryId === cat._id
+                className={`px-6 py-2 rounded-none text-xs font-bold whitespace-nowrap transition-all ${activeCategoryId === cat._id
                   ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20 scale-105"
                   : "text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   }`}
@@ -103,7 +103,7 @@ const ProductList = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search product..."
-                className="pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs font-bold border border-transparent focus:border-brand-500 outline-none w-48 transition-all"
+                className="pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-none text-xs font-bold border border-transparent focus:border-brand-500 outline-none w-48 transition-all"
               />
             </div>
           </div>

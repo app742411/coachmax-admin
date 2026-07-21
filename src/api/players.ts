@@ -12,12 +12,6 @@ export const deletePlayer = async (id: string): Promise<void> => {
   await apiClient.delete(`/players/${id}`);
 };
 
-export const updatePlayerStatus = async (
-  id: string,
-  data: { status: "APPROVED" | "REJECTED"; rejectresaon?: string }
-): Promise<void> => {
-  await apiClient.put(`/api/admin/updateStatus/${id}`, data);
-};
 
 export const exportUsersCSV = async (status: string = "APPROVED"): Promise<void> => {
   const response = await apiClient.post(

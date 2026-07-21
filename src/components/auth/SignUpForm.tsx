@@ -60,7 +60,7 @@ export default function SignUpForm() {
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-8 sm:p-10 mb-10">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-sm p-8 sm:p-10 mb-10">
           <div className="flex justify-center mb-8">
             <img src="/images/logo/cm-logo2.png" alt="CoachMax Logo" className="h-12 object-contain" />
           </div>
@@ -76,7 +76,7 @@ export default function SignUpForm() {
 
 
             {apiError && (
-              <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-none text-sm">
                 {apiError.message || "Failed to sign up. Please try again."}
               </div>
             )}
@@ -184,7 +184,7 @@ export default function SignUpForm() {
                   <button
                     type="submit"
                     disabled={isPending}
-                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300"
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-none bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300"
                   >
                     {isPending ? "Signing Up..." : "Sign Up"}
                   </button>

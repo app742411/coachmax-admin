@@ -33,6 +33,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const availableOptions = options.filter(
+    (opt) => !selectedOptions.includes(opt.value)
+  );
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -81,8 +85,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       case "Enter":
         if (!isOpen) {
           setIsOpen(true);
-        } else if (focusedIndex >= 0) {
-          handleSelect(options[focusedIndex].value);
+        } else if (focusedIndex >= 0 && focusedIndex < availableOptions.length) {
+          handleSelect(availableOptions[focusedIndex].value);
         }
         break;
       case "Escape":
@@ -92,12 +96,12 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         if (!isOpen) {
           setIsOpen(true);
         } else {
-          setFocusedIndex((prev) => (prev < options.length - 1 ? prev + 1 : 0));
+          setFocusedIndex((prev) => (prev < availableOptions.length - 1 ? prev + 1 : 0));
         }
         break;
       case "ArrowUp":
         if (isOpen) {
-          setFocusedIndex((prev) => (prev > 0 ? prev - 1 : options.length - 1));
+          setFocusedIndex((prev) => (prev > 0 ? prev - 1 : availableOptions.length - 1));
         }
         break;
     }
@@ -128,7 +132,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             tabIndex={disabled ? -1 : 0}
           >
             <div
-              className={`mb-2 flex min-h-11  rounded-lg border border-gray-300 py-1.5 pl-3 pr-3 shadow-theme-xs outline-hidden transition focus:border-brand-300 focus:shadow-focus-ring dark:border-gray-700 dark:bg-gray-900 dark:focus:border-brand-300 ${
+              className={`mb-2 flex min-h-11  rounded-none border border-gray-300 py-1.5 pl-3 pr-3 shadow-theme-xs outline-hidden transition focus:border-brand-300 focus:shadow-focus-ring dark:border-gray-700 dark:bg-gray-900 dark:focus:border-brand-300 ${
                 disabled
                   ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800"
                   : "cursor-pointer"
@@ -213,33 +217,36 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
           {isOpen && (
             <div
-              className="absolute left-0 z-40 w-full overflow-y-auto bg-white rounded-lg shadow-sm top-full max-h-select dark:bg-gray-900"
+              className="absolute left-0 z-40 w-full overflow-y-auto bg-white rounded-none shadow-sm top-full max-h-select dark:bg-gray-900"
               onClick={(e) => e.stopPropagation()}
               role="listbox"
               aria-label={label}
             >
-              {options.map((option, index) => {
-                const isSelected = selectedOptions.includes(option.value);
-                const isFocused = index === focusedIndex;
+              {availableOptions.length > 0 ? (
+                availableOptions.map((option, index) => {
+                  const isFocused = index === focusedIndex;
 
-                return (
-                  <div
-                    key={option.value}
-                    className={`hover:bg-primary/5 w-full cursor-pointer rounded-t border-b border-gray-200 dark:border-gray-800 ${
-                      isFocused ? "bg-primary/5" : ""
-                    } ${isSelected ? "bg-primary/10" : ""}`}
-                    onClick={() => handleSelect(option.value)}
-                    role="option"
-                    aria-selected={isSelected}
-                  >
-                    <div className="relative flex w-full items-center p-2 pl-2">
-                      <div className="mx-2 leading-6 text-gray-800 dark:text-white/90">
-                        {option.text}
+                  return (
+                    <div
+                      key={option.value}
+                      className={`hover:bg-primary/5 w-full cursor-pointer rounded-none border-b border-gray-200 dark:border-gray-800 ${
+                        isFocused ? "bg-primary/5" : ""
+                      }`}
+                      onClick={() => handleSelect(option.value)}
+                      role="option"
+                      aria-selected={false}
+                    >
+                      <div className="relative flex w-full items-center p-2 pl-2">
+                        <div className="mx-2 leading-6 text-gray-800 dark:text-white/90">
+                          {option.text}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="p-3 text-sm text-gray-500 text-center">No options available</div>
+              )}
             </div>
           )}
         </div>

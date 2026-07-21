@@ -20,12 +20,12 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
- <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
-  <div className="p-2 bg-brand-50 dark:bg-brand-500/10 rounded-lg text-brand-500">
-   <Icon size={18} />
+  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6">
+    <div className="p-2 bg-white/10 rounded-none text-white">
+      <Icon size={18} />
+    </div>
+    <h5 className="text-lg font-bold text-white">{title}</h5>
   </div>
-  <h5 className="text-lg font-bold text-gray-800 dark:text-gray-100">{title}</h5>
- </div>
 );
 
 interface SponsorFormProps {
@@ -111,7 +111,7 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSuccess, editingSponsor, on
  };
 
  return (
-  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+  <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
    <form onSubmit={handleSubmit} className="space-y-6">
     <SectionHeader icon={editingSponsor ? Tag : ImageIcon} title={editingSponsor ? "Edit Sponsor Banner" : "Add New Sponsor Banner"} />
 
@@ -170,7 +170,7 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSuccess, editingSponsor, on
        type="button"
        variant="outline"
        onClick={onCancelEdit}
-       className="rounded-xl px-8 font-bold text-gray-500"
+       className="rounded-none px-8 font-bold text-gray-500"
       >
        Cancel
       </Button>
@@ -178,7 +178,7 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSuccess, editingSponsor, on
      <Button
       type="submit"
       disabled={loading}
-      className="rounded-xl px-12 font-bold  shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
+      className="rounded-none px-12 font-bold  shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
      >
       {loading ? "Saving..." : editingSponsor ? "Update Sponsor" : "Create Sponsor"}
      </Button>

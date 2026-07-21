@@ -5,7 +5,8 @@ import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import { createProgram, updateProgram, deleteProgram, getProgramsByCategory, getAllCategories } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
-import { Edit, Trash, Filter, Layers } from "../../icons/lucide-icons";
+import { Edit, Trash, Filter, Layers } from "lucide-react";
+import Select from "../form/Select";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const ProgramManagement: React.FC = () => {
@@ -15,7 +16,7 @@ const ProgramManagement: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -82,8 +83,8 @@ const ProgramManagement: React.FC = () => {
 
   // ── Event Handlers ─────────────────────────────────────────────
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCategoryFilter(e.target.value);
+  const handleFilterChange = (value: string) => {
+    setSelectedCategoryFilter(value);
   };
 
   const handleOpenAdd = () => {
@@ -123,24 +124,21 @@ const ProgramManagement: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-6 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-white/[0.03] rounded-none border border-gray-200 dark:border-white/[0.05] p-6 shadow-sm overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="space-y-1">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">Curriculum Programs</h3>
           <p className="text-xs text-gray-500 font-medium">Manage coaching levels by academy category</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative group">
-            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-brand-500 transition-colors" />
-            <select 
-              value={selectedCategoryFilter} 
+          <div className="w-48">
+            <Select
+              value={selectedCategoryFilter}
               onChange={handleFilterChange}
-              className="pl-9 pr-8 py-2 rounded-lg border border-gray-100 bg-gray-50 text-xs font-bold text-gray-600 focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
-            >
-              {categories.map((c: any) => (
-                <option key={c._id} value={c._id}>{c.name}</option>
-              ))}
-            </select>
+              icon={Filter}
+              options={categories.map((c: any) => ({ label: c.name, value: c._id }))}
+              className="w-full"
+            />
           </div>
           <Button onClick={handleOpenAdd} size="sm">Add Program</Button>
         </div>
@@ -159,8 +157,8 @@ const ProgramManagement: React.FC = () => {
             {loading ? (
               <TableRow><TableCell colSpan={3} className="text-center py-20">
                 <div className="flex flex-col items-center gap-3 text-gray-400">
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
-                    <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Library...</span>
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
+                  <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Library...</span>
                 </div>
               </TableCell></TableRow>
             ) : programs.length === 0 ? (
@@ -170,14 +168,14 @@ const ProgramManagement: React.FC = () => {
                 <TableRow key={prog._id}>
                   <TableCell className="pl-6">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 border border-indigo-100 shadow-sm">
+                      <div className="w-8 h-8 rounded-none bg-indigo-50 flex items-center justify-center text-indigo-500 border border-indigo-100 shadow-sm">
                         <Layers size={16} />
                       </div>
                       {prog.name || prog.title}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="px-2 py-1 bg-brand-50 text-brand-600 text-[10px] font-extrabold uppercase rounded shadow-sm border border-brand-100">
+                    <span className="px-2 py-1 bg-brand-50 text-brand-600 text-[10px] font-extrabold uppercase rounded-none shadow-sm border border-brand-100">
                       {prog.category?.name || categories.find((c: any) => c._id === (prog.category?._id || prog.category))?.name || "Uncategorized"}
                     </span>
                   </TableCell>
@@ -194,28 +192,17 @@ const ProgramManagement: React.FC = () => {
         </Table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 rounded-2xl shadow-2xl">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 rounded-none shadow-2xl">
         <h4 className="text-xl font-bold mb-2 tracking-tight">{isEditing ? "Modify Program" : "New Curriculum Module"}</h4>
         <p className="text-xs text-gray-500 mb-8 font-medium">Define the core objectives for this training level.</p>
         <form onSubmit={handleSubmit}>
           <div className="space-y-5">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Program Label</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
-                placeholder="Elite Performance"
-                required
-              />
-            </div>
-            <div>
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Parent Category</label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full rounded-xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
                 required
               >
                 <option value="">Select Target Category</option>
@@ -224,11 +211,22 @@ const ProgramManagement: React.FC = () => {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Program Label</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                placeholder="Elite Performance"
+                required
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-3 mt-10 pt-6 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
-            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">
-                {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Deploy Program"}
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
+              {createMutation.isPending || updateMutation.isPending ? "Saving..." : (isEditing ? "Update Program" : "Add Program")}
             </Button>
           </div>
         </form>

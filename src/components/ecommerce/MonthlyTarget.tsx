@@ -64,8 +64,8 @@ export default function MonthlyTarget() {
     setIsOpen(false);
   }
   return (
-    <div className="rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-white/[0.03]">
-      <div className="px-5 pt-5 bg-white shadow-default rounded-2xl pb-11 dark:bg-gray-900 sm:px-6 sm:pt-6">
+    <div className="rounded-none border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-white/[0.03]">
+      <div className="px-5 pt-5 bg-white shadow-default rounded-none pb-11 dark:bg-gray-900 sm:px-6 sm:pt-6">
         <div className="flex justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
@@ -86,13 +86,13 @@ export default function MonthlyTarget() {
             >
               <DropdownItem
                 onItemClick={closeDropdown}
-                className="flex w-full font-normal text-left text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                className="flex w-full font-normal text-left text-gray-500 rounded-none hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
               >
                 View More
               </DropdownItem>
               <DropdownItem
                 onItemClick={closeDropdown}
-                className="flex w-full font-normal text-left text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                className="flex w-full font-normal text-left text-gray-500 rounded-none hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
               >
                 Delete
               </DropdownItem>

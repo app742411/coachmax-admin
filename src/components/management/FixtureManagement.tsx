@@ -41,13 +41,13 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
   );
 
   return (
-    <div className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden mb-4 shadow-sm transition-all hover:shadow-md">
+    <div className="border border-slate-200 dark:border-slate-800 rounded-none bg-white dark:bg-slate-900 overflow-hidden mb-4 shadow-sm transition-all hover:shadow-md">
       <div 
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-brand-50 overflow-hidden flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm shrink-0">
+          <div className="w-12 h-12 rounded-none bg-brand-50 overflow-hidden flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm shrink-0">
             {league.logo ? (
               <img src={getImageUrl(league.logo) as string} alt={league.name} className="w-full h-full object-cover" />
             ) : (
@@ -69,11 +69,11 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
             <div className="overflow-visible no-scrollbar">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider rounded-t-xl">
-                    <th className="py-3 px-4 min-w-[200px] first:rounded-tl-lg">Match</th>
+                  <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider rounded-none">
+                    <th className="py-3 px-4 min-w-[200px] first:rounded-none">Match</th>
                     <th className="py-3 px-4 min-w-[140px]">Date & Time</th>
                     <th className="py-3 px-4 min-w-[160px]">Details</th>
-                    <th className="py-3 px-4 w-[50px] text-right last:rounded-tr-lg">Action</th>
+                    <th className="py-3 px-4 w-[50px] text-right last:rounded-none">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -93,14 +93,14 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
                           <div className="flex flex-col gap-1.5">
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{getTeamName(fixture.homeTeam)}</span>
-                                <span className="text-[9px] font-extrabold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 rounded uppercase">(H)</span>
+                                <span className="text-[9px] font-extrabold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 rounded-none uppercase">(H)</span>
                             </div>
                             <div className="flex items-center gap-2">
                                <Swords size={12} className="text-brand-500 opacity-70" />
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{getTeamName(fixture.awayTeam)}</span>
-                                <span className="text-[9px] font-extrabold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 rounded uppercase">(A)</span>
+                                <span className="text-[9px] font-extrabold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 rounded-none uppercase">(A)</span>
                             </div>
                           </div>
                         </td>
@@ -129,7 +129,7 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
                         </td>
                         <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
                           <button 
-                            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded shadow-sm hover:shadow transition-colors"
+                            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-none shadow-sm hover:shadow transition-colors"
                             title="More Options"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -142,7 +142,7 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
                           </button>
 
                           {openDropdownId === fixture._id && (
-                            <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                            <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                               <button 
                                 className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                                 onClick={(e) => {
@@ -330,7 +330,7 @@ const FixtureManagement: React.FC = () => {
             placeholder="Search leagues..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 bg-white dark:bg-slate-800 dark:text-white transition-colors shadow-sm"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-none outline-none focus:border-brand-500 bg-white dark:bg-slate-800 dark:text-white transition-colors shadow-sm"
           />
         </div>
         <Button onClick={handleOpenAdd} size="sm">Add Fixture</Button>
@@ -359,9 +359,9 @@ const FixtureManagement: React.FC = () => {
         )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-3xl shadow-2xl" noBackgroundBlur={true}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-none shadow-2xl" noBackgroundBlur={true}>
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-xl text-brand-500">
+          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-brand-500">
              <Swords size={22} />
           </div>
           <div>
@@ -377,7 +377,7 @@ const FixtureManagement: React.FC = () => {
               <select
                 value={formData.league}
                 onChange={(e) => setFormData({ ...formData, league: e.target.value })}
-                className="w-full rounded-xl border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                className="w-full rounded-none border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
                 required
               >
                 <option value="">Select League/Event</option>
@@ -393,7 +393,7 @@ const FixtureManagement: React.FC = () => {
                   <select
                     value={formData.homeTeam}
                     onChange={(e) => setFormData({ ...formData, homeTeam: e.target.value })}
-                    className="w-full rounded-xl border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                    className="w-full rounded-none border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
                     required
                   >
                     <option value="">Select Home</option>
@@ -407,7 +407,7 @@ const FixtureManagement: React.FC = () => {
                   <select
                     value={formData.awayTeam}
                     onChange={(e) => setFormData({ ...formData, awayTeam: e.target.value })}
-                    className="w-full rounded-xl border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                    className="w-full rounded-none border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
                     required
                   >
                     <option value="">Select Away</option>
@@ -429,7 +429,7 @@ const FixtureManagement: React.FC = () => {
                   ref={kickoffTimeRef}
                   value={formData.kickoffTime}
                   onChange={(e) => setFormData({ ...formData, kickoffTime: e.target.value })}
-                  className="w-full rounded-xl border border-slate-100 bg-slate-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
+                  className="w-full rounded-none border border-slate-100 bg-slate-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
                   required
                 />
                 <div 
@@ -453,7 +453,7 @@ const FixtureManagement: React.FC = () => {
                 type="text"
                 value={formData.venue}
                 onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                className="w-full rounded-xl border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                className="w-full rounded-none border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
                 placeholder="e.g. Camelot Turf Ground"
                 required
               />
@@ -465,7 +465,7 @@ const FixtureManagement: React.FC = () => {
                 type="text"
                 value={formData.referee}
                 onChange={(e) => setFormData({ ...formData, referee: e.target.value })}
-                className="w-full rounded-xl border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                className="w-full rounded-none border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
                 placeholder="e.g. Howard Webb"
               />
             </div>
@@ -473,7 +473,7 @@ const FixtureManagement: React.FC = () => {
 
           <div className="md:col-span-12 flex justify-end gap-3 mt-4 pt-6 border-t border-gray-100 dark:border-gray-800">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
-            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-xl text-xs font-bold uppercase tracking-widest">
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
                 {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Save Fixture"}
             </Button>
           </div>

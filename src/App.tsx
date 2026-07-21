@@ -19,6 +19,7 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import PlayersManagement from "./pages/PlayersManagement/PlayersManagement";
+import RegistrationRequests from "./pages/PlayersManagement/RegistrationRequests";
 import Academy from "./pages/Academy/Academy";
 import ProgramsManagement from "./pages/Programs/ProgramsManagement";
 import ClassesList from "./pages/Classes/ClassesList";
@@ -35,18 +36,18 @@ import AddGalleryPage from "./pages/Gallery/AddGalleryPage";
 import SponsorManagementPage from "./pages/Sponsors/SponsorManagementPage";
 import EditEvent from "./pages/Events/EditEvent";
 import EventDetails from "./pages/Events/EventDetails";
-import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
-import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
-import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
+// import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
+// import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
+// import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
 import { Toaster } from "react-hot-toast";
 
 function DynamicProgramRoute() {
   const { programType } = useParams<{ programType: string }>();
   const formattedType = programType
     ? programType
-        .split('-')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ')
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ')
     : 'Academy';
   return <Academy programType={formattedType} />;
 }
@@ -54,7 +55,7 @@ function DynamicProgramRoute() {
 export default function App() {
   return (
     <>
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
           style: {
@@ -86,11 +87,12 @@ export default function App() {
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
             <Route index path="/" element={<RoleBasedDashboard />} />
+            <Route path="/new-registration-request" element={<RegistrationRequests />} />
             <Route path="/players" element={<PlayersManagement />} />
             <Route path="/programs" element={<ProgramsManagement />} />
             <Route path="/classes" element={<ClassesList />} />
             <Route path="/program/:programType" element={<DynamicProgramRoute />} />
-            
+
             {/* Store */}
             <Route path="/products" element={<ProductList />} />
             <Route path="/add-product" element={<AddProductPage />} />
@@ -98,9 +100,9 @@ export default function App() {
 
             {/* Management */}
             <Route path="/coaching-management" element={<CoachingManagementPage />} />
-            <Route path="/leagues" element={<LeaguesManagementPage />} />
-            <Route path="/teams" element={<TeamsManagementPage />} />
-            <Route path="/fixtures" element={<FixturesManagementPage />} />
+            {/* <Route path="/leagues" element={<LeaguesManagementPage />} /> */}
+            {/* <Route path="/teams" element={<TeamsManagementPage />} /> */}
+            {/* <Route path="/fixtures" element={<FixturesManagementPage />} /> */}
             <Route path="/events" element={<EventList />} />
             <Route path="/add-event" element={<AddEvent />} />
             <Route path="/edit-event/:id" element={<EditEvent />} />

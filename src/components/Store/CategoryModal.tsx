@@ -129,7 +129,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
    </div>
 
    {/* Add/Edit Form */}
-   <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 mb-6">
+   <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-none border border-gray-100 dark:border-gray-700 mb-6">
     <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4">
      {editingId ? "Edit Category" : "Add New Category"}
     </h3>
@@ -175,7 +175,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
       <Loader2 className="animate-spin text-brand-500" size={24} />
      </div>
     ) : categories.length === 0 ? (
-     <div className="text-center p-4 text-sm text-gray-400 border border-dashed rounded-lg">
+     <div className="text-center p-4 text-sm text-gray-400 border border-dashed rounded-none">
       No categories found. Create one above.
      </div>
     ) : (
@@ -183,7 +183,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
       {categories.map((category) => (
        <div 
         key={category._id} 
-        className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-lg hover:border-brand-300 transition-colors"
+        className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-none hover:border-brand-300 transition-colors"
        >
         <div>
          <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{category.name}</p>
@@ -194,7 +194,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
         <div className="flex items-center gap-2">
          <button
           onClick={() => handleEdit(category)}
-          className="p-1.5 text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-md transition-colors"
+          className="p-1.5 text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-none transition-colors"
           title="Edit"
           type="button"
          >
@@ -202,7 +202,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
          </button>
          <button
           onClick={() => handleDeleteClick(category._id)}
-          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors"
+          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-none transition-colors"
           title="Delete"
           type="button"
          >

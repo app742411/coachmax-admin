@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Badge from "../../components/ui/badge/Badge";
+import { MoreVertical } from "lucide-react";
 
 interface ClassItem {
   _id: string;
@@ -95,22 +96,20 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                     </Badge>
                   </td>
                   <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
-                    <button 
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    <button
+                      className="inline-flex items-center justify-center w-7 h-7 bg-white border border-slate-200 hover:bg-slate-50 text-slate-400 transition-colors shadow-sm"
                       title="More Options"
                       onClick={(e) => {
                         e.stopPropagation();
                         setOpenDropdownId(openDropdownId === cls._id ? null : cls._id);
                       }}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
+                      <MoreVertical size={16} />
                     </button>
 
                     {openDropdownId === cls._id && (
-                      <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                        <button 
+                      <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <button
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -120,7 +119,7 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                         >
                           Edit Class
                         </button>
-                        <button 
+                        <button
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700"
                           onClick={(e) => {
                             e.stopPropagation();

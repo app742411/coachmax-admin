@@ -38,10 +38,10 @@ const DropzoneComponent: React.FC<DropzoneComponentProps> = ({ onUpload, preview
 
   return (
     <ComponentCard title="Dropzone">
-      <div className="transition border border-gray-300 border-dashed cursor-pointer dark:hover:border-brand-500 dark:border-gray-700 rounded-xl hover:border-brand-500">
+      <div className="transition border border-gray-300 border-dashed cursor-pointer dark:hover:border-brand-500 dark:border-gray-700 rounded-none hover:border-brand-500">
         <form
           {...getRootProps()}
-          className={`dropzone rounded-xl   border-dashed border-gray-300 p-7 lg:p-10
+          className={`dropzone rounded-none   border-dashed border-gray-300 p-7 lg:p-10
         ${
           isDragActive
             ? "border-brand-500 bg-gray-100 dark:bg-gray-800"
@@ -54,7 +54,7 @@ const DropzoneComponent: React.FC<DropzoneComponentProps> = ({ onUpload, preview
           <input {...getInputProps()} />
 
           {preview ? (
-            <div className="relative w-full h-48 rounded-xl overflow-hidden group">
+            <div className="relative w-full h-48 rounded-none overflow-hidden group">
               <img src={preview} alt="Preview" className="w-full h-full object-contain" />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <span className="text-white font-bold text-sm">Click or Drag to Replace</span>

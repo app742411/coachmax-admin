@@ -7,9 +7,7 @@ import {
  TableHeader,
  TableRow,
 } from "../ui/table";
-import { MoreVertical, EditIcon, TrashIcon } from "lucide-react";
-import { Dropdown } from "../ui/dropdown/Dropdown";
-import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { MoreVertical } from "lucide-react";
 import { Sponsor, deleteSponsor, toggleBannerStatus } from "../../api/sponsorApi";
 import toast from "react-hot-toast";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
@@ -85,7 +83,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
           <img
            src={`${import.meta.env.VITE_API_BASE_URL}/${sponsor.image}`}
            alt={sponsor.title}
-           className="h-12 w-24 object-cover rounded-lg border border-gray-100 dark:border-white/10 shadow-sm"
+           className="h-12 w-24 object-cover rounded-none border border-gray-100 dark:border-white/10 shadow-sm"
            onError={(e) => {
             (e.target as HTMLImageElement).src = "/images/placeholder/placeholder.jpg";
            }}
@@ -135,36 +133,43 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
            </span>
           </div>
          </TableCell>
-         <TableCell className="px-5">
-          <div className="absolute">
+         <TableCell className="px-5 text-center relative">
+          <div className="flex items-center justify-center" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
            <button
-            onClick={() => setOpenMenuId(openMenuId === sponsor._id ? null : sponsor._id)}
-            className="p-2 dropdown-toggle bg-gray-100 dark:bg-white/5 shadow-sm rounded-xl text-gray-500 hover:text-brand-500 transition-all border border-transparent hover:border-brand-500/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenMenuId(openMenuId === sponsor._id ? null : sponsor._id);
+            }}
+            className="inline-flex items-center justify-center w-7 h-7 bg-white border border-slate-200 hover:bg-slate-50 text-slate-400 transition-colors shadow-sm"
            >
             <MoreVertical size={16} />
            </button>
-
-           <Dropdown
-            isOpen={openMenuId === sponsor._id}
-            onClose={() => setOpenMenuId(null)}
-            className="w-36 p-2 right-0 left-auto z-[999]"
-           >
-            <DropdownItem
-             onClick={() => { onEdit(sponsor); setOpenMenuId(null); }}
-             className="flex items-center gap-2 text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-colors"
-            >
-             <EditIcon size={14} />
-             <span className="text-xs font-bold  ">Edit</span>
-            </DropdownItem>
-            <DropdownItem
-             onClick={() => handleDeleteClick(sponsor._id)}
-             className="flex items-center gap-2 text-error-600 hover:bg-error-50 rounded-lg p-2 transition-colors"
-            >
-             <TrashIcon size={14} />
-             <span className="text-xs font-bold  ">Delete</span>
-            </DropdownItem>
-           </Dropdown>
           </div>
+
+          {openMenuId === sponsor._id && (
+            <div className="absolute right-12 top-1/2 -translate-y-1/2 w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 py-1.5 overflow-hidden">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenMenuId(null);
+                  onEdit(sponsor);
+                }}
+                className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                Edit
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenMenuId(null);
+                  handleDeleteClick(sponsor._id);
+                }}
+                className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
+              >
+                Delete
+              </button>
+            </div>
+          )}
          </TableCell>
         </TableRow>
        ))

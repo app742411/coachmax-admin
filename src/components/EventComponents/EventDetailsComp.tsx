@@ -176,7 +176,7 @@ const EventDetailsComp: React.FC = () => {
   return (
     <div className="space-y-8 pb-10">
       {/* Banner & Basic Info Wrapper */}
-      <div className="relative rounded-xl overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-500">
+      <div className="relative rounded-none overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-500">
         {/* Banner Section - Responsive Height matching Image Ratio */}
         <div className="w-full relative overflow-hidden group bg-gray-950 flex items-center justify-center min-h-[300px]">
           {event.bannerImage ? (
@@ -226,7 +226,7 @@ const EventDetailsComp: React.FC = () => {
           {/* Detailed Description */}
           <div className="lg:col-span-12">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-brand-500/10 rounded-2xl">
+              <div className="p-3 bg-brand-500/10 rounded-none">
                 <FileText size={24} className="text-brand-500" />
               </div>
               <h3 className="text-xl font-bold  tracking-tighter text-gray-800 dark:text-white">Event Details & Description</h3>
@@ -239,12 +239,12 @@ const EventDetailsComp: React.FC = () => {
           {/* Metrics Grid */}
           <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
             {metrics.map((m, i) => (
-              <div key={i} className="p-8 bg-gray-50 dark:bg-gray-800/10 rounded-xl border border-gray-100 dark:border-gray-800/50 flex items-center justify-between group hover:border-brand-500/20 transition-all duration-300">
+              <div key={i} className="p-8 bg-gray-50 dark:bg-gray-800/10 rounded-none border border-gray-100 dark:border-gray-800/50 flex items-center justify-between group hover:border-brand-500/20 transition-all duration-300">
                 <div>
                   <span className="text-[11px] font-bold text-gray-400  block mb-2">{m.label}</span>
                   <span className="text-3xl font-bold  text-gray-800 dark:text-white tracking-tighter scale-110 origin-left inline-block">{m.value}</span>
                 </div>
-                <div className={`p-4 ${m.bg} ${m.color} rounded-2xl group-hover:scale-110 transition-transform`}>
+                <div className={`p-4 ${m.bg} ${m.color} rounded-none group-hover:scale-110 transition-transform`}>
                   <m.icon size={28} />
                 </div>
               </div>
@@ -253,12 +253,12 @@ const EventDetailsComp: React.FC = () => {
 
           {/* Logistics Info Card */}
           <div className="lg:col-span-6 flex flex-col">
-            <div className="h-full p-8 bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
+            <div className="h-full p-8 bg-white dark:bg-gray-800/20 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
               <h4 className="text-sm font-bold  tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-gray-800 pb-4">Tournament Logistics</h4>
 
               <div className="space-y-5">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900 rounded-2xl flex items-center justify-center text-brand-500 shadow-sm border border-transparent group-hover:border-brand-500/10">
+                  <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900 rounded-none flex items-center justify-center text-brand-500 shadow-sm border border-transparent group-hover:border-brand-500/10">
                     <MapPin size={20} />
                   </div>
                   <div>
@@ -271,7 +271,7 @@ const EventDetailsComp: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900 rounded-2xl flex items-center justify-center text-brand-500 shadow-sm border border-transparent group-hover:border-brand-500/10">
+                  <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900 rounded-none flex items-center justify-center text-brand-500 shadow-sm border border-transparent group-hover:border-brand-500/10">
                     <Clock size={20} />
                   </div>
                   <div>
@@ -285,14 +285,14 @@ const EventDetailsComp: React.FC = () => {
 
           {/* Organizer Support Card */}
           <div className="lg:col-span-6 flex flex-col">
-            <div className="h-full p-8 bg-brand-600 rounded-xl shadow-xl shadow-brand-500/20 text-white relative overflow-hidden group">
+            <div className="h-full p-8 bg-brand-600 rounded-none shadow-xl shadow-brand-500/20 text-white relative overflow-hidden group">
               <div className="relative z-10">
                 <span className="text-[11px] font-bold tracking-[0.2em] opacity-70 ">Organizer Context</span>
                 <h4 className="text-2xl font-bold  mt-2 mb-8 group-hover:translate-x-1 transition-transform">Get Professional Support</h4>
 
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+                    <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-none flex items-center justify-center border border-white/20">
                       <PhoneCall size={20} />
                     </div>
                     <div>
@@ -301,7 +301,7 @@ const EventDetailsComp: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+                    <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-none flex items-center justify-center border border-white/20">
                       <Globe size={20} />
                     </div>
                     <div>
@@ -322,7 +322,7 @@ const EventDetailsComp: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between px-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="p-3 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm">
               <Users size={24} className="text-brand-500" />
             </div>
             <div>
@@ -330,11 +330,11 @@ const EventDetailsComp: React.FC = () => {
               <p className="text-[10px] font-bold text-gray-400  mt-1">Confirmed participants for this program</p>
             </div>
           </div>
-          <div className="flex bg-gray-50 dark:bg-white/5 p-2 rounded-2xl border border-gray-100 dark:border-white/5 gap-3">
+          <div className="flex bg-gray-50 dark:bg-white/5 p-2 rounded-none border border-gray-100 dark:border-white/5 gap-3">
             <div className="relative">
               <button
                 onClick={() => setExportOpen(!exportOpen)}
-                className="flex items-center gap-2 px-4 py-1.5 bg-brand-500 rounded-xl text-white text-[10px] font-bold  shadow-lg shadow-brand-500/20 active:scale-95 transition-all dropdown-toggle"
+                className="flex items-center gap-2 px-4 py-1.5 bg-brand-500 rounded-none text-white text-[10px] font-bold  shadow-lg shadow-brand-500/20 active:scale-95 transition-all dropdown-toggle"
               >
                 <Download size={14} />
                 Export Data
@@ -348,14 +348,14 @@ const EventDetailsComp: React.FC = () => {
                 <p className="text-[9px] font-bold text-gray-400 p-2 tracking-tighter border-b border-gray-50 dark:border-gray-800/50 mb-1">Select Format</p>
                 <DropdownItem
                   onClick={() => handleExport("csv")}
-                  className="flex items-center gap-2 p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex items-center gap-2 p-2 rounded-none text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <FileText size={14} className="text-brand-500" />
                   <span className="text-[10px] font-bold  ">CSV Format</span>
                 </DropdownItem>
                 <DropdownItem
                   onClick={() => handleExport("excel")}
-                  className="flex items-center gap-2 p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex items-center gap-2 p-2 rounded-none text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <Layers size={14} className="text-success-500" />
                   <span className="text-[10px] font-bold  ">Excel Sheet</span>
@@ -393,10 +393,10 @@ const EventDetailsComp: React.FC = () => {
                         <div className="relative">
                           <img
                             src={p.user.profile ? `${import.meta.env.VITE_API_BASE_URL}/${p.user.profile}` : "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
-                            className="h-12 w-12 rounded-2xl object-cover ring-2 ring-gray-100 dark:ring-gray-800 group-hover:ring-brand-500/30 transition-all shadow-sm"
+                            className="h-12 w-12 rounded-none object-cover ring-2 ring-gray-100 dark:ring-gray-800 group-hover:ring-brand-500/30 transition-all shadow-sm"
                             alt={p.user.fullName}
                           />
-                          <div className="absolute -bottom-1 -right-1 p-1 bg-success-500 rounded-lg text-white ring-2 ring-white dark:ring-gray-900 shadow-lg">
+                          <div className="absolute -bottom-1 -right-1 p-1 bg-success-500 rounded-none text-white ring-2 ring-white dark:ring-gray-900 shadow-lg">
                             <CheckCircle size={8} strokeWidth={4} />
                           </div>
                         </div>
@@ -464,14 +464,14 @@ const EventDetailsComp: React.FC = () => {
                 <button
                   disabled={page === 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className="px-6 py-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-[10px] font-bold  hover:text-brand-500 transition-all shadow-sm disabled:opacity-50"
+                  className="px-6 py-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-none text-[10px] font-bold  hover:text-brand-500 transition-all shadow-sm disabled:opacity-50"
                 >
                   Prev
                 </button>
                 <button
                   disabled={page === totalPages}
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  className="px-6 py-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-[10px] font-bold  hover:text-brand-500 transition-all shadow-sm disabled:opacity-50"
+                  className="px-6 py-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-none text-[10px] font-bold  hover:text-brand-500 transition-all shadow-sm disabled:opacity-50"
                 >
                   Next
                 </button>

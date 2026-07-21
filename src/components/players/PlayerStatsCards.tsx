@@ -84,9 +84,9 @@ export default function PlayerStatsCards({
       {stats.map((stat, idx) => (
         <div
           key={idx}
-          className="p-4 bg-white border border-slate-100 rounded-xl shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex items-center gap-3"
+          className="p-4 bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 flex items-center gap-3"
         >
-          <div className={`p-2.5 rounded-lg shrink-0 ${stat.color}`}>{stat.icon}</div>
+          <div className={`p-2.5 rounded-none shrink-0 ${stat.color}`}>{stat.icon}</div>
           <div>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
               {stat.title}

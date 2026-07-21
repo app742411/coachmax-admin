@@ -123,7 +123,7 @@ export default function ForgotPasswordForm() {
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-8 sm:p-10 mb-10">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none shadow-sm p-8 sm:p-10 mb-10">
           <div className="flex justify-center mb-8">
             <img src="/images/logo/cm-logo2.png" alt="CoachMax Logo" className="h-12 object-contain" />
           </div>
@@ -139,13 +139,13 @@ export default function ForgotPasswordForm() {
           </div>
           <div>
             {errorMessage && (
-              <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-none text-sm">
                 {errorMessage}
               </div>
             )}
 
             {successMessage && (
-              <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-none text-sm">
                 {successMessage}
               </div>
             )}

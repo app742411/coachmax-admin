@@ -6,7 +6,7 @@ import PlayerFilters from "../../components/players/PlayerFilters";
 import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
 import AssignClassModal from "../../components/players/AssignClassModal";
-import { usePlayers, useDeletePlayer, useUpdatePlayerStatus } from "../../hooks/usePlayers";
+import { usePlayers, useDeletePlayer } from "../../hooks/usePlayers";
 
 export default function PlayersManagement() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -19,10 +19,6 @@ export default function PlayersManagement() {
   const players = playersResponse?.users || [];
   
   const deletePlayerMutation = useDeletePlayer();
-  const updatePlayerStatusMutation = useUpdatePlayerStatus();
-  
-  const [playerToReject, setPlayerToReject] = useState<Player | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
   
   const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
 
@@ -33,27 +29,7 @@ export default function PlayersManagement() {
     }
   };
 
-  const handleApprovePlayer = (player: Player) => {
-    if (window.confirm("Are you sure you want to approve this player?")) {
-      updatePlayerStatusMutation.mutate({ id: player._id, data: { status: "APPROVED" } });
-    }
-  };
 
-  const handleRejectPlayer = (player: Player) => {
-    setPlayerToReject(player);
-    setRejectReason("");
-  };
-
-  const submitReject = () => {
-    if (playerToReject && rejectReason.trim()) {
-      updatePlayerStatusMutation.mutate({
-        id: playerToReject._id,
-        data: { status: "REJECTED", rejectresaon: rejectReason },
-      });
-      setPlayerToReject(null);
-      setRejectReason("");
-    }
-  };
 
   const handleAssignPlayer = (player: Player) => {
     setPlayerToAssign(player);
@@ -131,8 +107,6 @@ export default function PlayersManagement() {
               selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
               onSelectPlayer={setSelectedPlayer}
               onDeletePlayer={handleDeletePlayer}
-              onApprovePlayer={handleApprovePlayer}
-              onRejectPlayer={handleRejectPlayer}
               onAssignClass={handleAssignPlayer}
             />
           )}
@@ -148,37 +122,7 @@ export default function PlayersManagement() {
         <AssignClassModal player={playerToAssign} onClose={() => setPlayerToAssign(null)} />
       )}
 
-      {playerToReject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg w-full max-w-md p-6 border border-slate-200 dark:border-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Reject Player</h3>
-            <p className="text-sm text-slate-500 mb-4">Please provide a reason for rejecting {playerToReject.fullName}.</p>
-            
-            <textarea
-              className="w-full h-24 p-3 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 dark:bg-slate-800 dark:text-white resize-none"
-              placeholder="Enter reason..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-            />
-            
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setPlayerToReject(null)}
-                className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitReject}
-                disabled={!rejectReason.trim() || updatePlayerStatusMutation.isPending}
-                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-              >
-                {updatePlayerStatusMutation.isPending ? "Rejecting..." : "Reject Player"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </>
   );
 }

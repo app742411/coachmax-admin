@@ -30,12 +30,12 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
- <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
-  <div className="p-2 bg-brand-50 dark:bg-brand-500/10 rounded-lg text-brand-500">
-   <Icon size={18} />
+  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
+    <div className="p-2 bg-white/10 rounded-none text-white">
+      <Icon size={18} />
+    </div>
+    <h5 className="text-lg font-bold text-white">{title}</h5>
   </div>
-  <h5 className="text-lg font-bold text-gray-800 dark:text-gray-100 tracking-tighter ">{title}</h5>
- </div>
 );
 
 interface FormCardProps {
@@ -44,7 +44,7 @@ interface FormCardProps {
 }
 
 const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
- <div className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-8 shadow-sm ${className}`}>
+ <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-8 shadow-sm ${className}`}>
   {children}
  </div>
 );
@@ -202,7 +202,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
    <div className="mb-12 flex items-center justify-between px-4 overflow-x-auto no-scrollbar gap-8">
     {steps.map((step) => (
      <div key={step.id} className="flex items-center gap-3 shrink-0">
-      <div className={`p-3 rounded-xl transition-all ${currentStep === step.id
+      <div className={`p-3 rounded-none transition-all ${currentStep === step.id
         ? "bg-brand-500 text-white shadow-xl shadow-brand-500/30 scale-110"
         : currentStep > step.id
          ? "bg-success-500/10 text-success-500 border border-success-500/20"
@@ -319,7 +319,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
        <div>
         <Label>Event Description</Label>
         <textarea
-         className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400 min-h-[150px]"
+         className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400 min-h-[150px]"
          placeholder="Tell us more about the weekend match..."
          name="description"
          value={formData.description}
@@ -460,7 +460,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
        type="button"
        variant="outline"
        onClick={prevStep}
-       className="rounded-xl px-8 font-bold  border-gray-200 text-gray-500 flex items-center gap-2"
+       className="rounded-none px-8 font-bold  border-gray-200 text-gray-500 flex items-center gap-2"
       >
        <ChevronLeft size={16} strokeWidth={3} />
        Back
@@ -471,7 +471,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
        <Button
         type="button"
         onClick={nextStep}
-        className="rounded-xl px-12 font-bold  shadow-xl shadow-brand-500/20 flex items-center gap-2"
+        className="rounded-none px-12 font-bold  shadow-xl shadow-brand-500/20 flex items-center gap-2"
        >
         Next Step
         <ChevronRight size={16} strokeWidth={3} />
@@ -481,7 +481,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
         type="button"
         onClick={() => handleSubmit()}
         disabled={loading}
-        className="rounded-xl px-16 font-bold  shadow-xl shadow-brand-500/30 bg-success-600 hover:bg-success-700 active:scale-95 transition-all text-white"
+        className="rounded-none px-16 font-bold  shadow-xl shadow-brand-500/30 bg-success-600 hover:bg-success-700 active:scale-95 transition-all text-white"
        >
         {loading ? "Optimizing Assets..." : eventId ? "Update Event Profile" : "Create Event Profile"}
        </Button>
