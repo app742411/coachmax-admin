@@ -11,6 +11,8 @@ interface PlayerFiltersProps {
   setAgeFilter: (age: string) => void;
   statusFilter: string;
   setStatusFilter: (status: string) => void;
+  medicalFilter?: string;
+  setMedicalFilter?: (val: string) => void;
 }
 
 export default function PlayerFilters({
@@ -22,6 +24,8 @@ export default function PlayerFilters({
   setAgeFilter,
   statusFilter,
   setStatusFilter,
+  medicalFilter = "All",
+  setMedicalFilter = () => {},
 }: PlayerFiltersProps) {
   const exportCSVMutation = useExportUsersCSV();
 
@@ -86,6 +90,18 @@ export default function PlayerFilters({
                 { label: "Status: All", value: "All" },
                 { label: "Paid", value: "Paid" },
                 { label: "Overdue", value: "Overdue" }
+              ]}
+              className="w-full"
+            />
+          </div>
+          <div className="w-36">
+            <Select
+              value={medicalFilter}
+              onChange={(val) => setMedicalFilter && setMedicalFilter(val)}
+              options={[
+                { label: "Medical: All", value: "All" },
+                { label: "Yes", value: "true" },
+                { label: "No", value: "false" }
               ]}
               className="w-full"
             />

@@ -37,8 +37,8 @@ export default function AllocatedPlayersCard({ players }: AllocatedPlayersCardPr
             {players.length}
           </span>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)} 
+        <button
+          onClick={() => setIsModalOpen(true)}
           className="text-[10px] font-semibold text-[#0047FF] hover:underline bg-transparent border-none cursor-pointer"
         >
           View all
@@ -47,9 +47,9 @@ export default function AllocatedPlayersCard({ players }: AllocatedPlayersCardPr
 
       <div className="space-y-3.5 mb-4">
         {players.map((p) => (
-          <div 
-            key={p.id} 
-            className="flex gap-3 items-start justify-between cursor-move hover:bg-slate-50 dark:hover:bg-slate-800/50 p-1 -mx-1 rounded"
+          <div
+            key={p.id}
+            className="flex gap-3 items-start justify-between cursor-move hover:border-blue-200 dark:hover:border-blue-900/50 hover:shadow-md transition-all p-2.5 rounded-md border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/50"
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData("application/json", JSON.stringify({
@@ -59,7 +59,8 @@ export default function AllocatedPlayersCard({ players }: AllocatedPlayersCardPr
                 categoryId: p.categoryId,
                 programId: p.programId,
                 categoryName: p.categoryName,
-                programName: p.fullProgramName
+                programName: p.fullProgramName,
+                preferredClasses: p.preferredClasses || []
               }));
             }}
           >

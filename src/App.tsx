@@ -3,6 +3,7 @@ import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import ForgotPassword from "./pages/AuthPages/ForgotPassword";
 import NotFound from "./pages/OtherPage/NotFound";
+import ComingSoon from "./pages/OtherPage/ComingSoon";
 import UserProfiles from "./pages/UserProfiles";
 import Videos from "./pages/UiElements/Videos";
 import Images from "./pages/UiElements/Images";
@@ -42,6 +43,7 @@ import BankDetails from "./pages/Finance/BankDetails";
 import InvoiceList from "./pages/Finance/InvoiceList";
 import InvoiceDetails from "./pages/Finance/InvoiceDetails";
 import Transactions from "./pages/Finance/Transactions";
+import NotificationsPage from "./pages/Notifications/NotificationsPage";
 // import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
 // import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
 // import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
@@ -63,6 +65,9 @@ export default function App() {
     <>
       <Toaster
         position="top-right"
+        containerStyle={{
+          zIndex: 99999,
+        }}
         toastOptions={{
           style: {
             background: '#333',
@@ -116,7 +121,7 @@ export default function App() {
             <Route path="/edit-event/:id" element={<EditEvent />} />
             <Route path="/event-details/:id" element={<EventDetails />} />
             <Route path="/news" element={<ContentListPage type="news" />} />
-            <Route path="/add-content" element={<AddContentPage type="blog" />} />
+            <Route path="/add-content" element={<AddContentPage />} />
             <Route path="/gallery" element={<GalleryGrid />} />
             <Route path="/add-gallery" element={<AddGalleryPage />} />
             <Route path="/sponsors" element={<SponsorManagementPage />} />
@@ -128,6 +133,14 @@ export default function App() {
             <Route path="/invoices" element={<InvoiceList />} />
             <Route path="/invoices/:id" element={<InvoiceDetails />} />
             <Route path="/transactions" element={<Transactions />} />
+
+            {/* Notifications */}
+            <Route path="/notifications" element={<NotificationsPage />} />
+
+            {/* Communication & Messages */}
+            <Route path="/communication" element={<ComingSoon />} />
+            <Route path="/messages" element={<ComingSoon />} />
+            <Route path="/announcements" element={<ComingSoon />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

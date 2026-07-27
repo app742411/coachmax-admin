@@ -40,6 +40,7 @@ export interface Player {
   status: string;
   category?: PlayerCategory;
   program?: PlayerProgram;
+  programs?: PlayerProgram[];
   term?: string;
   paymentStatus?: string;
   jerseyNumber: number;
@@ -57,7 +58,18 @@ export interface Player {
   rejectedAt: string | null;
   isBlocked: boolean;
   adminNote: string;
+  medicalConditions?: string;
+  isMedicalCondition?: boolean;
+  medicalConditionDetails?: string;
+  skill?: string;
+  rating?: number;
+  prefferedFoot?: string;
   assignedClasses: any[];
+  preferredTerm?: any;
+  preferredClasses?: any[];
+  requestType?: string;
+  createdBy?: string;
+  assignedBy?: any;
   joinedDate: string;
   createdAt: string;
   updatedAt: string;

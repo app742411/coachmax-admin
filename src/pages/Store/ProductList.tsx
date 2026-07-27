@@ -96,14 +96,17 @@ const ProductList = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-              <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <Search size={16} />
+              </span>
               <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search product..."
-                className="pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-none text-xs font-bold border border-transparent focus:border-brand-500 outline-none w-48 transition-all"
+                className="w-full pl-9 pr-4 py-2.5 text-xs border border-slate-200 rounded-none outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
               />
             </div>
           </div>

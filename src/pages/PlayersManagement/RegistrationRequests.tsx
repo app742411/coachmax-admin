@@ -16,10 +16,11 @@ export default function RegistrationRequests() {
   const [programFilter, setProgramFilter] = useState("All");
   const [ageFilter, setAgeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  
-  const { data: playersResponse, isLoading } = useRegistrationRequests(1, 100);
+  const [medicalFilter, setMedicalFilter] = useState("All");
+
+  const { data: playersResponse, isLoading } = useRegistrationRequests(1, 100, medicalFilter);
   const players = playersResponse?.users || [];
-  
+
   const deletePlayerMutation = useDeletePlayer();
   const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
 
@@ -43,7 +44,7 @@ export default function RegistrationRequests() {
     const email = p.parentId?.email || "";
     const phone = p.parentId?.phone || "";
     const programStr = p.program?.name || "";
-    
+
     const matchesSearch =
       p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -51,9 +52,9 @@ export default function RegistrationRequests() {
 
     const matchesProgram =
       programFilter === "All" || programStr.toUpperCase().includes(programFilter.toUpperCase());
-    
+
     // Status from backend
-    const playerStatus = p.status || "PENDING"; 
+    const playerStatus = p.status || "PENDING";
     const matchesStatus =
       statusFilter === "All" || playerStatus.toUpperCase() === statusFilter.toUpperCase();
 
@@ -100,6 +101,8 @@ export default function RegistrationRequests() {
             setAgeFilter={setAgeFilter}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
+            medicalFilter={medicalFilter}
+            setMedicalFilter={setMedicalFilter}
           />
 
           {isLoading ? (
@@ -117,7 +120,7 @@ export default function RegistrationRequests() {
 
         {/* Right Side: Player Detail Module */}
         {selectedPlayer && (
-          <PlayerDetailCard player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
+          <PlayerDetailCard player={selectedPlayer} onClose={() => setSelectedPlayer(null)} isRegistrationRequest={true} />
         )}
       </div>
 

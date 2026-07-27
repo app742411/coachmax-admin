@@ -9,23 +9,6 @@ interface PlayersListModalProps {
 }
 
 export default function PlayersListModal({ isOpen, onClose, title, players }: PlayersListModalProps) {
-  const renderStars = (count: number) => {
-    return (
-      <div className="flex gap-0.5 text-amber-500">
-        {Array.from({ length: 5 }).map((_, idx) => (
-          <svg
-            key={idx}
-            className={`w-3 h-3 ${idx < count ? "fill-current" : "text-slate-200 dark:text-slate-700"}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.53 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-3xl mx-auto">
       <div className="bg-white dark:bg-slate-900 shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -96,10 +79,29 @@ export default function PlayersListModal({ isOpen, onClose, title, players }: Pl
                             {p.categoryName || "N/A"}
                           </span>
                         </div>
+                        {p.termName && (
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <span className="text-slate-400 min-w-[60px]">Term:</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                              {p.termName}
+                            </span>
+                          </div>
+                        )}
+                        {p.preferredClasses && p.preferredClasses.length > 0 && (
+                          <div className="flex items-start gap-1.5 text-xs pt-1">
+                            <span className="text-slate-400 min-w-[60px] pt-0.5">Classes:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {p.preferredClasses.map(c => (
+                                <span key={c.id} className="inline-block bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap">
+                                  {c.dayOfWeek.substring(0, 3)} {c.startTime}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between">
-                        {renderStars(p.rating)}
+                      <div className="mt-3 flex items-center justify-end">
                         <span className="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
                           REQ: {p.requested}
                         </span>

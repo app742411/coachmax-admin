@@ -32,15 +32,20 @@ const mapRegistrationToPlayer = (reg: any): Player => {
     yellowCards: reg.player?.yellowCards || 0,
     redCards: reg.player?.redCards || 0,
     // Add raw registration request id for status updates if needed
-    requestId: reg._id
+    requestId: reg._id,
+    preferredTerm: reg.preferredTerm,
+    preferredClasses: reg.preferredClasses,
+    requestType: reg.requestType,
+    createdBy: reg.createdBy,
+    assignedBy: reg.assignedBy,
   } as Player & { requestId: string };
 };
 
-export const useRegistrationRequests = (page = 1, limit = 10) => {
+export const useRegistrationRequests = (page = 1, limit = 10, isMedicalCondition?: string) => {
   return useQuery<PlayersResponse, Error>({
-    queryKey: ["registrationRequests", page, limit],
+    queryKey: ["registrationRequests", page, limit, isMedicalCondition],
     queryFn: async () => {
-      const response = await getRegistrationRequests(page, limit);
+      const response = await getRegistrationRequests(page, limit, isMedicalCondition);
       // Map data array to Players
       if (!response || !response.data) {
         return { success: true, limit: 10, totalPages: 1, users: [], total: 0, page: 1 };

@@ -16,6 +16,7 @@ export interface SelectProps {
   icon?: LucideIcon;
   iconSize?: number;
   triggerClassName?: string;
+  disabled?: boolean;
 }
 
 const Select: React.FC<SelectProps> = ({
@@ -28,6 +29,7 @@ const Select: React.FC<SelectProps> = ({
   icon: Icon,
   iconSize = 14,
   triggerClassName,
+  disabled = false,
 }) => {
   const [internalValue, setInternalValue] = useState<string>(defaultValue);
   const [isOpen, setIsOpen] = useState(false);
@@ -59,8 +61,9 @@ const Select: React.FC<SelectProps> = ({
       {/* Select Trigger */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={triggerClassName || "w-full flex items-center justify-between appearance-none rounded-none border border-gray-100 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 focus:bg-white focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] outline-none transition-all shadow-theme-xs cursor-pointer group"}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={triggerClassName || `w-full flex items-center justify-between appearance-none rounded-none border border-gray-100 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 focus:bg-white focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] outline-none transition-all shadow-theme-xs ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer group"}`}
       >
         <div className="flex items-center gap-2 overflow-hidden">
           {Icon && <Icon size={iconSize} className="text-gray-400 shrink-0 group-hover:text-brand-500 transition-colors" />}

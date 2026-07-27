@@ -30,6 +30,15 @@ export interface UnallocatedPlayer {
   programId?: string;
   registrationRequestId?: string;
   paymentStatus?: string;
+  termName?: string;
+  preferredClasses?: Array<{
+    id: string;
+    name: string;
+    dayOfWeek: string;
+    startTime: string;
+    endTime: string;
+    location: string;
+  }>;
 }
 
 export interface WaitlistItem {

@@ -3,7 +3,8 @@ import { getUnallocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
 
 const mapUnallocatedToCard = (data: any): UnallocatedPlayer => {
-  const avatar = data.profileImage ? `/${data.profileImage}` : `https://ui-avatars.com/api/?name=${data.fullName}`;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  const avatar = data.profileImage ? `${baseUrl}/${data.profileImage.replace(/^\/+/, "")}` : `https://ui-avatars.com/api/?name=${data.fullName}`;
   // Extract details based on whatever data we have, e.g., age group and gender
   const details = `${data.gender || "Unknown"}`;
 
@@ -25,12 +26,21 @@ const mapUnallocatedToCard = (data: any): UnallocatedPlayer => {
     programId: data.programs && data.programs.length > 0 ? data.programs[0]._id : undefined,
     registrationRequestId: data.registrationRequest?._id || undefined,
     paymentStatus: data.paymentStatus || "TRIAL",
+    termName: data.registrationRequest?.preferredTerm?.name || undefined,
+    preferredClasses: data.registrationRequest?.preferredClasses?.map((c: any) => ({
+      id: c._id,
+      name: c.name,
+      dayOfWeek: c.dayOfWeek,
+      startTime: c.startTime,
+      endTime: c.endTime,
+      location: c.location,
+    })) || [],
   };
 };
 
 export const useUnallocatedPlayers = (
-  category?: string, 
-  program?: string, 
+  category?: string,
+  program?: string,
   search?: string,
   enabled: boolean = true
 ) => {

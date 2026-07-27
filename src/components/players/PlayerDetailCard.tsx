@@ -5,9 +5,10 @@ import { usePlayerProfile } from "../../hooks/usePlayers";
 interface PlayerDetailCardProps {
   player: Player;
   onClose: () => void;
+  isRegistrationRequest?: boolean;
 }
 
-export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardProps) {
+export default function PlayerDetailCard({ player, onClose, isRegistrationRequest }: PlayerDetailCardProps) {
   const [activeTab, setActiveTab] = useState<
     "Overview" | "Details" | "Development" | "Medical" | "More"
   >("Overview");
@@ -18,18 +19,18 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
   const dob = new Date(player.dob);
   const age = new Date().getFullYear() - dob.getFullYear();
   const dobString = dob.toLocaleDateString();
-  
+
   const skillNum = player.weakFootRating || 3;
 
   return (
     <>
-      <div 
-        className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm transition-opacity" 
+      <div
+        className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       <div className="fixed top-0 right-0 z-50 h-screen w-full sm:w-[420px] bg-white border-l border-slate-100 shadow-2xl dark:bg-slate-900 dark:border-slate-800 p-6 overflow-y-auto transform transition-transform duration-300">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
             <img
               src={avatar}
               alt={player.fullName}
@@ -65,11 +66,10 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2.5 px-3 -mb-px transition-all border-b-2 hover:text-[#0047FF] ${
-                activeTab === tab
-                  ? "border-[#0047FF] text-[#0047FF]"
-                  : "border-transparent text-slate-400"
-              }`}
+              className={`pb-2.5 px-3 -mb-px transition-all border-b-2 hover:text-[#0047FF] ${activeTab === tab
+                ? "border-[#0047FF] text-[#0047FF]"
+                : "border-transparent text-slate-400"
+                }`}
             >
               {tab}
             </button>
@@ -134,99 +134,145 @@ export default function PlayerDetailCard({ player, onClose }: PlayerDetailCardPr
                     {player.parentId?.email || "N/A"}
                   </span>
                 </div>
-              <div>
-                <span className="text-slate-400 block mb-0.5">Phone</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">{player.parentId?.phone || "N/A"}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 block mb-0.5">Address</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {player.parentId?.address || "N/A"}
-                </span>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Phone</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{player.parentId?.phone || "N/A"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Address</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {player.parentId?.address || "N/A"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Player Ratings */}
-          <div>
-            <div className="flex items-center justify-between mb-3 pb-1 border-b border-slate-50 dark:border-slate-800/40">
-              <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">
-                Player Ratings
-              </h4>
-              <select className="px-2 py-1 text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-none outline-none cursor-pointer">
-                <option>Current Season</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {[
-                { label: "Ball Mastery", rating: skillNum },
-                { label: "Weak Foot", rating: skillNum },
-                { label: "First Touch", rating: skillNum },
-                { label: "Defending", rating: skillNum },
-                { label: "Passing", rating: skillNum },
-                { label: "Football IQ", rating: skillNum },
-                { label: "Dribbling", rating: skillNum },
-                { label: "Aggression", rating: skillNum },
-                { label: "Finishing", rating: skillNum },
-                { label: "Positioning", rating: skillNum },
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between py-0.5">
-                  <span className="text-slate-500">{item.label}</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-amber-500 font-bold">
-                      {"★".repeat(item.rating)}
-                      {"☆".repeat(5 - item.rating)}
+            {!isRegistrationRequest && (
+              <>
+                {/* Player Ratings */}
+                <div>
+                  <div className="flex items-center justify-between mb-3 pb-1 border-b border-slate-50 dark:border-slate-800/40">
+                    <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">
+                      Player Ratings
+                    </h4>
+                    <select className="px-2 py-1 text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-none outline-none cursor-pointer">
+                      <option>Current Season</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    {[
+                      { label: "Ball Mastery", rating: skillNum },
+                      { label: "Weak Foot", rating: skillNum },
+                      { label: "First Touch", rating: skillNum },
+                      { label: "Defending", rating: skillNum },
+                      { label: "Passing", rating: skillNum },
+                      { label: "Football IQ", rating: skillNum },
+                      { label: "Dribbling", rating: skillNum },
+                      { label: "Aggression", rating: skillNum },
+                      { label: "Finishing", rating: skillNum },
+                      { label: "Positioning", rating: skillNum },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-0.5">
+                        <span className="text-slate-500">{item.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-amber-500 font-bold">
+                            {"★".repeat(item.rating)}
+                            {"☆".repeat(5 - item.rating)}
+                          </span>
+                          <span className="font-bold text-slate-700 dark:text-slate-300 w-3 text-right">
+                            {item.rating}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Additional Information */}
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px] mb-3 pb-1 border-b border-slate-50 dark:border-slate-800/40">
+                    Additional Information
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Registration Date</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {new Date(player.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Elite Goals (Total)</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{player.goals || 0}</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Current Season</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{player.appearances || 0} matches</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {isRegistrationRequest && (
+              <div className="mt-4 p-4 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/60 rounded-xl">
+                <h4 className="font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider text-[10px] mb-3 pb-2 border-b border-blue-100 dark:border-blue-800/60">
+                  Registration Details
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-blue-700/70 dark:text-blue-400/70 block mb-0.5">Request Type</span>
+                    <span className="font-semibold text-blue-950 dark:text-blue-100">
+                      {player.requestType?.replace("_", " ") || "N/A"}
                     </span>
-                    <span className="font-bold text-slate-700 dark:text-slate-300 w-3 text-right">
-                      {item.rating}
+                  </div>
+                  <div>
+                    <span className="text-blue-700/70 dark:text-blue-400/70 block mb-0.5">Preferred Term</span>
+                    <span className="font-bold text-[#0047FF] dark:text-blue-400">
+                      {player.preferredTerm?.name || "N/A"}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-blue-700/70 dark:text-blue-400/70 block mb-0.5">Preferred Classes</span>
+                    {player.preferredClasses && player.preferredClasses.length > 0 ? (
+                      <ul className="list-disc pl-4 text-blue-950 dark:text-blue-100 font-semibold space-y-1">
+                        {player.preferredClasses.map((cls: any) => (
+                          <li key={cls._id}>{cls.name}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="font-semibold text-blue-950 dark:text-blue-100">N/A</span>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-blue-700/70 dark:text-blue-400/70 block mb-0.5">Assigned By</span>
+                    <span className="font-semibold text-blue-950 dark:text-blue-100">
+                      {player.assignedBy?.name || "N/A"}
                     </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px] mb-3 pb-1 border-b border-slate-50 dark:border-slate-800/40">
-              Additional Information
-            </h4>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
-                <span className="text-[10px] text-slate-400 block mb-0.5">Registration Date</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">
-                  {new Date(player.createdAt).toLocaleDateString()}
-                </span>
               </div>
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
-                <span className="text-[10px] text-slate-400 block mb-0.5">Elite Goals (Total)</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{player.goals || 0}</span>
-              </div>
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-none">
-                <span className="text-[10px] text-slate-400 block mb-0.5">Current Season</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{player.appearances || 0} matches</span>
-              </div>
-            </div>
-          </div>
+            )}
 
-          <div className="pt-2">
-            <a
-              href="#full-profile"
-              className="inline-flex items-center gap-1 font-bold text-[#0047FF] hover:underline"
-            >
-              <span>View Full Profile</span>
-              <span>&rarr;</span>
-            </a>
+            {!isRegistrationRequest && (
+              <div className="pt-2">
+                <a
+                  href="#full-profile"
+                  className="inline-flex items-center gap-1 font-bold text-[#0047FF] hover:underline"
+                >
+                  <span>View Full Profile</span>
+                  <span>&rarr;</span>
+                </a>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Empty States for other tabs */}
-      {activeTab !== "Overview" && (
-        <div className="py-8 text-center text-slate-400 text-xs">
-          <span>{activeTab} module details are currently empty.</span>
-        </div>
-      )}
+        {/* Empty States for other tabs */}
+        {activeTab !== "Overview" && (
+          <div className="py-8 text-center text-slate-400 text-xs">
+            <span>{activeTab} module details are currently empty.</span>
+          </div>
+        )}
       </div>
     </>
   );

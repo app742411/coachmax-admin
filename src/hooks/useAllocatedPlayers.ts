@@ -3,7 +3,8 @@ import { getAllocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
 
 const mapAllocatedToCard = (data: any): UnallocatedPlayer => {
-  const avatar = data.profileImage ? `/${data.profileImage}` : `https://ui-avatars.com/api/?name=${data.fullName}`;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  const avatar = data.profileImage ? `${baseUrl}/${data.profileImage.replace(/^\/+/, "")}` : `https://ui-avatars.com/api/?name=${data.fullName}`;
   const details = `${data.gender || "Unknown"}`;
 
   const requestedDate = new Date(data.joinedDate || data.createdAt);

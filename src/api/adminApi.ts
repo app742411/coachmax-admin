@@ -23,7 +23,7 @@ export const ENDPOINTS = {
   CREATE_CATEGORY: "/api/admin/createCategory",
   UPDATE_CATEGORY: "/api/admin/updateCategory",
   DELETE_CATEGORY: "/api/admin/deleteCategory",
-  GET_REGISTRATION_REQUESTS: "/api/admin/registration-requests",
+  GET_REGISTRATION_REQUESTS: "/api/admin/registration-requests?status=PENDING",
   GET_ALL_TERMS: "/api/admin/getAllTerms",
   CREATE_TERM: "/api/admin/createTerm",
   UPDATE_TERM: "/api/admin/updateTerm",
@@ -34,6 +34,8 @@ export const ENDPOINTS = {
   FIXTURES: "/api/admin/fixtures",
   GET_ALL_LEAGUES: "/api/admin/leagues",
   LEAGUES: "/api/admin/leagues",
+  GET_NOTIFICATIONS: "/api/admin/notifications",
+  READ_ALL_NOTIFICATIONS: "/api/admin/notifications/read-all",
 };
 
 // ================= PROGRAMS =================
@@ -298,9 +300,13 @@ export const deleteLeague = async (id: string): Promise<any> => {
   return res.data;
 };
 
-export const getRegistrationRequests = async (page = 1, limit = 10): Promise<any> => {
+export const getRegistrationRequests = async (page = 1, limit = 10, isMedicalCondition?: string): Promise<any> => {
+  const params: any = { page, limit };
+  if (isMedicalCondition && isMedicalCondition !== "All") {
+    params.isMedicalCondition = isMedicalCondition;
+  }
   const response = await apiClient.get(ENDPOINTS.GET_REGISTRATION_REQUESTS, {
-    params: { page, limit },
+    params,
   });
   return response.data;
 };
@@ -337,7 +343,7 @@ export const removeClassFromPlayer = async (
   userId: string,
   classId: string
 ): Promise<any> => {
-  const response = await apiClient.post(`/admin/removeClass/${userId}`, {
+  const response = await apiClient.post(`api/admin/removeClass/${userId}`, {
     classId,
   });
   return response.data;
@@ -353,5 +359,17 @@ export const getAllocatedPlayers = async (
   if (program) params.program = program;
   if (search) params.search = search;
   const response = await apiClient.get("/api/admin/players/search", { params });
+  return response.data;
+};
+
+// ================= NOTIFICATIONS =================
+
+export const getNotifications = async (): Promise<any> => {
+  const response = await apiClient.get(ENDPOINTS.GET_NOTIFICATIONS);
+  return response.data;
+};
+
+export const markAllNotificationsRead = async (): Promise<any> => {
+  const response = await apiClient.patch(ENDPOINTS.READ_ALL_NOTIFICATIONS);
   return response.data;
 };

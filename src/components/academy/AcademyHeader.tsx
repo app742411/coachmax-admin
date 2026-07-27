@@ -14,10 +14,10 @@ interface AcademyHeaderProps {
   onPlayerTypeChange?: (val: "BOTH" | "ALLOCATED" | "UNALLOCATED") => void;
 }
 
-export default function AcademyHeader({ 
-  programType = "Academy", 
-  onCategoryChange, 
-  onProgramChange, 
+export default function AcademyHeader({
+  programType = "Academy",
+  onCategoryChange,
+  onProgramChange,
   onYearChange,
   onOpenCreateClass,
   onOpenTermSettings,
@@ -28,7 +28,7 @@ export default function AcademyHeader({
   const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
   const [programs, setPrograms] = useState<{ _id: string; name: string }[]>([]);
   const [terms, setTerms] = useState<{ _id: string; name: string; year: number }[]>([]);
-  
+
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>("");
@@ -97,7 +97,7 @@ export default function AcademyHeader({
               const end = new Date(t.endDate);
               return now >= start && now <= end;
             });
-            
+
             if (!currentTerm) {
               currentTerm = allTerms[0];
             }
@@ -123,9 +123,6 @@ export default function AcademyHeader({
         {/* Programs (Static) */}
         <div className="flex items-center gap-1.5 cursor-pointer">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Programs</h1>
-          <svg className="w-4 h-4 text-slate-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         </div>
 
         <span className="text-slate-300 dark:text-slate-700 text-lg">/</span>
@@ -146,10 +143,10 @@ export default function AcademyHeader({
             options={
               categories.length === 0
                 ? [{ label: programType, value: "" }]
-                : categories.map(cat => ({ 
-                    label: cat.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), 
-                    value: cat._id 
-                  }))
+                : categories.map(cat => ({
+                  label: cat.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
+                  value: cat._id
+                }))
             }
             triggerClassName="appearance-none flex items-center gap-1 text-xl font-bold text-[#0047FF] bg-transparent outline-none cursor-pointer pr-2 hover:opacity-80"
           />
@@ -169,10 +166,10 @@ export default function AcademyHeader({
             options={
               programs.length === 0
                 ? [{ label: "Sub-category", value: "" }]
-                : programs.map(prog => ({ 
-                    label: prog.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), 
-                    value: prog._id 
-                  }))
+                : programs.map(prog => ({
+                  label: prog.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
+                  value: prog._id
+                }))
             }
             triggerClassName="appearance-none flex items-center gap-1 text-lg font-semibold text-slate-700 dark:text-slate-300 bg-transparent outline-none cursor-pointer pr-2 hover:opacity-80"
           />
@@ -216,12 +213,12 @@ export default function AcademyHeader({
 
       {/* Buttons */}
       <div className="flex flex-wrap gap-2 text-xs font-semibold">
-        <button className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 rounded-none bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+        {/* <button className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 rounded-none bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
           <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
           <span>New Trial</span>
-        </button>
+        </button> */}
 
         <div className="relative">
           <select

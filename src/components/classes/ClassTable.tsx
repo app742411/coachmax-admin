@@ -39,7 +39,7 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
   return (
     <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
       <div className="overflow-visible no-scrollbar">
-        <table className="w-full text-left border-collapse text-xs">
+        <table className="w-full text-left border-collapse text-xs [&_th]:border [&_th]:border-slate-700/50 [&_td]:border [&_td]:border-slate-200 dark:[&_td]:border-slate-700">
           <thead>
             <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
               <th className="py-3 px-4 w-[40px]">#</th>

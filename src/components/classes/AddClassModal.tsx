@@ -6,9 +6,10 @@ interface AddClassModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  classToEdit?: any;
 }
 
-export default function AddClassModal({ isOpen, onClose, onSuccess }: AddClassModalProps) {
+export default function AddClassModal({ isOpen, onClose, onSuccess, classToEdit }: AddClassModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -52,6 +53,28 @@ export default function AddClassModal({ isOpen, onClose, onSuccess }: AddClassMo
   }, [isOpen]);
 
   useEffect(() => {
+    if (isOpen && classToEdit) {
+      setFormData({
+        name: classToEdit.name || "",
+        term: classToEdit.term?._id || classToEdit.term || "",
+        category: classToEdit.category?._id || classToEdit.category || "",
+        program: classToEdit.program?._id || classToEdit.program || "",
+        coach: classToEdit.coach?._id || classToEdit.coach || "",
+        dayOfWeek: classToEdit.dayOfWeek || "MONDAY",
+        startTime: classToEdit.startTime || "",
+        endTime: classToEdit.endTime || "",
+        location: classToEdit.location || "",
+        capacity: classToEdit.capacity || 20,
+      });
+    } else if (isOpen) {
+      setFormData({
+        name: "", term: "", category: "", program: "", coach: "",
+        dayOfWeek: "MONDAY", startTime: "", endTime: "", location: "", capacity: 20
+      });
+    }
+  }, [isOpen, classToEdit]);
+
+  useEffect(() => {
     if (formData.category) {
       const fetchPrograms = async () => {
         try {
@@ -90,7 +113,11 @@ export default function AddClassModal({ isOpen, onClose, onSuccess }: AddClassMo
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await apiClient.post("/api/admin/createClass", formData);
+      if (classToEdit) {
+        await apiClient.put(`/api/admin/updateClass/${classToEdit._id}`, formData);
+      } else {
+        await apiClient.post("/api/admin/createClass", formData);
+      }
       onClose();
       setFormData({
         name: "", term: "", category: "", program: "", coach: "",
@@ -110,7 +137,9 @@ export default function AddClassModal({ isOpen, onClose, onSuccess }: AddClassMo
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-900 rounded-none w-full max-w-2xl max-h-[90vh] overflow-visible flex flex-col shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add New Class</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            {classToEdit ? "Edit Class" : "Add New Class"}
+          </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -208,7 +237,7 @@ export default function AddClassModal({ isOpen, onClose, onSuccess }: AddClassMo
               Cancel
             </button>
             <button type="submit" disabled={isSubmitting} className="px-5 py-2 text-sm font-semibold text-white bg-[#0047FF] hover:bg-blue-700 rounded-none disabled:opacity-50 transition-colors shadow-sm">
-              {isSubmitting ? "Saving..." : "Create Class"}
+              {isSubmitting ? "Saving..." : classToEdit ? "Update Class" : "Create Class"}
             </button>
           </div>
         </form>

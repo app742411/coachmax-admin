@@ -30,6 +30,7 @@ export default function ClassesList() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [classToEdit, setClassToEdit] = useState<ClassItem | null>(null);
   const [viewPlayersClassId, setViewPlayersClassId] = useState<string | null>(null);
 
   const fetchClasses = async () => {
@@ -72,7 +73,7 @@ export default function ClassesList() {
         </div>
         <div className="flex gap-3">
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setClassToEdit(null); setIsModalOpen(true); }}
             className="inline-flex items-center justify-center rounded-none bg-[#0047FF] px-5 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-theme-xs"
           >
             + Add Class
@@ -89,7 +90,10 @@ export default function ClassesList() {
           <ClassTable 
             classes={filteredClasses}
             isLoading={isLoading}
-            onEditClass={() => { /* TODO: handle edit */ }}
+            onEditClass={(cls) => {
+              setClassToEdit(cls);
+              setIsModalOpen(true);
+            }}
             onViewPlayers={(cls) => setViewPlayersClassId(cls._id)}
           />
         </div>
@@ -99,7 +103,11 @@ export default function ClassesList() {
 
         <AddClassModal 
           isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
+          classToEdit={classToEdit}
+          onClose={() => {
+            setIsModalOpen(false);
+            setClassToEdit(null);
+          }} 
           onSuccess={() => {
             setIsLoading(true);
             fetchClasses();

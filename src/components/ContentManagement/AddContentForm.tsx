@@ -1,21 +1,18 @@
 import React, { useState } from "react";
-import {
+import { 
+  Upload, 
+  Trash2, 
+  Tag, 
+  FileText, 
+  Bookmark,
+  ArrowRight,
+  Loader2,
   Newspaper,
-  Layout,
-  User,
-  Image as ImageIcon,
-  FileText,
-  Eye
+  LucideIcon
 } from "lucide-react";
-import Button from "../ui/button/Button";
-import Input from "../form/input/InputField";
-import Label from "../form/Label";
 import toast from "react-hot-toast";
-import Select from "../form/Select";
-import DropzoneComponent from "../form/form-elements/DropZone";
-import SuccessPopup from "../SuccessPopup";
-import { LucideIcon } from "lucide-react";
 import { createNews } from "../../api/adminApi";
+import SuccessPopup from "../SuccessPopup";
 
 interface SectionHeaderProps {
   icon: LucideIcon;
@@ -31,287 +28,327 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
   </div>
 );
 
-interface FormCardProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
-  <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
-    {children}
-  </div>
-);
-
 interface AddContentFormProps {
   type?: "news" | "blog";
 }
 
-const AddContentForm: React.FC<AddContentFormProps> = ({ type: initialType = "news" }) => {
-  const [activeTab, setActiveTab] = useState("basic");
-  const [contentType, setContentType] = useState<"news" | "blog">(initialType);
+const AddContentForm: React.FC<AddContentFormProps> = () => {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
     title: "",
     category: "",
-    readTime: "",
-    author: "",
-    excerpt: "",
-    description: "",
-    content: "",
-    status: "Published",
     featured: "false",
-    isFeatured: false,
-    tags: []
+    description: ""
   });
 
   const newsCategories = [
     { value: "sports", label: "Sports" },
     { value: "business", label: "Business" },
-    { value: "latest", label: "Latest" },
+    { value: "latest", label: "Latest News" },
     { value: "liga", label: "La Liga" }
   ];
 
-  const blogCategories = [
-    { value: "coaching", label: "Coaching Tips" },
-    { value: "nutrition", label: "Nutrition" },
-    { value: "analysis", label: "Match Analysis" },
-    { value: "mindset", label: "Player Mindset" }
-  ];
-
-  const categories = contentType === "news" ? newsCategories : blogCategories;
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const handleCategoryChange = (val: string) => {
+    setFormData((prev) => ({ ...prev, category: val }));
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (contentType === "news") {
-      try {
-        const data = new FormData();
-        data.append("title", formData.title);
-        data.append("description", formData.description || formData.excerpt);
-        data.append("category", formData.category);
-        data.append("featured", formData.featured);
-        if (imageFile) {
-          data.append("images", imageFile);
-        }
-        await createNews(data);
-        toast.success("News published successfully!");
-        setShowSuccessPopup(true);
-      } catch (err) {
-        console.error("Error creating news:", err);
-        toast.error("Failed to create news.");
-      }
-    } else {
-      console.log(`Submitting ${contentType} Data:`, formData);
-      toast.success("Blog published successfully!");
-      setShowSuccessPopup(true);
+  const handleFeaturedChange = (val: string) => {
+    setFormData((prev) => ({ ...prev, featured: val }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  const tabs = [
-    { id: "basic", label: "General Info", icon: Layout },
-    { id: "body", label: "Content Editor", icon: FileText }
-  ];
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith("image/")) {
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+      } else {
+        toast.error("Please drop an image file.");
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim()) {
+      toast.error("Headline Title is required");
+      return;
+    }
+    if (!formData.description.trim()) {
+      toast.error("News Description is required");
+      return;
+    }
+    if (!formData.category) {
+      toast.error("Please select a category");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const data = new FormData();
+      data.append("title", formData.title.trim());
+      data.append("description", formData.description.trim());
+      data.append("category", formData.category);
+      data.append("featured", formData.featured);
+      if (imageFile) {
+        data.append("images", imageFile);
+      }
+
+      const response = await createNews(data);
+      
+      if (response && response.success === false) {
+        toast.error(response.message || "Failed to create news.");
+        return;
+      }
+
+      toast.success(response.message || "News announcement published successfully");
+      setShowSuccessPopup(true);
+      
+      // Reset form
+      setFormData({
+        title: "",
+        category: "",
+        featured: "false",
+        description: ""
+      });
+      setImageFile(null);
+      setImagePreview(null);
+    } catch (err: any) {
+      console.error("Error creating news:", err);
+      const errorMsg = err.response?.data?.message || "Failed to submit news. Please check required fields.";
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col xl:flex-row gap-8">
-        
-        {/* Left: Sidebar Navigation */}
-        <div className="w-full xl:w-72 flex-shrink-0">
-          <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-4 sticky top-24 shadow-sm">
-            <div className="flex items-center gap-3 px-3 mb-6 pb-4 border-b border-gray-50 dark:border-gray-800/50">
-              <div className="p-2.5 bg-brand-500 rounded-none text-white shadow-lg shadow-brand-500/30">
-                <Newspaper size={20} strokeWidth={2.5} />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-gray-900 dark:text-white  ">Content Studio</h4>
-                <p className="text-[10px] font-bold text-gray-400 ">Unified Creation</p>
-              </div>
-            </div>
-            <div className="space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-none transition-all font-bold text-sm ${
-                    activeTab === tab.id
-                      ? "bg-brand-500 text-white shadow-lg shadow-brand-500/20 translate-x-1"
-                      : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-                >
-                  <tab.icon size={18} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-gray-400 ">Live Preview</span>
-                <Eye size={16} className="text-gray-400" />
-              </div>
-              <div className="aspect-video bg-gray-50 dark:bg-gray-800/50 rounded-none border border-gray-100 dark:border-gray-800 flex items-center justify-center p-4">
-                <p className="text-[10px] text-gray-400 font-bold text-center leading-relaxed">Headline: {formData.title || "Untiled Story..."}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Main Editor Content */}
-        <div className="flex-1 min-w-0">
-          <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="bg-gray-50/50 dark:bg-gray-950/20 py-4 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+         {/* Main Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* Card Wrapper */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xl shadow-gray-100/50 dark:shadow-none p-6 space-y-6 rounded-none">
+            <SectionHeader icon={Newspaper} title="Create News Article" />
             
-            {activeTab === "basic" && (
-              <FormCard>
-                <SectionHeader icon={Layout} title="Basic Information" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-2">
-                    <Label>Content Type</Label>
-                    <Select 
-                      options={[
-                        { value: "news", label: "News Article" },
-                        { value: "blog", label: "Blog Post" }
-                      ]} 
-                      placeholder="Select Type"
-                      value={contentType}
-                      onChange={(val) => setContentType(val as "news" | "blog")}
-                    />
+            {/* 1. Featured Image Dropzone (At the Top) */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                Featured Banner Image
+              </label>
+              
+              {!imagePreview ? (
+                <div 
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className="group relative border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-brand-500 dark:hover:border-brand-500 transition-all rounded-none cursor-pointer p-8 text-center flex flex-col items-center justify-center min-h-[220px]"
+                >
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleImageChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-none group-hover:scale-110 transition-transform mb-4">
+                    <Upload className="w-6 h-6 text-gray-400 group-hover:text-brand-500" />
                   </div>
-                  <div className="col-span-2">
-                    <Label>Headline Title</Label>
-                    <Input 
-                      placeholder={contentType === "news" ? "e.g., Real Madrid confirm Xabi Alonso as new head coach" : "e.g., 5 Tips to Improve Your Tactics"} 
-                      name="title" 
-                      value={formData.title} 
-                      onChange={handleInputChange} 
-                    />
-                  </div>
-                  <div>
-                    <Label>Category</Label>
-                    <Select 
-                      options={categories} 
-                      placeholder="Select Category"
-                      value={formData.category}
-                      onChange={(val) => setFormData(prev => ({...prev, category: val}))}
-                    />
-                  </div>
-                  {contentType === "news" && (
-                    <div>
-                      <Label>Featured</Label>
-                      <Select 
-                        options={[
-                          { value: "true", label: "Yes" },
-                          { value: "false", label: "No" }
-                        ]} 
-                        placeholder="Is Featured?"
-                        value={formData.featured}
-                        onChange={(val) => setFormData(prev => ({...prev, featured: val}))}
-                      />
-                    </div>
-                  )}
-                  {contentType !== "news" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Read Time</Label>
-                      <div className="relative">
-                        <Input 
-                          placeholder="5" 
-                          name="readTime" 
-                          value={formData.readTime} 
-                          onChange={handleInputChange} 
-                        />
-                        <span className="absolute right-3 top-3.5 text-[10px] font-bold text-gray-400">Min</span>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Author</Label>
-                      <div className="relative">
-                        <Input 
-                          placeholder="Admin" 
-                          name="author" 
-                          value={formData.author} 
-                          onChange={handleInputChange} 
-                        />
-                        <User size={16} className="absolute right-3 top-3 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                  )}
-                  <div className="col-span-2">
-                    <Label>Featured Banner Image</Label>
-                    <DropzoneComponent 
-                      onUpload={(files: File[]) => setImageFile(files[0])} 
-                    />
-                    <div className="mt-3 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-none flex items-center gap-2 text-brand-600 dark:text-brand-400">
-                      <ImageIcon size={14} />
-                      <span className="text-[10px] font-bold ">Recommended: 1200x630 (Social Sharing Display)</span>
-                    </div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Drag & drop banner here
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Supports JPG, PNG, WEBP (Max 5MB)
+                  </p>
+                  <span className="mt-4 text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">
+                    Browse Local Files
+                  </span>
+                </div>
+              ) : (
+                <div className="relative border border-gray-100 dark:border-gray-800 rounded-none overflow-hidden group aspect-[16/9] max-h-[300px]">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover" 
+                  />
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button 
+                      type="button"
+                      onClick={removeImage}
+                      className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-none transition-transform hover:scale-110 shadow-lg shadow-red-600/30"
+                      title="Remove Image"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
-              </FormCard>
-            )}
-
-            {activeTab === "body" && (
-              <FormCard>
-                <SectionHeader icon={FileText} title="Story Composition" />
-                <div className="space-y-6">
-                  <div>
-                    <Label>{contentType === "news" ? "Description" : "Short Excerpt (Brief Summary)"}</Label>
-                    <textarea 
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
-                      rows={contentType === "news" ? 10 : 3}
-                      placeholder={contentType === "news" ? "Enter news description..." : "A short punchy intro to grab attention..."}
-                      name={contentType === "news" ? "description" : "excerpt"}
-                      value={contentType === "news" ? formData.description : formData.excerpt}
-                      onChange={handleInputChange}
-                    ></textarea>
-                  </div>
-                  {contentType !== "news" && (
-                  <div>
-                    <Label>Full Content Body</Label>
-                    <textarea 
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400 min-h-[400px]"
-                      placeholder="Compose your full article here. Use paragraphs and rich formatting ideas..."
-                      name="content"
-                      value={formData.content}
-                      onChange={handleInputChange}
-                    ></textarea>
-                  </div>
-                  )}
-                </div>
-              </FormCard>
-            )}
-
-            {/* Bottom Actions */}
-            <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-800">
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="rounded-none px-8 font-bold text-gray-500 border-gray-200"
-              >
-                Cancel Draft
-              </Button>
-              <Button 
-                type="submit" 
-                className="rounded-none px-12 font-bold  shadow-xl shadow-brand-500/20 active:scale-95 transition-all"
-              >
-                Publish Now
-              </Button>
+              )}
             </div>
-          </form>
-        </div>
+
+            {/* 2. Headline Title */}
+            <div className="space-y-2">
+              <label htmlFor="title" className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                Headline Title
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  placeholder="e.g., Real Madrid confirm Xabi Alonso as new head coach"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* 3. Category & Featured Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              
+              {/* Category */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <Tag size={12} />
+                  Category
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all cursor-pointer"
+                  required
+                >
+                  <option value="" disabled>Select Category</option>
+                  {newsCategories.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Featured */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <Bookmark size={12} />
+                  Pin as Featured
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-50 dark:bg-gray-850 rounded-none border border-gray-200 dark:border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => handleFeaturedChange("true")}
+                    className={`py-2 px-4 text-xs font-bold rounded-none transition-all ${
+                      formData.featured === "true"
+                        ? "bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-md border border-gray-100 dark:border-gray-800"
+                        : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFeaturedChange("false")}
+                    className={`py-2 px-4 text-xs font-bold rounded-none transition-all ${
+                      formData.featured === "false"
+                        ? "bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-md border border-gray-100 dark:border-gray-800"
+                        : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* 4. Description */}
+            <div className="space-y-2">
+              <label htmlFor="description" className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                <FileText size={12} />
+                News Description
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows={8}
+                placeholder="Write your news article description here..."
+                value={formData.description}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all resize-y min-h-[160px]"
+                required
+              />
+            </div>
+
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex items-center justify-end gap-4 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setFormData({ title: "", category: "", featured: "false", description: "" });
+                setImageFile(null);
+                setImagePreview(null);
+              }}
+              className="px-6 py-3 rounded-none text-sm font-bold text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors"
+            >
+              Reset Form
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center justify-center gap-2 px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white rounded-none text-sm font-bold transition-all shadow-lg shadow-brand-500/20 active:scale-95 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  Publish Article
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       {showSuccessPopup && (
-        <SuccessPopup 
-          message={`Success! Your ${contentType === "news" ? "News Article" : "Blog Post"} is now live on the CoachMax platform.`} 
-          onClose={() => setShowSuccessPopup(false)} 
+        <SuccessPopup
+          message="Success! Your News Article is now live on the CoachMax platform."
+          onClose={() => setShowSuccessPopup(false)}
         />
       )}
     </div>

@@ -38,7 +38,7 @@ const AppSidebar: React.FC = () => {
   }
 
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
-  const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const subMenuRefs = useRef<Record<string, HTMLUListElement | null>>({});
 
   const [programsSubItems, setProgramsSubItems] = useState<{ name: string; path: string }[]>([
     { name: "Academy", path: "/program/academy" },
@@ -284,9 +284,25 @@ const AppSidebar: React.FC = () => {
       ],
     },
     {
-      title: "Teams & Competitions",
-      key: "teams_competitions",
+      title: "OPERATIONS",
+      key: "operations",
       items: [
+        {
+          name: "Events",
+          icon: <CalendarIcon />,
+          subItems: [
+            { name: "All Events", path: "/events" },
+            { name: "Add Event", path: "/add-event" },
+            // { name: "Training Sessions", path: "/training-sessions" },
+          ],
+        },
+        {
+          name: "Communication",
+          icon: <ChatIcon />,
+          subItems: [
+            { name: "Messages", path: "/communication" }
+          ]
+        },
         // {
         //   name: "Leagues",
         //   icon: <Trophy size={18} />,
@@ -302,15 +318,7 @@ const AppSidebar: React.FC = () => {
         //   icon: <Calendar size={18} />,
         //   path: "/fixtures"
         // },
-        {
-          name: "Store",
-          icon: <GridIcon />,
-          subItems: [
-            { name: "Product List", path: "/products" },
-            { name: "Add Product", path: "/add-product" },
-            { name: "Orders", path: "/orders" }
-          ]
-        },
+
         {
           name: "Finance",
           icon: <GridIcon />,
@@ -321,36 +329,22 @@ const AppSidebar: React.FC = () => {
             { name: "Transactions", path: "/transactions" }
           ]
         },
+
+      ],
+    },
+    {
+      title: "COMMERCE",
+      key: "commerce",
+      items: [
         {
-          name: "Communication",
-          icon: <ChatIcon />,
+          name: "Store",
+          icon: <GridIcon />,
           subItems: [
-            { name: "Messages", path: "/communication" }
+            { name: "Product List", path: "/products" },
+            { name: "Add Product", path: "/add-product" },
+            { name: "Orders", path: "/orders" }
           ]
         },
-      ],
-    },
-    {
-      title: "Events & Training",
-      key: "events_training",
-      items: [
-        {
-          name: "Events",
-          icon: <CalendarIcon />,
-          subItems: [
-            { name: "All Events", path: "/events" },
-            { name: "Add Event", path: "/add-event" },
-            // { name: "Training Sessions", path: "/training-sessions" },
-          ],
-        },
-      ],
-    },
-    {
-      title: "Management",
-      key: "management",
-      items: [
-        { name: "Coaching Management", icon: <UserIcon />, path: "/coaching-management" },
-        { name: "Sponsors", icon: <GridIcon />, path: "/sponsors" },
       ],
     },
     {
@@ -375,6 +369,15 @@ const AppSidebar: React.FC = () => {
         // },
       ],
     },
+    {
+      title: "Management",
+      key: "management",
+      items: [
+        { name: "Coaching Management", icon: <UserIcon />, path: "/coaching-management" },
+        { name: "Sponsors", icon: <GridIcon />, path: "/sponsors" },
+      ],
+    },
+
     {
       title: "Settings",
       key: "settings",
@@ -419,7 +422,7 @@ const AppSidebar: React.FC = () => {
         }));
       }
     }
-  }, [openSubmenu]);
+  }, [openSubmenu, programsSubItems]);
 
   const handleSubmenuToggle = (sectionKey: string, index: number) => {
     setOpenSubmenu((prevOpenSubmenu) => {
@@ -435,7 +438,7 @@ const AppSidebar: React.FC = () => {
   };
 
   const renderMenuItems = (items: NavItem[], sectionKey: string) => (
-    <ul className="flex flex-col gap-2">
+    <ul className="flex flex-col gap-1">
       {items.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
@@ -493,9 +496,6 @@ const AppSidebar: React.FC = () => {
           )}
           {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
             <div
-              ref={(el) => {
-                subMenuRefs.current[`${sectionKey}-${index}`] = el;
-              }}
               className="overflow-hidden transition-all duration-300"
               style={{
                 height:
@@ -504,7 +504,12 @@ const AppSidebar: React.FC = () => {
                     : "0px",
               }}
             >
-              <ul className="mt-1 space-y-1 ml-9">
+              <ul
+                ref={(el) => {
+                  subMenuRefs.current[`${sectionKey}-${index}`] = el;
+                }}
+                className="pt-1 space-y-1 ml-9 pb-1"
+              >
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
@@ -551,11 +556,11 @@ const AppSidebar: React.FC = () => {
       </div>
       <div className="flex flex-col flex-1 overflow-y-auto duration-300 ease-linear no-scrollbar pb-6">
         <nav className="mb-6">
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             {menuSections.map((section) => (
               <div key={section.key}>
                 <h2
-                  className={`mb-3 text-[10px] tracking-wider uppercase font-semibold text-slate-400/70 flex leading-[20px] ${!isExpanded && !isHovered
+                  className={`mb-1.5 text-[10px] tracking-wider uppercase font-semibold text-slate-400/70 flex leading-[20px] ${!isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"
                     }`}

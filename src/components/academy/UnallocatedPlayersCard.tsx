@@ -9,23 +9,6 @@ interface UnallocatedPlayersCardProps {
 export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const renderStars = (count: number) => {
-    return (
-      <div className="flex gap-0.5 text-amber-500">
-        {Array.from({ length: 5 }).map((_, idx) => (
-          <svg
-            key={idx}
-            className={`w-2.5 h-2.5 ${idx < count ? "fill-current" : "text-slate-200 dark:text-slate-700"}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.53 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-none shadow-theme-xs mb-5 flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -37,8 +20,8 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
             {players.length}
           </span>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)} 
+        <button
+          onClick={() => setIsModalOpen(true)}
           className="text-[10px] font-semibold text-[#0047FF] hover:underline bg-transparent border-none cursor-pointer"
         >
           View all
@@ -47,9 +30,9 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
 
       <div className="space-y-3.5 mb-4">
         {players.map((p) => (
-          <div 
-            key={p.id} 
-            className="flex gap-3 items-start justify-between cursor-move hover:bg-slate-50 dark:hover:bg-slate-800/50 p-1 -mx-1 rounded"
+          <div
+            key={p.id}
+            className="flex gap-3 items-start justify-between cursor-move hover:border-blue-200 dark:hover:border-blue-900/50 hover:shadow-md transition-all p-2.5 rounded-md border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/50"
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData("application/json", JSON.stringify({
@@ -59,24 +42,60 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
                 categoryId: p.categoryId,
                 programId: p.programId,
                 categoryName: p.categoryName,
-                programName: p.fullProgramName
+                programName: p.fullProgramName,
+                preferredClasses: p.preferredClasses || []
               }));
             }}
           >
-            <div className="flex gap-2 min-w-0">
+            <div className="flex gap-2 min-w-0 flex-1 pr-2">
               <img
                 src={p.avatar}
                 alt={p.name}
                 className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-100"
               />
-              <div className="min-w-0">
-                <h4 className="text-xs font-bold text-slate-850 dark:text-slate-200 leading-tight">
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-bold text-slate-850 dark:text-slate-200 leading-tight truncate">
                   {p.name}
                 </h4>
-                <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
-                  {p.details}
-                </span>
-                <div className="mt-1">{renderStars(p.rating)}</div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {p.categoryName && p.categoryName !== "N/A" && (
+                    <span className="text-[8px] text-slate-500 font-semibold border border-slate-200 dark:border-slate-700 px-1 py-0.5 rounded uppercase whitespace-nowrap">
+                      {p.categoryName}
+                    </span>
+                  )}
+                  {p.fullProgramName && p.fullProgramName !== "N/A" && (
+                    <span className="text-[8px] text-slate-500 font-semibold border border-slate-200 dark:border-slate-700 px-1 py-0.5 rounded uppercase whitespace-nowrap">
+                      {p.fullProgramName}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <span className="text-[8px] text-slate-500 font-semibold bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded uppercase whitespace-nowrap">
+                    {p.details}
+                  </span>
+                  {p.termName && (
+                    <span className="text-[8px] text-slate-500 font-semibold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1 py-0.5 rounded uppercase whitespace-nowrap">
+                      {p.termName}
+                    </span>
+                  )}
+                </div>
+                
+                {p.preferredClasses && p.preferredClasses.length > 0 && (
+                  <div className="mt-1 w-full">
+                    <style>{`
+                      .no-scrollbar::-webkit-scrollbar {
+                        display: none;
+                      }
+                    `}</style>
+                    <div className="flex gap-1 no-scrollbar w-full overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      {p.preferredClasses.map(c => (
+                        <span key={c.id} className="text-[8px] bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 px-1.5 py-0.5 rounded whitespace-nowrap flex-shrink-0">
+                          {c.dayOfWeek.substring(0, 3)} {c.startTime}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
