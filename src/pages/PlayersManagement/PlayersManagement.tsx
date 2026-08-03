@@ -7,6 +7,7 @@ import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
 import AssignClassModal from "../../components/players/AssignClassModal";
 import GenerateInvoiceModal from "../../components/InvoiceManagement/GenerateInvoiceModal";
+import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
 import { usePlayers, useDeletePlayer } from "../../hooks/usePlayers";
 
 export default function PlayersManagement() {
@@ -23,6 +24,7 @@ export default function PlayersManagement() {
   
   const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
   const [playerForInvoice, setPlayerForInvoice] = useState<Player | null>(null);
+  const [coachNotePlayer, setCoachNotePlayer] = useState<Player | null>(null);
 
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
@@ -115,6 +117,7 @@ export default function PlayersManagement() {
               onDeletePlayer={handleDeletePlayer}
               onAssignClass={handleAssignPlayer}
               onGenerateInvoice={handleGenerateInvoice}
+              onAddCoachNote={setCoachNotePlayer}
             />
           )}
         </div>
@@ -134,6 +137,15 @@ export default function PlayersManagement() {
         onClose={() => setPlayerForInvoice(null)}
         player={playerForInvoice}
       />
+
+      {coachNotePlayer && (
+        <AddCoachNoteModal
+          isOpen={coachNotePlayer !== null}
+          onClose={() => setCoachNotePlayer(null)}
+          playerId={coachNotePlayer._id}
+          playerName={coachNotePlayer.fullName}
+        />
+      )}
     </>
   );
 }

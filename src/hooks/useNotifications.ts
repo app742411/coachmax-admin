@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getNotifications, markAllNotificationsRead } from "../api/adminApi";
+import { getCoachNotifications, markCoachNotificationAsRead } from "../api/coaches";
 
 export interface NotificationData {
   parentId?: string;
@@ -66,6 +67,23 @@ export const useNotifications = () => {
   return useQuery<Notification[]>({
     queryKey: ["notifications"],
     queryFn: async () => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        const response = await getCoachNotifications();
+        return response?.data || [];
+      }
       const response = await getNotifications();
       return response?.data || [];
     },
@@ -76,7 +94,32 @@ export const useNotifications = () => {
 export const useMarkAllNotificationsRead = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: markAllNotificationsRead,
+    mutationFn: async () => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        // Fetch current unread notifications and mark them as read one by one
+        const activeUnreadsRes = await getCoachNotifications();
+        const unreadList = (activeUnreadsRes?.data || []).filter((n: any) => !n.isRead);
+        for (const item of unreadList) {
+          await markCoachNotificationAsRead(item._id);
+        }
+        return;
+      }
+
+      return markAllNotificationsRead();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },

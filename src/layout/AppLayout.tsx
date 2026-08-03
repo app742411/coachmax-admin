@@ -1,17 +1,37 @@
 import { useEffect } from "react";
 import { SidebarProvider, useSidebar } from "../context/SidebarContext";
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useNavigate, useLocation } from "react-router";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
+import { useAppDispatch, useAppSelector } from "../store";
+import { syncAuth } from "../store/slices/authSlice";
+import { socketService } from "../services/socketService";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useAppDispatch();
+  const token = useAppSelector((state) => state.auth.token);
+
+  const isEdgeToEdge = ["/communication", "/messages", "/announcements"].includes(location.pathname);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    dispatch(syncAuth());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (token) {
+      socketService.connect(token);
+    } else {
+      socketService.disconnect();
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const localToken = localStorage.getItem("token");
+    if (!localToken) {
       navigate("/signin");
     }
   }, [navigate]);
@@ -23,12 +43,11 @@ const LayoutContent: React.FC = () => {
         <Backdrop />
       </div>
       <div
-        className={`flex-1 min-w-0 transition-all duration-300 ease-in-out ${
-          isExpanded || isHovered ? "lg:ml-[290px]" : "lg:ml-[90px]"
-        } ${isMobileOpen ? "ml-0" : ""}`}
+        className={`flex-1 min-w-0 transition-all duration-300 ease-in-out ${isExpanded || isHovered ? "lg:ml-[290px]" : "lg:ml-[90px]"
+          } ${isMobileOpen ? "ml-0" : ""}`}
       >
         <AppHeader />
-        <div className="p-4 w-full md:p-6">
+        <div className={isEdgeToEdge ? "w-full h-[calc(100vh-76px)] overflow-hidden" : "p-4 w-full md:p-6"}>
           <Outlet />
         </div>
       </div>

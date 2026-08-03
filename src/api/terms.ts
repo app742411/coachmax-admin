@@ -1,7 +1,8 @@
 import apiClient from "./apiClient";
 
-export const getAllTerms = async (): Promise<any> => {
-  const res = await apiClient.get("/api/admin/getAllTerms");
+export const getAllTerms = async (year?: number): Promise<any> => {
+  const params = year ? { params: { year } } : {};
+  const res = await apiClient.get("/api/admin/getAllTerms", params);
   return res.data;
 };
 

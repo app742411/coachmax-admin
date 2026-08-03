@@ -1,6 +1,28 @@
 import { useState } from "react";
 import { Player } from "../../types/player";
-import { usePlayerProfile } from "../../hooks/usePlayers";
+import { usePlayerProfile, useCoachNotes } from "../../hooks/usePlayers";
+import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
+
+const getBadgeStyles = (noteType: string) => {
+  switch (noteType) {
+    case "POSITIVE_PERFORMANCE":
+      return "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800";
+    case "DEVELOPMENT_AREA":
+      return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800";
+    case "ARRIVED_LATE":
+      return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800";
+    case "BEHAVIOUR_CONCERN":
+      return "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800";
+    case "INJURY":
+      return "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800";
+    case "MEDICAL_INCIDENT":
+      return "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800";
+    case "PARENT_DISCUSSION":
+      return "bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800";
+    default:
+      return "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-800";
+  }
+};
 
 interface PlayerDetailCardProps {
   player: Player;
@@ -10,10 +32,13 @@ interface PlayerDetailCardProps {
 
 export default function PlayerDetailCard({ player, onClose, isRegistrationRequest }: PlayerDetailCardProps) {
   const [activeTab, setActiveTab] = useState<
-    "Overview" | "Details" | "Development" | "Medical" | "More"
+    "Overview" | "Details" | "Development" | "Medical" | "Note"
   >("Overview");
 
   usePlayerProfile(player._id);
+  const { data: notesRes } = useCoachNotes(player._id);
+  const notes = notesRes?.data || [];
+  const [editingNote, setEditingNote] = useState<any | null>(null);
 
   const avatar = player.profileImage ? `/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
   const dob = new Date(player.dob);
@@ -62,7 +87,7 @@ export default function PlayerDetailCard({ player, onClose, isRegistrationReques
 
         {/* Tab navigation */}
         <div className="flex border-b border-slate-100 dark:border-slate-800 mb-5 text-[11px] font-bold">
-          {(["Overview", "Details", "Development", "Medical", "More"] as const).map((tab) => (
+          {(["Overview", "Details", "Development", "Medical", "Note"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -267,13 +292,75 @@ export default function PlayerDetailCard({ player, onClose, isRegistrationReques
           </div>
         )}
 
+        {activeTab === "Note" && (
+          <div className="space-y-4">
+            <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px] pb-1 border-b border-slate-50 dark:border-slate-800/40">
+              Coach Performance Notes
+            </h4>
+            {notes.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs italic">
+                No notes logged for this player yet.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                {notes.map((note: any) => (
+                  <div
+                    key={note._id}
+                    className="relative p-4 bg-[#FEF9C3] dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/50 shadow-sm rounded-none space-y-1.5 pt-5"
+                  >
+                    {/* Pin design element */}
+                    <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-500/80 rounded-full shadow-inner" />
+
+                    <div className="flex items-center justify-between text-[9px] font-bold">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-1.5 py-0.5 border uppercase font-bold text-[8px] ${getBadgeStyles(note.noteType)}`}>
+                          {note.noteType?.replace("_", " ")}
+                        </span>
+                        <button
+                          onClick={() => setEditingNote(note)}
+                          className="text-[#0047FF] hover:underline"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <span className="text-slate-500 dark:text-yellow-400/60">
+                        {new Date(note.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
+                      {note.description}
+                    </p>
+                    {note.createdBy && (
+                      <div className="text-[9px] text-slate-500 dark:text-yellow-400/50 font-medium text-right italic">
+                        — Coach {note.createdBy.name || note.createdBy.email}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Empty States for other tabs */}
-        {activeTab !== "Overview" && (
+        {activeTab !== "Overview" && activeTab !== "Note" && (
           <div className="py-8 text-center text-slate-400 text-xs">
             <span>{activeTab} module details are currently empty.</span>
           </div>
         )}
       </div>
+
+      {editingNote && (
+        <AddCoachNoteModal
+          isOpen={editingNote !== null}
+          onClose={() => setEditingNote(null)}
+          playerId={player._id}
+          playerName={player.fullName}
+          noteId={editingNote._id}
+          initialNoteType={editingNote.noteType}
+          initialDescription={editingNote.description}
+        />
+      )}
     </>
   );
 }

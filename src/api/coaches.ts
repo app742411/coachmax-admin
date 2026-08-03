@@ -7,7 +7,6 @@ export interface Coach {
   phone: string;
   status: string;
   createdAt: string;
-  // add other fields as necessary
 }
 
 export interface CoachesResponse {
@@ -17,6 +16,19 @@ export interface CoachesResponse {
   total: number;
   totalPages: number;
   coaches: Coach[];
+}
+
+export interface TemporaryPlayerPayload {
+  name: string;
+  dob: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  emergencyContact: string;
+  medicalConditions?: string;
+  allergies?: string;
+  classId: string;
+  sessionDate: string;
 }
 
 export const getAllCoaches = async (page = 1, limit = 100): Promise<CoachesResponse> => {
@@ -40,3 +52,80 @@ export const deleteCoach = async (id: string): Promise<any> => {
   const response = await apiClient.delete(`/admin/coaches/${id}`);
   return response.data;
 };
+
+export const addTemporaryPlayer = async (data: TemporaryPlayerPayload): Promise<any> => {
+  const response = await apiClient.post("/api/coach/temporary-players", data);
+  return response.data;
+};
+
+export const getCoachClasses = async (): Promise<any> => {
+  const response = await apiClient.get("/api/coach/classes");
+  return response.data;
+};
+
+export const markCoachSingleAttendance = async (classId: string, data: { sessionDate: string; playerId: string; status: string }): Promise<any> => {
+  const response = await apiClient.post(`/api/coach/attendance/${classId}/single`, data);
+  return response.data;
+};
+
+export const markCoachBulkAttendance = async (classId: string, data: { sessionDate: string; records: { player: string; status: string }[] }): Promise<any> => {
+  const response = await apiClient.post(`/api/coach/attendance/${classId}`, data);
+  return response.data;
+};
+
+export const getCoachClassDetails = async (classId: string): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/classes/${classId}`);
+  return response.data;
+};
+
+export const getCoachClassPlayers = async (classId: string): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/classes/${classId}/players`);
+  return response.data;
+};
+
+export const getCoachPlayerProfile = async (playerId: string): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/player/${playerId}/profile`);
+  return response.data;
+};
+
+export const getCoachUniquePlayers = async (page = 1, limit = 10): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/unique-players?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const getCoachTemporaryPlayers = async (page = 1, limit = 20): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/temporary-players?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const addCoachNote = async (data: { playerId: string; classId?: string; noteType: string; description: string }): Promise<any> => {
+  const response = await apiClient.post("/api/coach/notes", data);
+  return response.data;
+};
+
+export const getCoachNotes = async (playerId: string, page = 1, limit = 20): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/notes/player/${playerId}?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const updateCoachNote = async (noteId: string, data: { noteType: string; description: string }): Promise<any> => {
+  const response = await apiClient.put(`/api/coach/notes/${noteId}`, data);
+  return response.data;
+};
+
+export const getCoachAllNotes = async (page = 1, limit = 20): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/notes?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const getCoachNotifications = async (page = 1, limit = 20): Promise<any> => {
+  const response = await apiClient.get(`/api/coach/notifications?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const markCoachNotificationAsRead = async (notificationId: string): Promise<any> => {
+  const response = await apiClient.put(`/api/coach/notifications/mark-read`, { id: notificationId });
+  return response.data;
+};
+
+

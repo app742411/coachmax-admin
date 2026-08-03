@@ -60,7 +60,7 @@ export default function ForgotPasswordForm() {
           setTimer(60);
           setStep("VERIFY_OTP");
         },
-        onError: (err) => setErrorMessage(err.message || "Failed to send OTP. Please check your email and role."),
+        onError: (err) => setErrorMessage((err as any)?.response?.data?.message || err.message || "User not found"),
       }
     );
   };
@@ -74,7 +74,7 @@ export default function ForgotPasswordForm() {
           setSuccessMessage(res.message || "OTP resent successfully.");
           setTimer(60);
         },
-        onError: (err) => setErrorMessage(err.message || "Failed to resend OTP."),
+        onError: (err) => setErrorMessage((err as any)?.response?.data?.message || err.message || "User not found"),
       }
     );
   };
@@ -89,7 +89,7 @@ export default function ForgotPasswordForm() {
           setSuccessMessage(res.message || "OTP verified successfully. You may now reset your password.");
           setStep("RESET_PASSWORD");
         },
-        onError: (err) => setErrorMessage(err.message || "Invalid OTP. Please try again."),
+        onError: (err) => setErrorMessage((err as any)?.response?.data?.message || err.message || "User not found"),
       }
     );
   };
@@ -106,7 +106,7 @@ export default function ForgotPasswordForm() {
             navigate("/signin");
           }, 2000);
         },
-        onError: (err) => setErrorMessage(err.message || "Failed to reset password."),
+        onError: (err) => setErrorMessage((err as any)?.response?.data?.message || err.message || "User not found"),
       }
     );
   };

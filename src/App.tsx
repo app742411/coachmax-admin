@@ -3,7 +3,6 @@ import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import ForgotPassword from "./pages/AuthPages/ForgotPassword";
 import NotFound from "./pages/OtherPage/NotFound";
-import ComingSoon from "./pages/OtherPage/ComingSoon";
 import UserProfiles from "./pages/UserProfiles";
 import Videos from "./pages/UiElements/Videos";
 import Images from "./pages/UiElements/Images";
@@ -29,6 +28,11 @@ import AddProductPage, { EditProductPage } from "./pages/Store/AddProductPage";
 import OrdersList from "./pages/Store/OrdersList";
 import OrderDetails from "./pages/Store/OrderDetails";
 import CoachingManagementPage from "./pages/CochingManagement/CoachingManagementPage";
+import CoachesPage from "./pages/Coaches/CoachesPage";
+import AddTempPlayers from "./pages/CoachManagement/AddTempPlayers";
+import MyClassesList from "./pages/CoachManagement/MyClassesList";
+import TemporaryPlayersList from "./pages/CoachManagement/TemporaryPlayersList";
+import CoachNotesPage from "./pages/CoachManagement/CoachNotesPage";
 import RoleBasedDashboard from "./components/auth/RoleBasedDashboard";
 import AddEvent from "./pages/Events/AddEvent";
 import EventList from "./pages/Events/EventList";
@@ -44,6 +48,7 @@ import InvoiceList from "./pages/Finance/InvoiceList";
 import InvoiceDetails from "./pages/Finance/InvoiceDetails";
 import Transactions from "./pages/Finance/Transactions";
 import NotificationsPage from "./pages/Notifications/NotificationsPage";
+import CommunicationPage from "./pages/Communication";
 // import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
 // import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
 // import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
@@ -113,6 +118,8 @@ export default function App() {
 
             {/* Management */}
             <Route path="/coaching-management" element={<CoachingManagementPage />} />
+            <Route path="/coaches" element={<CoachesPage />} />
+            <Route path="/add-temporary-players" element={<AddTempPlayers />} />
             {/* <Route path="/leagues" element={<LeaguesManagementPage />} /> */}
             {/* <Route path="/teams" element={<TeamsManagementPage />} /> */}
             {/* <Route path="/fixtures" element={<FixturesManagementPage />} /> */}
@@ -127,7 +134,7 @@ export default function App() {
             <Route path="/sponsors" element={<SponsorManagementPage />} />
             <Route path="/edit-event/:id" element={<EditEvent />} />
             <Route path="/event-details/:id" element={<EventDetails />} />
-            
+
             {/* Finance */}
             <Route path="/bank-details" element={<BankDetails />} />
             <Route path="/invoices" element={<InvoiceList />} />
@@ -136,11 +143,15 @@ export default function App() {
 
             {/* Notifications */}
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/schedule" element={<MyClassesList />} />
+            <Route path="/my-players" element={<PlayersManagement />} />
+            <Route path="/temporary-players-list" element={<TemporaryPlayersList />} />
+            <Route path="/coach-notes" element={<CoachNotesPage />} />
 
             {/* Communication & Messages */}
-            <Route path="/communication" element={<ComingSoon />} />
-            <Route path="/messages" element={<ComingSoon />} />
-            <Route path="/announcements" element={<ComingSoon />} />
+            <Route path="/communication" element={<CommunicationPage />} />
+            <Route path="/messages" element={<CommunicationPage />} />
+            <Route path="/announcements" element={<CommunicationPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

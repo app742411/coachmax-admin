@@ -116,8 +116,9 @@ export const deleteCategory = async (id: string): Promise<any> => {
 
 // ================= TERMS =================
 
-export const getAllTerms = async (): Promise<any> => {
-  const res = await apiClient.get(ENDPOINTS.GET_ALL_TERMS);
+export const getAllTerms = async (year?: number): Promise<any> => {
+  const params = year ? { params: { year } } : undefined;
+  const res = await apiClient.get(ENDPOINTS.GET_ALL_TERMS, params);
   return res.data;
 };
 
@@ -309,6 +310,11 @@ export const getRegistrationRequests = async (page = 1, limit = 10, isMedicalCon
     params,
   });
   return response.data;
+};
+
+export const deleteTemporaryPlayer = async (tempPlayerId: string): Promise<any> => {
+  const res = await apiClient.delete(`/api/admin/temporary-players/${tempPlayerId}`);
+  return res.data;
 };
 
 export const getUnallocatedPlayers = async (

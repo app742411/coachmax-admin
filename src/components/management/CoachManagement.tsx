@@ -5,8 +5,8 @@ import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import { getAllCoaches, createCoach, updateCoach, deleteCoach } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
-import { Edit, Trash, User, Mail, Phone, Lock, ShieldCheck } from "../../icons/lucide-icons";
-import { Eye, EyeOff } from "lucide-react";
+import { User, Mail, Phone, Lock, ShieldCheck } from "../../icons/lucide-icons";
+import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const CoachManagement: React.FC = () => {
@@ -25,7 +25,7 @@ const CoachManagement: React.FC = () => {
     password: "",
     confirmPassword: "",
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -122,7 +122,7 @@ const CoachManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isEditing || formData.password) {
       if (formData.password.length < 6 || !/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
         toast.error("Password does not meet requirements");
@@ -203,8 +203,8 @@ const CoachManagement: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-3">
-                      <button onClick={() => handleOpenEdit(coach)} title="Modify" className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
-                      <button onClick={() => handleDeleteClick(coach._id)} title="Remove" className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
+                      <button onClick={() => handleOpenEdit(coach)} title="Modify" className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"><Pencil size={14} /></button>
+                      <button onClick={() => handleDeleteClick(coach._id)} title="Remove" className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -269,9 +269,9 @@ const CoachManagement: React.FC = () => {
                   placeholder={isEditing ? "••••••••" : "Target Password"}
                   required={!isEditing}
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)} 
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -299,9 +299,9 @@ const CoachManagement: React.FC = () => {
                   placeholder="Confirm Password"
                   required={!!formData.password}
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}

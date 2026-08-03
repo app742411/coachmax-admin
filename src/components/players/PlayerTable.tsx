@@ -1,4 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { useAppDispatch } from "../../store";
+import { setActiveRoomId } from "../../store/slices/chatSlice";
+import apiClient from "../../api/apiClient";
 import { Player } from "../../types/player";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
@@ -11,6 +15,7 @@ interface PlayerTableProps {
   onRejectPlayer?: (player: Player) => void;
   onAssignClass?: (player: Player) => void;
   onGenerateInvoice?: (player: Player) => void;
+  onAddCoachNote?: (player: Player) => void;
 }
 
 export default function PlayerTable({
@@ -22,9 +27,47 @@ export default function PlayerTable({
   onRejectPlayer,
   onAssignClass,
   onGenerateInvoice,
+  onAddCoachNote,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
+
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const handleChatWithParent = async (player: Player) => {
+    const parentId = (player.parentId as any)?.id || (player.parentId as any)?._id || player.parentId;
+    if (!parentId || typeof parentId !== "string") {
+      alert("Parent ID not found for this player.");
+      return;
+    }
+
+    try {
+      const res = await apiClient.post("/api/coach/chat/direct", { parentId });
+      if (res.data && res.data.success && res.data.data) {
+        const roomId = res.data.data._id;
+        dispatch(setActiveRoomId(roomId));
+
+        // Determine destination route based on role
+        const userStr = localStorage.getItem("user");
+        let isCoach = false;
+        if (userStr) {
+          try {
+            const parsed = JSON.parse(userStr);
+            isCoach = parsed?.role === "COACH";
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        navigate(isCoach ? "/messages" : "/communication");
+      } else {
+        alert(res.data?.message || "Failed to start conversation.");
+      }
+    } catch (error: any) {
+      console.error("Chat redirection error:", error);
+      alert(error?.response?.data?.message || "Failed to start direct conversation.");
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdownId(null);
@@ -212,66 +255,124 @@ export default function PlayerTable({
 
                     {openDropdownId === player._id && (
                       <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                        {onApprovePlayer && (
-                          <button
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onApprovePlayer(player);
-                              setOpenDropdownId(null);
-                            }}
-                          >
-                            Approve Player
-                          </button>
-                        )}
-                        {onRejectPlayer && (
-                          <button
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRejectPlayer(player);
-                              setOpenDropdownId(null);
-                            }}
-                          >
-                            Reject Player
-                          </button>
-                        )}
-                        {onAssignClass && (
-                          <button
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAssignClass(player);
-                              setOpenDropdownId(null);
-                            }}
-                          >
-                            Assign to Class
-                          </button>
-                        )}
-                        {onGenerateInvoice && (
-                          <button
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onGenerateInvoice(player);
-                              setOpenDropdownId(null);
-                            }}
-                          >
-                            Generate Invoice
-                          </button>
-                        )}
-                        {onDeletePlayer && (
-                          <button
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteModalPlayer(player);
-                              setOpenDropdownId(null);
-                            }}
-                          >
-                            Delete Player
-                          </button>
-                        )}
+                        {(() => {
+                          const userStr = localStorage.getItem("user");
+                          let isCoach = false;
+                          if (userStr) {
+                            try {
+                              const parsed = JSON.parse(userStr);
+                              if (parsed?.role === "COACH") {
+                                isCoach = true;
+                              }
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }
+
+                          if (isCoach) {
+                            return (
+                              <div className="py-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenDropdownId(null);
+                                    if (onAddCoachNote) {
+                                      onAddCoachNote(player);
+                                    }
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                  Add Coach Note
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenDropdownId(null);
+                                    handleChatWithParent(player);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-gray-100 dark:border-slate-700 mt-1 pt-1"
+                                >
+                                  Chat
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              {onApprovePlayer && (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onApprovePlayer(player);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  Approve Player
+                                </button>
+                              )}
+                              {onRejectPlayer && (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRejectPlayer(player);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  Reject Player
+                                </button>
+                              )}
+                              {onAssignClass && (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAssignClass(player);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  Assign to Class
+                                </button>
+                              )}
+                              <button
+                                className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdownId(null);
+                                  handleChatWithParent(player);
+                                }}
+                              >
+                                Chat
+                              </button>
+                              {onGenerateInvoice && (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50 transition-colors border-t border-gray-100 dark:border-slate-700 mt-1 pt-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onGenerateInvoice(player);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  Generate Invoice
+                                </button>
+                              )}
+                              {onDeletePlayer && (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteModalPlayer(player);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  Delete Player
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
                   </td>

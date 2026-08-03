@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { getRegistrationRequests } from "../api/adminApi";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { getRegistrationRequests, deleteTemporaryPlayer } from "../api/adminApi";
+import { getCoachTemporaryPlayers } from "../api/coaches";
 import { Player, PlayersResponse } from "../types/player";
 
 // We map the raw response to match the Player interface so we can reuse PlayerTable
@@ -61,4 +63,60 @@ export const useRegistrationRequests = (page = 1, limit = 10, isMedicalCondition
     },
   });
 };
+
+export const useCoachTemporaryPlayers = (page = 1, limit = 20) => {
+  return useQuery<PlayersResponse, Error>({
+    queryKey: ["coachTemporaryPlayers", page, limit],
+    queryFn: async () => {
+      const response = await getCoachTemporaryPlayers(page, limit);
+      if (!response || !response.data) {
+        return { success: true, limit: 20, totalPages: 1, users: [], total: 0, page: 1 };
+      }
+      return {
+        success: true,
+        limit: response.limit || 20,
+        totalPages: response.totalPages || 1,
+        users: response.data.map((p: any) => ({
+          _id: p._id,
+          firstName: p.firstName || "",
+          lastName: p.lastName || "",
+          fullName: p.fullName || "",
+          email: p.email || null,
+          phone: p.phone || null,
+          dob: p.dob || "",
+          gender: p.gender || "MALE",
+          profileImage: p.profileImage || "",
+          parentId: p.parentId || null,
+          preferredFoot: p.preferredFoot || "RIGHT",
+          weakFootRating: p.rating || 0,
+          school: p.temporaryClass?.name || p.temporaryClass?.className || "N/A",
+          status: p.playerStatus || "PENDING_APPROVAL",
+          category: p.temporaryClass ? { name: p.temporaryClass.name || p.temporaryClass.className } : undefined,
+          program: p.temporaryClass ? { name: p.temporaryClass.name || p.temporaryClass.className } : undefined,
+          paymentStatus: p.paymentStatus || "TRIAL",
+          jerseyNumber: p.jerseyNumber || 0,
+          isMedicalCondition: p.isMedicalCondition,
+          medicalConditionDetails: p.medicalConditionDetails,
+        })),
+        total: response.total || 0,
+        page: response.page || 1,
+      } as PlayersResponse;
+    },
+  });
+};
+
+export const useDeleteTemporaryPlayer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteTemporaryPlayer(id),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["coachTemporaryPlayers"] });
+      toast.success(data?.message || "Temporary player deleted successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to delete temporary player");
+    }
+  });
+};
+
 

@@ -4,14 +4,13 @@ import { useForm } from "react-hook-form";
 import { EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
-import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
 import { useLogin } from "../../hooks/useAuth";
 import { SignInCredentials } from "../../types/auth";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  const isChecked = false;
   const navigate = useNavigate();
 
   const { mutate: loginMutate, isPending, error: apiError } = useLogin();
@@ -53,7 +52,7 @@ export default function SignInForm() {
 
             {apiError && (
               <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-none text-sm">
-                {(apiError as any)?.response?.data?.message || apiError.message || "Failed to sign in. Please check your credentials."}
+                {(apiError as any)?.response?.data?.message || apiError.message || "User not found"}
               </div>
             )}
 
@@ -107,16 +106,16 @@ export default function SignInForm() {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-end">
+                  {/* <div className="flex items-center gap-3">
                     <Checkbox checked={isChecked} onChange={setIsChecked} />
                     <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
                       Keep me logged in
                     </span>
-                  </div>
+                  </div> */}
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                    className="text-sm text-red-500 hover:text-red-600 dark:text-red-400"
                   >
                     Forgot password?
                   </Link>

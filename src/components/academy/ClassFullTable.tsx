@@ -1,9 +1,14 @@
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
+import { useAppDispatch } from "../../store";
+import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
 import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer, useRemoveClassFromPlayer } from "../../hooks/usePlayers";
 import { Modal } from "../ui/modal";
 import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
+import PlayerDetailCard from "../players/PlayerDetailCard";
+import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 
 interface ClassFullTableProps {
   classId: string;
@@ -19,6 +24,43 @@ interface ClassFullTableProps {
 
 export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName, isExpanded = true, onToggle, index }: ClassFullTableProps) {
   const { data: schedule, isLoading } = useClassFullTable(classId);
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const handleChatWithParent = async (row: any) => {
+    const parentId = row.parent?.id || row.parent?._id || row.parentId;
+    if (!parentId) {
+      alert("Parent ID not found for this player.");
+      return;
+    }
+
+    try {
+      const res = await apiClient.post("/api/coach/chat/direct", { parentId });
+      if (res.data && res.data.success && res.data.data) {
+        const roomId = res.data.data._id;
+        dispatch(setActiveRoomId(roomId));
+
+        // Determine destination route based on role
+        const userStr = localStorage.getItem("user");
+        let isCoach = false;
+        if (userStr) {
+          try {
+            const parsed = JSON.parse(userStr);
+            isCoach = parsed?.role === "COACH";
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        navigate(isCoach ? "/messages" : "/communication");
+      } else {
+        alert(res.data?.message || "Failed to start conversation.");
+      }
+    } catch (error: any) {
+      console.error("Chat redirection error:", error);
+      alert(error?.response?.data?.message || "Failed to start direct conversation.");
+    }
+  };
+
   const markSingleMutation = useMarkSingleAttendance(classId);
   const markBulkMutation = useMarkBulkAttendance(classId);
   const assignClassesMutation = useAssignClassesToPlayer();
@@ -28,8 +70,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
   const removeClassMutation = useRemoveClassFromPlayer();
+  const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
   const queryClient = useQueryClient();
   const [invoicePlayer, setInvoicePlayer] = useState<any | null>(null);
+  const [coachNotePlayer, setCoachNotePlayer] = useState<{ playerId: string; name: string; classId?: string } | null>(null);
 
   const handleUpdateStatus = async (userId: string, paymentStatus: string) => {
     try {
@@ -297,7 +341,21 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
                         <span className="text-[10px] font-bold">{row.name.charAt(0)}</span>
                       </div>
-                      <span className="font-bold text-slate-700 dark:text-slate-200">{row.name}</span>
+                      <button
+                        onClick={() => setSelectedPlayer({
+                          _id: row.playerId,
+                          fullName: row.name,
+                          dob: row.dob,
+                          jerseyNumber: row.jerseyNumber || "-",
+                          preferredFoot: row.preferredFoot || "N/A",
+                          status: row.paymentStatus || "PENDING",
+                          program: schedule?.program,
+                          category: schedule?.category
+                        })}
+                        className="font-bold text-slate-700 dark:text-slate-200 hover:text-[#0047FF] dark:hover:text-[#336eff] text-left hover:underline transition-all"
+                      >
+                        {row.name}
+                      </button>
                     </div>
                   </td>
                   <td className="sticky left-[190px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 font-semibold text-slate-500 min-w-[90px] w-[90px] border-b border-slate-50 dark:border-slate-800/40">{new Date(row.dob).toLocaleDateString()}</td>
@@ -338,67 +396,129 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                     </div>
                     {openMenuId === row.playerId && (
                       <div className={`absolute right-10 ${idx >= 3 || (players.length > 1 && idx >= players.length - 2) ? 'bottom-8' : 'top-8'} w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-[500] animate-in fade-in zoom-in-95 duration-100 py-1.5 overflow-hidden`}>
-                        <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
-                          Update Status
-                        </div>
-                        {["TRIAL", "UNPAID", "PAID", "OVER_DUE"]
-                          .filter(status => status !== row.paymentStatus)
-                          .map((status) => {
-                            let activeClasses = "";
-
-                            if (status === "PAID") {
-                              activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20";
-                            } else if (status === "UNPAID") {
-                              activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20";
-                            } else if (status === "OVER_DUE" || status === "TRIAL") {
-                              activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20";
-                            }
-
-                            return (
-                              <button
-                                key={status}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  handleUpdateStatus(row.playerId, status);
-                                }}
-                                className={`w-full text-left px-4 py-1.5 text-xs font-semibold transition-colors ${activeClasses}`}
-                              >
-                                {status.replace("_", " ")}
-                              </button>
-                            );
-                          })}
-                        <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(null);
-                              setInvoicePlayer({
-                                _id: row.playerId,
-                                name: row.name,
-                                parentId: row.parent?.id || row.parent?._id || row.parentId
-                              });
-                            }}
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                          >
-                            Generate Invoice
-                          </button>
-                        </div>
-                        <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(null);
-                              if (window.confirm("Are you sure you want to remove this player from this class?")) {
-                                removeClassMutation.mutate({ userId: row.playerId, classId });
+                        {(() => {
+                          const userStr = localStorage.getItem("user");
+                          let isCoach = false;
+                          if (userStr) {
+                            try {
+                              const parsed = JSON.parse(userStr);
+                              if (parsed?.role === "COACH") {
+                                isCoach = true;
                               }
-                            }}
-                            disabled={removeClassMutation.isPending}
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-50"
-                          >
-                            Remove Class
-                          </button>
-                        </div>
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }
+
+                          if (isCoach) {
+                            return (
+                              <div className="py-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    setCoachNotePlayer({
+                                      playerId: row.playerId,
+                                      name: row.name,
+                                      classId
+                                    });
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                  Add Coach Note
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    handleChatWithParent(row);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-1"
+                                >
+                                  Chat
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
+                                Update Status
+                              </div>
+                              {["TRIAL", "UNPAID", "PAID", "OVER_DUE"]
+                                .filter(status => status !== row.paymentStatus)
+                                .map((status) => {
+                                  let activeClasses = "";
+
+                                  if (status === "PAID") {
+                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20";
+                                  } else if (status === "UNPAID") {
+                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20";
+                                  } else if (status === "OVER_DUE" || status === "TRIAL") {
+                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20";
+                                  }
+
+                                  return (
+                                    <button
+                                      key={status}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(null);
+                                        handleUpdateStatus(row.playerId, status);
+                                      }}
+                                      className={`w-full text-left px-4 py-1.5 text-xs font-semibold transition-colors ${activeClasses}`}
+                                    >
+                                      {status.replace("_", " ")}
+                                    </button>
+                                  );
+                                })}
+                              <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    handleChatWithParent(row);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                  Chat
+                                </button>
+                              </div>
+                              <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    setInvoicePlayer({
+                                      _id: row.playerId,
+                                      name: row.name,
+                                      parentId: row.parent?.id || row.parent?._id || row.parentId
+                                    });
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-1"
+                                >
+                                  Generate Invoice
+                                </button>
+                              </div>
+                              <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    if (window.confirm("Are you sure you want to remove this player from this class?")) {
+                                      removeClassMutation.mutate({ userId: row.playerId, classId });
+                                    }
+                                  }}
+                                  disabled={removeClassMutation.isPending}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-50"
+                                >
+                                  Remove Class
+                                </button>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
                   </td>
@@ -493,6 +613,23 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
         onClose={() => setInvoicePlayer(null)}
         player={invoicePlayer}
       />
+
+      {selectedPlayer && (
+        <PlayerDetailCard
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
+
+      {coachNotePlayer && (
+        <AddCoachNoteModal
+          isOpen={coachNotePlayer !== null}
+          onClose={() => setCoachNotePlayer(null)}
+          playerId={coachNotePlayer.playerId}
+          playerName={coachNotePlayer.name}
+          classId={coachNotePlayer.classId}
+        />
+      )}
     </div>
   );
 }

@@ -133,24 +133,43 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         </div>
 
         {/* Right Side: Sidebar Cards Panel */}
-        <div className="w-full xl:w-[350px] shrink-0 flex flex-col gap-4">
-          <SidebarPlayersFilter
-            category={sidebarCategory}
-            program={sidebarProgram}
-            search={sidebarSearch}
-            onCategoryChange={setSidebarCategory}
-            onProgramChange={setSidebarProgram}
-            onSearchChange={setSidebarSearch}
-          />
-          {(playerType === "BOTH" || playerType === "UNALLOCATED") && (
-            <UnallocatedPlayersCard players={unallocatedPlayers || []} />
-          )}
-          {(playerType === "BOTH" || playerType === "ALLOCATED") && (
-            <AllocatedPlayersCard players={allocatedPlayers || []} />
-          )}
-          {/* <WaitlistCard items={mockWaitlist} /> */}
-          {/* <TrialsCard items={mockTrials} /> */}
-        </div>
+        {(() => {
+          const userStr = localStorage.getItem("user");
+          let isCoach = false;
+          if (userStr) {
+            try {
+              const parsed = JSON.parse(userStr);
+              if (parsed?.role === "COACH") {
+                isCoach = true;
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+
+          if (isCoach) return null;
+
+          return (
+            <div className="w-full xl:w-[350px] shrink-0 flex flex-col gap-4">
+              <SidebarPlayersFilter
+                category={sidebarCategory}
+                program={sidebarProgram}
+                search={sidebarSearch}
+                onCategoryChange={setSidebarCategory}
+                onProgramChange={setSidebarProgram}
+                onSearchChange={setSidebarSearch}
+              />
+              {(playerType === "BOTH" || playerType === "UNALLOCATED") && (
+                <UnallocatedPlayersCard players={unallocatedPlayers || []} />
+              )}
+              {(playerType === "BOTH" || playerType === "ALLOCATED") && (
+                <AllocatedPlayersCard players={allocatedPlayers || []} />
+              )}
+              {/* <WaitlistCard items={mockWaitlist} /> */}
+              {/* <TrialsCard items={mockTrials} /> */}
+            </div>
+          );
+        })()}
       </div>
 
       <AddClassModal 

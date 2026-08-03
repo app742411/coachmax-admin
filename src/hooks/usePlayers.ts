@@ -2,12 +2,31 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile } from "../api/players";
 import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer } from "../api/adminApi";
+import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
 
 export const usePlayers = (page = 1, limit = 10) => {
   return useQuery<PlayersResponse, Error>({
     queryKey: ["players", page, limit],
-    queryFn: () => getPlayers(page, limit),
+    queryFn: () => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        return getCoachUniquePlayers(page, limit);
+      }
+      return getPlayers(page, limit);
+    },
   });
 };
 
@@ -81,7 +100,25 @@ export const useClassFullTable = (classId: string) => {
 export const useMarkSingleAttendance = (classId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => markSingleAttendance(classId, data),
+    mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        return markCoachSingleAttendance(classId, data);
+      }
+      return markSingleAttendance(classId, data);
+    },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
       toast.success(data?.message || "Attendance marked");
@@ -95,7 +132,25 @@ export const useMarkSingleAttendance = (classId: string) => {
 export const useMarkBulkAttendance = (classId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { sessionDate: string; records: { player: string; status: string }[] }) => markBulkAttendance(classId, data),
+    mutationFn: (data: { sessionDate: string; records: { player: string; status: string }[] }) => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        return markCoachBulkAttendance(classId, data);
+      }
+      return markBulkAttendance(classId, data);
+    },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
       toast.success(data?.message || "Bulk attendance marked");
@@ -110,7 +165,25 @@ export const useMarkBulkAttendance = (classId: string) => {
 export const useClassPlayers = (classId: string) => {
   return useQuery({
     queryKey: ["classPlayers", classId],
-    queryFn: () => getClassPlayers(classId),
+    queryFn: () => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        return getCoachClassPlayers(classId);
+      }
+      return getClassPlayers(classId);
+    },
     enabled: !!classId,
   });
 };
@@ -118,7 +191,25 @@ export const useClassPlayers = (classId: string) => {
 export const usePlayerProfile = (playerId: string | undefined) => {
   return useQuery({
     queryKey: ["playerProfile", playerId],
-    queryFn: () => getPlayerProfile(playerId!),
+    queryFn: () => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        return getCoachPlayerProfile(playerId!);
+      }
+      return getPlayerProfile(playerId!);
+    },
     enabled: !!playerId,
   });
 };
@@ -162,5 +253,51 @@ export const useRemoveClassFromPlayer = () => {
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || error.message || "Failed to remove player from class");
     }
+  });
+};
+
+export const useAddCoachNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { playerId: string; classId?: string; noteType: string; description: string }) =>
+      addCoachNote(data),
+    onSuccess: (data: any, variables: any) => {
+      queryClient.invalidateQueries({ queryKey: ["coachNotes", variables.playerId] });
+      toast.success(data?.message || "Coach note saved successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to add coach note");
+    }
+  });
+};
+
+export const useCoachNotes = (playerId: string, page = 1, limit = 20) => {
+  return useQuery({
+    queryKey: ["coachNotes", playerId, page, limit],
+    queryFn: () => getCoachNotes(playerId, page, limit),
+    enabled: !!playerId,
+  });
+};
+
+export const useUpdateCoachNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ noteId, data }: { noteId: string; data: { noteType: string; description: string } }) =>
+      updateCoachNote(noteId, data),
+    onSuccess: (data: any, _variables: any) => {
+      // Invalidate the cache to reload
+      queryClient.invalidateQueries({ queryKey: ["coachNotes"] });
+      toast.success(data?.message || "Coach note updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to update coach note");
+    }
+  });
+};
+
+export const useCoachAllNotes = (page = 1, limit = 20) => {
+  return useQuery({
+    queryKey: ["coachAllNotes", page, limit],
+    queryFn: () => getCoachAllNotes(page, limit),
   });
 };

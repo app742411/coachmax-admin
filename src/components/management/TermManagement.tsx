@@ -5,7 +5,8 @@ import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import { getAllTerms, createTerm, updateTerm, deleteTerm } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
-import { Edit, Trash, Calendar } from "../../icons/lucide-icons";
+import { Calendar } from "../../icons/lucide-icons";
+import { Pencil, Trash2 } from "lucide-react";
 import DatePicker from "../form/date-picker";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
@@ -17,7 +18,7 @@ const TermManagement: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
-    
+
     const [formData, setFormData] = useState({
         name: "",
         year: new Date().getFullYear(),
@@ -30,11 +31,16 @@ const TermManagement: React.FC = () => {
         return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
     };
 
+    // ── Year filter ────────────────────────────────────────────────
+    const currentYear = new Date().getFullYear();
+    const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+    const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
+
     // ── Queries ─────────────────────────────────────────────────────
 
     const { data: termsData, isLoading: loading } = useQuery({
-        queryKey: ["terms"],
-        queryFn: getAllTerms,
+        queryKey: ["terms", selectedYear],
+        queryFn: () => getAllTerms(selectedYear),
     });
     const terms = Array.isArray(termsData) ? termsData : (termsData?.data || []);
 
@@ -173,7 +179,18 @@ const TermManagement: React.FC = () => {
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">Academy Terms</h3>
                     <p className="text-xs text-gray-500">Define seasonal training windows</p>
                 </div>
-                <Button onClick={handleOpenAdd} size="sm">Add Term</Button>
+                <div className="flex items-center gap-3">
+                    <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        className="rounded-none border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-700 focus:border-brand-500 focus:bg-white outline-none transition-all cursor-pointer appearance-none"
+                    >
+                        {yearOptions.map((y) => (
+                            <option key={y} value={y}>Year {y}</option>
+                        ))}
+                    </select>
+                    <Button onClick={handleOpenAdd} size="sm">Add Term</Button>
+                </div>
             </div>
 
             <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
@@ -214,8 +231,8 @@ const TermManagement: React.FC = () => {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-3">
-                                            <button onClick={() => handleOpenEdit(term)} className="p-2 text-gray-400 hover:text-brand-500 transition-colors"><Edit size={16} /></button>
-                                            <button onClick={() => handleDeleteClick(term._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Trash size={16} /></button>
+                                            <button onClick={() => handleOpenEdit(term)} className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"><Pencil size={14} /></button>
+                                            <button onClick={() => handleDeleteClick(term._id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -232,25 +249,25 @@ const TermManagement: React.FC = () => {
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="col-span-2">
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Term Name</label>
-                            <input 
-                                type="text" 
-                                name="name" 
-                                value={formData.name} 
-                                onChange={handleChange} 
-                                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all" 
+                            <input
+                                type="text"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
                                 placeholder="Summer Term"
-                                required 
+                                required
                             />
                         </div>
                         <div className="col-span-1">
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Year</label>
-                            <input 
-                                type="number" 
-                                name="year" 
-                                value={formData.year} 
-                                onChange={handleChange} 
-                                className="w-full rounded-none border border-gray-100 bg-gray-50 px-3 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all" 
-                                required 
+                            <input
+                                type="number"
+                                name="year"
+                                value={formData.year}
+                                onChange={handleChange}
+                                className="w-full rounded-none border border-gray-100 bg-gray-50 px-3 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                                required
                             />
                         </div>
                     </div>
