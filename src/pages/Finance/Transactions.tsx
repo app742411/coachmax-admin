@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { usePayments, useApprovePayment, useRejectPayment, useDashboardPayments } from "../../hooks/usePayments";
+import { Modal } from "../../components/ui/modal";
+import Button from "../../components/ui/button/Button";
+import toast from "react-hot-toast";
 
 const formatDate = (dateString: string) => {
   if (!dateString) return "N/A";
@@ -21,11 +24,32 @@ export default function Transactions() {
   const [page, setPage] = useState(1);
   const limit = 10;
 
+  const [rejectingTxnId, setRejectingTxnId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   const { data, isLoading, isError } = usePayments(search, statusFilter, page, limit);
   const { data: dashboardData } = useDashboardPayments();
 
   const approvePaymentMutation = useApprovePayment();
   const rejectPaymentMutation = useRejectPayment();
+
+  const handleRejectSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingTxnId) return;
+    if (!rejectReason.trim()) {
+      toast.error("Please enter a rejection reason");
+      return;
+    }
+    rejectPaymentMutation.mutate(
+      { id: rejectingTxnId, reason: rejectReason.trim() },
+      {
+        onSuccess: () => {
+          setRejectingTxnId(null);
+          setRejectReason("");
+        }
+      }
+    );
+  };
 
   const transactions = data?.data || [];
   const total = data?.pagination?.total || 0;
@@ -93,6 +117,30 @@ export default function Transactions() {
             </select>
           </div>
         </div>
+
+      {/* Rejection Reason Modal */}
+      <Modal isOpen={!!rejectingTxnId} onClose={() => setRejectingTxnId(null)} className="max-w-[400px] p-6 lg:p-8 rounded-none shadow-2xl">
+        <h4 className="text-xl font-bold mb-2 tracking-tight">Reject Payment</h4>
+        <p className="text-xs text-gray-500 mb-6 font-medium">Please provide a reason for rejecting this transaction.</p>
+        <form onSubmit={handleRejectSubmit}>
+          <div className="mb-6">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Rejection Reason</label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full rounded-none border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-semibold focus:bg-white focus:border-brand-500 outline-none transition-all resize-none h-24"
+              placeholder="e.g. Invalid transaction screenshot"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setRejectingTxnId(null)}>Cancel</Button>
+            <Button type="submit" disabled={rejectPaymentMutation.isPending} className="bg-rose-600 hover:bg-rose-700 text-white">
+              {rejectPaymentMutation.isPending ? "Rejecting..." : "Confirm Rejection"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
         <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
           <div className="overflow-visible no-scrollbar">
@@ -198,7 +246,8 @@ export default function Transactions() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                rejectPaymentMutation.mutate(txn._id);
+                                setRejectingTxnId(txn._id);
+                                setRejectReason("");
                               }}
                               disabled={approvePaymentMutation.isPending || rejectPaymentMutation.isPending}
                               className="px-3 py-1 text-xs font-semibold bg-rose-100 text-rose-700 hover:bg-rose-200 rounded disabled:opacity-50 transition-colors"

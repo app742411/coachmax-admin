@@ -16,8 +16,8 @@ export const approvePayment = async (id: string) => {
   return response.data;
 };
 
-export const rejectPayment = async (id: string) => {
-  const response = await apiClient.post(`/api/admin/payments/${id}/reject`);
+export const rejectPayment = async (id: string, reason: string) => {
+  const response = await apiClient.post(`/api/admin/payments/${id}/reject`, { reason });
   return response.data;
 };
 

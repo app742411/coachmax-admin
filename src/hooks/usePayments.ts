@@ -27,7 +27,7 @@ export const useApprovePayment = () => {
 export const useRejectPayment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => rejectPayment(id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => rejectPayment(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       toast.success("Payment rejected successfully");
