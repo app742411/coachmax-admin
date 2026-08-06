@@ -38,7 +38,7 @@ export default function AcademyHeader({
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const catRes = await apiClient.get("/api/user/getCategories");
+        const catRes = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
         if (catRes.data && Array.isArray(catRes.data)) {
           setCategories(catRes.data);
           // Find the category matching the programType (e.g. "Academy" -> "ACADEMY")

@@ -25,7 +25,7 @@ export default function SidebarPlayersFilter({
     const fetchFilters = async () => {
       try {
         // Fetch Categories
-        const catRes = await apiClient.get("/api/user/getCategories");
+        const catRes = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
         if (catRes.data && Array.isArray(catRes.data)) {
           setCategories(catRes.data);
         }

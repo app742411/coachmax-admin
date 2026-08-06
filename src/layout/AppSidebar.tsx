@@ -8,7 +8,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string }[];
+  subItems?: { name: string; path: string; isEvent?: boolean }[];
 };
 
 type MenuSection = {
@@ -40,7 +40,7 @@ const AppSidebar: React.FC = () => {
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLUListElement | null>>({});
 
-  const [programsSubItems, setProgramsSubItems] = useState<{ name: string; path: string }[]>([
+  const [programsSubItems, setProgramsSubItems] = useState<{ name: string; path: string; isEvent?: boolean }[]>([
     { name: "Academy", path: "/program/academy" },
     { name: "Schools", path: "/program/schools" },
     { name: "Holiday Camps", path: "/program/holiday-camps" },
@@ -50,11 +50,12 @@ const AppSidebar: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await apiClient.get('/api/user/getCategories');
+        const response = await apiClient.get('/api/user/getCategories', { params: { isEvent: "all" } });
         if (response.data && Array.isArray(response.data)) {
           const formattedCategories = response.data.map((cat: any) => ({
             name: cat.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
             path: `/program/${cat.name.toLowerCase().replace(/\s+/g, '-')}`,
+            isEvent: !!cat.isEvent,
           }));
           setProgramsSubItems(formattedCategories);
         }
@@ -435,12 +436,17 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
-                      className={`menu-dropdown-item ${isActive(subItem.path)
+                      className={`menu-dropdown-item flex items-center justify-between gap-2 ${isActive(subItem.path)
                         ? "menu-dropdown-item-active"
                         : "menu-dropdown-item-inactive"
                         }`}
                     >
-                      {subItem.name}
+                      <span className="truncate">{subItem.name}</span>
+                      {subItem.isEvent && (
+                        <span className="px-1 py-px text-[7px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-none shrink-0 select-none">
+                          Holiday
+                        </span>
+                      )}
                     </Link>
                   </li>
                 ))}

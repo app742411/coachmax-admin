@@ -90,7 +90,7 @@ const CoachManagement: React.FC = () => {
     setFormData({
       fullName: coach.fullName || coach.name || "",
       email: coach.email || "",
-      phone: coach.phone || "",
+      phone: coach.phone || coach.mobile || "",
       password: "",
       confirmPassword: "",
     });
@@ -120,6 +120,14 @@ const CoachManagement: React.FC = () => {
     setFormData({ ...formData, password: p, confirmPassword: p });
   };
 
+  const handleToggleAccess = (coach: any) => {
+    const nextActive = coach.isActive === false ? true : false;
+    updateMutation.mutate({
+      id: coach._id,
+      data: { isActive: nextActive },
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -134,17 +142,22 @@ const CoachManagement: React.FC = () => {
       }
     }
 
-    const { confirmPassword, ...submissionData } = formData;
+    const payload: Record<string, any> = {
+      name: formData.fullName,
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      mobile: formData.phone,
+    };
+
+    if (formData.password) {
+      payload.password = formData.password;
+    }
 
     if (isEditing && selectedCoachId) {
-      if (!submissionData.password) {
-        const { password, ...rest } = submissionData;
-        updateMutation.mutate({ id: selectedCoachId, data: rest });
-      } else {
-        updateMutation.mutate({ id: selectedCoachId, data: submissionData });
-      }
+      updateMutation.mutate({ id: selectedCoachId, data: payload });
     } else {
-      createMutation.mutate(submissionData);
+      createMutation.mutate(payload);
     }
   };
 
@@ -163,28 +176,38 @@ const CoachManagement: React.FC = () => {
           <TableHeader className="sticky top-0 z-10 shadow-sm">
             <TableRow>
               <TableCell isHeader>Coach Detail</TableCell>
-              <TableCell isHeader>Contact Info</TableCell>
+              <TableCell isHeader>Email</TableCell>
+              <TableCell isHeader>Phone</TableCell>
+              <TableCell isHeader>Access</TableCell>
               <TableCell isHeader className="text-center">Actions</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={3} className="text-center py-20">
+              <TableRow><TableCell colSpan={5} className="text-center py-20">
                 <div className="flex flex-col items-center gap-3 text-gray-400">
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
                   <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Staff...</span>
                 </div>
               </TableCell></TableRow>
             ) : coaches.length === 0 ? (
-              <TableRow><TableCell colSpan={3} className="text-center py-20 text-gray-500 font-medium italic">No coaching staff records found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-20 text-gray-500 font-medium italic">No coaching staff records found.</TableCell></TableRow>
             ) : (
               coaches.map((coach: any) => (
                 <TableRow key={coach._id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-none bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm">
-                        <User size={18} />
-                      </div>
+                      {coach.profileImage ? (
+                        <img
+                          src={coach.profileImage.startsWith('http') ? coach.profileImage : `${import.meta.env.VITE_API_BASE_URL || ""}/${coach.profileImage.replace(/^\/+/, "")}`}
+                          alt={coach.fullName || coach.name || "Coach"}
+                          className="w-10 h-10 rounded-none object-cover border border-brand-100 shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-none bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm">
+                          <User size={18} />
+                        </div>
+                      )}
                       <div className="flex flex-col">
                         <span className="font-bold text-sm text-gray-900 dark:text-white/90 tracking-tight">{coach.fullName || coach.name || "N/A"}</span>
                         <span className="text-[10px] font-bold text-brand-500 uppercase flex items-center gap-1"><ShieldCheck size={10} /> Certified Coach</span>
@@ -192,14 +215,36 @@ const CoachManagement: React.FC = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 text-[11px] text-gray-500 font-medium lowercase">
-                        <Mail size={12} className="text-gray-300" /> {coach.email || "N/A"}
+                    {coach.email ? (
+                      <a
+                        href={`mailto:${coach.email}`}
+                        className="flex items-center gap-2 text-xs text-[#0047FF] hover:underline font-bold lowercase"
+                      >
+                        <Mail size={14} className="text-[#0047FF]" /> {coach.email}
+                      </a>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-gray-500 font-medium lowercase">
+                        <Mail size={14} className="text-gray-300" /> N/A
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-900 font-bold tracking-tight">
-                        <Phone size={12} className="text-brand-500" /> {coach.phone || coach.mobile || "N/A"}
-                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 text-xs text-gray-900 font-bold tracking-tight">
+                      <Phone size={12} className="text-brand-500" /> {coach.phone || coach.mobile || "N/A"}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => handleToggleAccess(coach)}
+                      disabled={updateMutation.isPending}
+                      className={`px-3 py-1 text-[10px] font-extrabold uppercase transition-all rounded-none border ${
+                        coach.isActive !== false
+                          ? "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20 hover:bg-green-100/50"
+                          : "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20 hover:bg-red-100/50"
+                      }`}
+                    >
+                      {coach.isActive !== false ? "Enabled" : "Disabled"}
+                    </button>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-3">

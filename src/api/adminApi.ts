@@ -95,7 +95,7 @@ export const getCoachById = async (id: string): Promise<any> => {
 // ================= CATEGORIES =================
 
 export const getAllCategories = async (): Promise<any> => {
-  const res = await apiClient.get(ENDPOINTS.GET_ALL_CATEGORIES);
+  const res = await apiClient.get(ENDPOINTS.GET_ALL_CATEGORIES, { params: { isEvent: "all" } });
   return res.data;
 };
 

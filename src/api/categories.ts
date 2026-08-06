@@ -1,7 +1,7 @@
 import apiClient from "./apiClient";
 
 export const getAllCategories = async (): Promise<any> => {
-  const res = await apiClient.get("/api/user/getCategories");
+  const res = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
   return res.data;
 };
 

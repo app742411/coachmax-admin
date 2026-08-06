@@ -37,7 +37,7 @@ const CoachingManagementPage: React.FC = () => {
   const [catEditing, setCatEditing] = useState(false);
   const [catEditId, setCatEditId] = useState<string | null>(null);
   const [catDeleteId, setCatDeleteId] = useState<string | null>(null);
-  const [catForm, setCatForm] = useState({ name: "" });
+  const [catForm, setCatForm] = useState({ name: "", isEvent: false });
 
   // ── Program Modal State ────────────────────────────────────────
   const [progModalOpen, setProgModalOpen] = useState(false);
@@ -139,7 +139,7 @@ const CoachingManagementPage: React.FC = () => {
   };
 
   const handleCatAdd = () => {
-    setCatForm({ name: "" });
+    setCatForm({ name: "", isEvent: false });
     setCatEditing(false);
     setCatEditId(null);
     setCatModalOpen(true);
@@ -147,7 +147,7 @@ const CoachingManagementPage: React.FC = () => {
 
   const handleCatEdit = (e: React.MouseEvent, cat: any) => {
     e.stopPropagation();
-    setCatForm({ name: cat.name });
+    setCatForm({ name: cat.name, isEvent: !!cat.isEvent });
     setCatEditing(true);
     setCatEditId(cat._id);
     setCatModalOpen(true);
@@ -156,6 +156,15 @@ const CoachingManagementPage: React.FC = () => {
   const handleCatDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setCatDeleteId(id);
+  };
+
+  const handleCatNameChange = (val: string) => {
+    const isHoliday = val.toLowerCase().includes("holiday");
+    setCatForm(prev => ({
+      ...prev,
+      name: val,
+      isEvent: isHoliday ? true : prev.isEvent
+    }));
   };
 
   const handleCatSubmit = (e: React.FormEvent) => {
@@ -253,9 +262,20 @@ const CoachingManagementPage: React.FC = () => {
                           ${isSelected ? "bg-white/20 text-white" : "bg-brand-50 text-brand-500"}`}>
                             <Tag size={11} />
                           </div>
-                          <span className={`text-sm font-semibold truncate ${isSelected ? "text-white" : ""}`}>
-                            {cat.name}
-                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className={`text-sm font-semibold truncate ${isSelected ? "text-white" : ""}`}>
+                              {cat.name}
+                            </span>
+                            {cat.isEvent && (
+                              <span className={`text-[9px] font-bold uppercase tracking-wider rounded-none self-start ${
+                                isSelected
+                                  ? "text-white/80"
+                                  : "text-amber-600 dark:text-amber-400"
+                              }`}>
+                                Holiday Program
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isSelected ? "opacity-100" : ""}`}>
                           <span
@@ -386,11 +406,22 @@ const CoachingManagementPage: React.FC = () => {
             <input
               type="text"
               value={catForm.name}
-              onChange={(e) => setCatForm({ name: e.target.value })}
+              onChange={(e) => handleCatNameChange(e.target.value)}
               className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
               placeholder="e.g. Academy"
               required
             />
+          </div>
+          <div className="mb-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={catForm.isEvent}
+                onChange={(e) => setCatForm(prev => ({ ...prev, isEvent: e.target.checked }))}
+                className="w-4 h-4 text-[#031549] border-gray-300 rounded-none focus:ring-[#031549]"
+              />
+              <span className="text-xs font-semibold text-gray-700">Holiday Program</span>
+            </label>
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
             <Button variant="outline" onClick={() => setCatModalOpen(false)}>Cancel</Button>

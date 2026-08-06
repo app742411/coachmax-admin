@@ -35,7 +35,7 @@ export default function AddClassModal({ isOpen, onClose, onSuccess, classToEdit 
         try {
           const [termsRes, catRes, coachRes] = await Promise.all([
             apiClient.get("/api/admin/getAllTerms"),
-            apiClient.get("/api/user/getCategories"),
+            apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } }),
             apiClient.get("/api/admin/getAllCoaches")
           ]);
           

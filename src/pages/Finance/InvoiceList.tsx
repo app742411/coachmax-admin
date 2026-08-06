@@ -43,17 +43,17 @@ export default function InvoiceList() {
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex-1 max-w-sm relative">
-            <input 
-              type="text" 
-              placeholder="Search by Invoice # (e.g. INV-2026)" 
-              value={search} 
+            <input
+              type="text"
+              placeholder="Search by Invoice # (e.g. INV-2026)"
+              value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-none border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900"
             />
           </div>
           <div className="flex items-center gap-3">
-            <select 
-              value={paymentStatus} 
+            <select
+              value={paymentStatus}
               onChange={(e) => setPaymentStatus(e.target.value)}
               className="rounded-none border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900"
             >
@@ -93,8 +93,8 @@ export default function InvoiceList() {
                   </tr>
                 ) : (
                   invoices.map((inv: any) => (
-                    <tr 
-                      key={inv._id} 
+                    <tr
+                      key={inv._id}
                       onClick={() => navigate(`/invoices/${inv._id}`)}
                       className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all"
                     >
@@ -133,14 +133,14 @@ export default function InvoiceList() {
                 Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} entries
               </span>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={handlePreviousPage}
                   disabled={page === 1}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
                 >
                   Previous
                 </button>
-                <button 
+                <button
                   onClick={handleNextPage}
                   disabled={page === totalPages}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"

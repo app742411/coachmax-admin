@@ -23,7 +23,7 @@ export default function Transactions() {
 
   const { data, isLoading, isError } = usePayments(search, statusFilter, page, limit);
   const { data: dashboardData } = useDashboardPayments();
-  
+
   const approvePaymentMutation = useApprovePayment();
   const rejectPaymentMutation = useRejectPayment();
 
@@ -69,17 +69,17 @@ export default function Transactions() {
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex-1 max-w-sm relative">
-            <input 
-              type="text" 
-              placeholder="Search Transactions (e.g. TXN-123)" 
-              value={search} 
+            <input
+              type="text"
+              placeholder="Search Transactions (e.g. TXN-123)"
+              value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-none border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900"
             />
           </div>
           <div className="flex items-center gap-3">
-            <select 
-              value={statusFilter} 
+            <select
+              value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setPage(1);
@@ -123,16 +123,15 @@ export default function Transactions() {
                   </tr>
                 ) : (
                   transactions.map((txn: any) => (
-                    <tr 
-                      key={txn._id} 
+                    <tr
+                      key={txn._id}
                       onClick={() => {
                         if (txn.invoice?._id) {
                           navigate(`/invoices/${txn.invoice._id}`);
                         }
                       }}
-                      className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${
-                        txn.invoice?._id ? "cursor-pointer" : ""
-                      }`}
+                      className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${txn.invoice?._id ? "cursor-pointer" : ""
+                        }`}
                     >
                       <td className="py-4 px-4">
                         <div className="font-semibold text-slate-500">{txn.transactionId || txn._id.substring(txn._id.length - 8)}</div>
@@ -158,10 +157,10 @@ export default function Transactions() {
                       <td className="py-4 px-3 font-semibold text-slate-500">{formatDate(txn.createdAt)}</td>
                       <td className="py-4 px-3">
                         {txn.paymentScreenshot ? (
-                          <a 
-                            href={`${import.meta.env.VITE_API_BASE_URL}/${txn.paymentScreenshot}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={`${import.meta.env.VITE_API_BASE_URL}/${txn.paymentScreenshot}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             className="text-xs font-bold text-[#0047FF] hover:underline"
                           >
@@ -222,14 +221,14 @@ export default function Transactions() {
                 Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} entries
               </span>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={handlePreviousPage}
                   disabled={page === 1}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
                 >
                   Previous
                 </button>
-                <button 
+                <button
                   onClick={handleNextPage}
                   disabled={page === totalPages}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
