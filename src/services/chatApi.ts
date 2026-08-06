@@ -83,4 +83,9 @@ export const chatApi = {
     const response = await apiClient.get(`/api/coach/chat/class/${classId}/parents`);
     return response.data;
   },
+
+  broadcastToClass: async (classId: string, text: string) => {
+    const response = await apiClient.post(`/api/coach/chat/broadcast/${classId}`, { text });
+    return response.data;
+  },
 };

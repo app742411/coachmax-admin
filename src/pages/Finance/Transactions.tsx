@@ -1,9 +1,21 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { usePayments, useApprovePayment, useRejectPayment, useDashboardPayments } from "../../hooks/usePayments";
 
+const formatDate = (dateString: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "N/A";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export default function Transactions() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
@@ -111,11 +123,27 @@ export default function Transactions() {
                   </tr>
                 ) : (
                   transactions.map((txn: any) => (
-                    <tr key={txn._id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
+                    <tr 
+                      key={txn._id} 
+                      onClick={() => {
+                        if (txn.invoice?._id) {
+                          navigate(`/invoices/${txn.invoice._id}`);
+                        }
+                      }}
+                      className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${
+                        txn.invoice?._id ? "cursor-pointer" : ""
+                      }`}
+                    >
                       <td className="py-4 px-4">
                         <div className="font-semibold text-slate-500">{txn.transactionId || txn._id.substring(txn._id.length - 8)}</div>
                         {txn.invoice?.invoiceNumber && (
-                          <div className="text-xs font-bold text-[#0047FF]">INV: {txn.invoice.invoiceNumber}</div>
+                          <Link
+                            to={`/invoices/${txn.invoice._id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs font-bold text-[#0047FF] hover:underline block"
+                          >
+                            INV: {txn.invoice.invoiceNumber}
+                          </Link>
                         )}
                       </td>
                       <td className="py-4 px-3">
@@ -127,10 +155,16 @@ export default function Transactions() {
                         <div className="font-bold text-slate-800 dark:text-slate-200">${txn.amount || 0} <span className="font-semibold text-slate-500 text-xs">({txn.paymentMethod || "UNKNOWN"})</span></div>
                         {txn.remarks && <div className="text-xs text-slate-500 max-w-[200px] truncate" title={txn.remarks}>{txn.remarks}</div>}
                       </td>
-                      <td className="py-4 px-3 font-semibold text-slate-500">{new Date(txn.createdAt).toLocaleDateString()}</td>
+                      <td className="py-4 px-3 font-semibold text-slate-500">{formatDate(txn.createdAt)}</td>
                       <td className="py-4 px-3">
                         {txn.paymentScreenshot ? (
-                          <a href={`${import.meta.env.VITE_API_BASE_URL}/${txn.paymentScreenshot}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-[#0047FF] hover:underline">
+                          <a 
+                            href={`${import.meta.env.VITE_API_BASE_URL}/${txn.paymentScreenshot}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs font-bold text-[#0047FF] hover:underline"
+                          >
                             View Image
                           </a>
                         ) : (
@@ -153,14 +187,20 @@ export default function Transactions() {
                         {txn.status === "PENDING" && (
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() => approvePaymentMutation.mutate(txn._id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                approvePaymentMutation.mutate(txn._id);
+                              }}
                               disabled={approvePaymentMutation.isPending || rejectPaymentMutation.isPending}
                               className="px-3 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded disabled:opacity-50 transition-colors"
                             >
                               Approve
                             </button>
                             <button
-                              onClick={() => rejectPaymentMutation.mutate(txn._id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                rejectPaymentMutation.mutate(txn._id);
+                              }}
                               disabled={approvePaymentMutation.isPending || rejectPaymentMutation.isPending}
                               className="px-3 py-1 text-xs font-semibold bg-rose-100 text-rose-700 hover:bg-rose-200 rounded disabled:opacity-50 transition-colors"
                             >

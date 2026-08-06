@@ -61,7 +61,7 @@ export default function ClassesList() {
   return (
     <>
       <PageMeta title="Classes Management | CoachMax" description="Manage your classes" />
-      
+
       <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Classes Management</h1>
@@ -72,7 +72,7 @@ export default function ClassesList() {
           </div>
         </div>
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={() => { setClassToEdit(null); setIsModalOpen(true); }}
             className="inline-flex items-center justify-center rounded-none bg-[#0047FF] px-5 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-theme-xs"
           >
@@ -83,11 +83,11 @@ export default function ClassesList() {
 
       <div className="flex flex-col xl:flex-row gap-2 items-start w-full">
         <div className="flex-1 w-full min-w-0">
-          <ClassFilters 
+          <ClassFilters
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
           />
-          <ClassTable 
+          <ClassTable
             classes={filteredClasses}
             isLoading={isLoading}
             onEditClass={(cls) => {
@@ -101,20 +101,20 @@ export default function ClassesList() {
 
 
 
-        <AddClassModal 
-          isOpen={isModalOpen} 
-          classToEdit={classToEdit}
-          onClose={() => {
-            setIsModalOpen(false);
-            setClassToEdit(null);
-          }} 
-          onSuccess={() => {
-            setIsLoading(true);
-            fetchClasses();
-          }} 
-        />
+      <AddClassModal
+        isOpen={isModalOpen}
+        classToEdit={classToEdit}
+        onClose={() => {
+          setIsModalOpen(false);
+          setClassToEdit(null);
+        }}
+        onSuccess={() => {
+          setIsLoading(true);
+          fetchClasses();
+        }}
+      />
 
-      <ViewClassPlayersModal 
+      <ViewClassPlayersModal
         isOpen={!!viewPlayersClassId}
         onClose={() => setViewPlayersClassId(null)}
         classId={viewPlayersClassId}

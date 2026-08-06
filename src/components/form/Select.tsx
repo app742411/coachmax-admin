@@ -63,7 +63,7 @@ const Select: React.FC<SelectProps> = ({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={triggerClassName || `w-full flex items-center justify-between appearance-none rounded-none border border-gray-100 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 focus:bg-white focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] outline-none transition-all shadow-theme-xs ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer group"}`}
+        className={triggerClassName || `h-11 w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2.5 text-sm shadow-theme-xs outline-hidden focus:outline-hidden focus:ring-3 bg-white dark:bg-gray-900 text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-800 transition-all ${disabled ? "opacity-40 cursor-not-allowed bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700" : "cursor-pointer group"}`}
       >
         <div className="flex items-center gap-2 overflow-hidden">
           {Icon && <Icon size={iconSize} className="text-gray-400 shrink-0 group-hover:text-brand-500 transition-colors" />}
@@ -83,11 +83,11 @@ const Select: React.FC<SelectProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSelect(String(option.value))}
-                  className={`w-full text-left px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors
                     ${
                       String(selectedValue) === String(option.value)
-                        ? "bg-[#0047FF] text-white"
-                        : "text-slate-700 dark:text-slate-300 hover:bg-[#0047FF] hover:text-white dark:hover:bg-[#0047FF] dark:hover:text-white"
+                        ? "bg-brand-500 text-white"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     }
                   `}
                 >

@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { useAppDispatch } from "../../store";
@@ -9,6 +10,7 @@ import { Modal } from "../ui/modal";
 import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
 import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
+import { chatApi } from "../../services/chatApi";
 
 interface ClassFullTableProps {
   classId: string;
@@ -74,6 +76,48 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const queryClient = useQueryClient();
   const [invoicePlayer, setInvoicePlayer] = useState<any | null>(null);
   const [coachNotePlayer, setCoachNotePlayer] = useState<{ playerId: string; name: string; classId?: string } | null>(null);
+
+  const handleClassChat = async () => {
+    try {
+      // Use broadcastChatRoomId directly from the schedule data (returned by getClassFullTable)
+      let roomId = schedule?.broadcastChatRoomId || "";
+
+      // If no room exists yet, create one via broadcast API
+      if (!roomId) {
+        const broadcastRes = await chatApi.broadcastToClass(classId, "Broadcast channel active");
+        if (broadcastRes && broadcastRes.success) {
+          toast.success(broadcastRes.message || "Broadcast message sent successfully");
+          if (broadcastRes.data?.room?._id) {
+            roomId = broadcastRes.data.room._id;
+          }
+        } else if (broadcastRes && !broadcastRes.success) {
+          toast.error(broadcastRes.message || "Failed to send broadcast");
+        }
+      }
+
+      if (roomId) {
+        dispatch(setActiveRoomId(roomId));
+      } else {
+        dispatch(setActiveRoomId(classId));
+      }
+
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          isCoach = parsed?.role === "COACH";
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      navigate(isCoach ? "/messages" : "/communication");
+    } catch (error) {
+      console.error("Error setting up class broadcast:", error);
+      dispatch(setActiveRoomId(classId));
+      navigate("/messages");
+    }
+  };
 
   const handleUpdateStatus = async (userId: string, paymentStatus: string) => {
     try {
@@ -279,6 +323,21 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
               <span className="text-[#38bdf8]">{programName || schedule.program?.name || "N/A"}</span>
             </span>
           </div>
+          {players.length > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClassChat();
+              }}
+              className="flex items-center gap-1.5 border border-white/20 hover:bg-white/10 text-white px-3 py-1.5 rounded-[4px] text-[10px] font-semibold transition-all active:scale-95 cursor-pointer ml-2 shadow-sm"
+              title="Text Class Parents"
+            >
+              <svg className="w-3.5 h-3.5 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              {schedule?.broadcastChatRoomId ? "Text Class" : "Chat Active"}
+            </button>
+          )}
         </div>
         {onToggle && (
           <div className="ml-2 pl-4 border-l border-white/10 shrink-0">

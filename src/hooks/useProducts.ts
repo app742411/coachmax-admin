@@ -12,6 +12,30 @@ import {
   ProductsResponse,
   ProductResponse,
 } from "../types/product";
+import { getStoreProducts, getStoreProductDetails } from "../api/orderApi";
+
+export const useStoreProducts = (params?: {
+  search?: string;
+  category?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+  availabilityStatus?: string;
+}) => {
+  return useQuery<any, Error>({
+    queryKey: ["storeProducts", params],
+    queryFn: () => getStoreProducts(params),
+    placeholderData: (previousData: any) => previousData,
+  });
+};
+
+export const useStoreProductDetails = (id: string) => {
+  return useQuery<any, Error>({
+    queryKey: ["storeProduct", id],
+    queryFn: () => getStoreProductDetails(id),
+    enabled: !!id,
+  });
+};
 
 export const useProducts = (page = 1, limit = 10) => {
   return useQuery<ProductsResponse, Error>({

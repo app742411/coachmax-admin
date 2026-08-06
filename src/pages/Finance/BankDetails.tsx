@@ -3,6 +3,8 @@ import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { getBankDetails, updateBankDetails, BankDetailsData } from "../../api/financeApi";
 import toast from "react-hot-toast";
+import PaymentSettings from "../../components/finance/PaymentSettings";
+
 
 export default function BankDetails() {
   const [formData, setFormData] = useState<BankDetailsData>({
@@ -89,6 +91,7 @@ export default function BankDetails() {
       <PageMeta title="CoachMax | Bank Details" description="Manage Bank Details" />
       <div className="space-y-6">
         <PageBreadcrumb pageTitle="Bank Details" items={[{ name: "Finance", path: "/finance" }]} />
+        <PaymentSettings />
         <div className="rounded-none border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

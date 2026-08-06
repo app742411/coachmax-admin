@@ -9,6 +9,7 @@ import {
 import { broadcastApi } from "../../services/broadcastApi";
 import { BroadcastCard } from "../../components/chat/BroadcastCard";
 import { toast } from "react-hot-toast";
+import { getCoachGetClasses } from "../../api/coaches";
 
 export const BroadcastList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -19,21 +20,29 @@ export const BroadcastList: React.FC = () => {
 
   const loadRooms = async () => {
     try {
-      const res = await broadcastApi.getBroadcastRooms();
+      const res = await getCoachGetClasses();
       if (res.success && Array.isArray(res.data)) {
-        const mapped = res.data.map((r: any) => ({
-          classId: r._id,
-          className: r.name || "Class Broadcast",
-        }));
+        // Only include classes that have a broadcastChatRoomId
+        const mapped = res.data
+          .filter((cls: any) => cls.broadcastChatRoomId)
+          .map((cls: any) => ({
+            classId: cls.broadcastChatRoomId,
+            className: cls.name || cls.className || "Class Broadcast",
+          }));
         dispatch(setBroadcastRooms(mapped));
         if (mapped.length > 0 && !activeClassId) {
           dispatch(setActiveClassId(mapped[0].classId));
         }
+      } else if (!res.success) {
+        toast.error(res.message || "Failed to load classes.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Load broadcast rooms error:", err);
+      const msg = err?.response?.data?.message || err?.message || "Failed to load classes.";
+      toast.error(msg);
     }
   };
+
 
   const loadFeed = async (classId: string) => {
     dispatch(setLoading(true));
@@ -52,14 +61,19 @@ export const BroadcastList: React.FC = () => {
         dispatch(setAnnouncements(mappedAnnouncements));
       } else {
         dispatch(setAnnouncements([]));
+        if (!res.success && res.message) {
+          toast.error(res.message);
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Load announcements error:", err);
-      toast.error("Failed to load announcements.");
+      const msg = err?.response?.data?.message || err?.message || "Failed to load announcements.";
+      toast.error(msg);
     } finally {
       dispatch(setLoading(false));
     }
   };
+
 
   useEffect(() => {
     loadRooms();

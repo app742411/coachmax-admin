@@ -4,6 +4,16 @@ import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useInvoices } from "../../hooks/useInvoices";
 
+const formatDate = (dateString: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "N/A";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export default function InvoiceList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -97,7 +107,7 @@ export default function InvoiceList() {
                       </td>
                       <td className="py-4 px-3 font-semibold text-slate-500">{inv.type}</td>
                       <td className="py-4 px-3 font-bold text-slate-800 dark:text-slate-200">${inv.totalAmount || inv.amount || 0}</td>
-                      <td className="py-4 px-3 font-semibold text-slate-500">{new Date(inv.dueDate).toLocaleDateString()}</td>
+                      <td className="py-4 px-3 font-semibold text-slate-500">{formatDate(inv.dueDate)}</td>
                       <td className="py-4 px-4">
                         <span
                           className={`inline-flex items-center gap-1 font-bold ${inv.paymentStatus === "PAID" ? "text-emerald-600" : inv.paymentStatus === "OVERDUE" ? "text-rose-600" : "text-amber-500"

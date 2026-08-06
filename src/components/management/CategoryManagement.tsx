@@ -16,7 +16,7 @@ const CategoryManagement: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: "" });
+  const [formData, setFormData] = useState({ name: "", isEvent: false });
 
   // ── Queries ─────────────────────────────────────────────────────
 
@@ -61,14 +61,14 @@ const CategoryManagement: React.FC = () => {
   // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
-    setFormData({ name: "" });
+    setFormData({ name: "", isEvent: false });
     setIsEditing(false);
     setSelectedId(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (cat: any) => {
-    setFormData({ name: cat.name || "" });
+    setFormData({ name: cat.name || "", isEvent: !!cat.isEvent });
     setIsEditing(true);
     setSelectedId(cat._id);
     setIsModalOpen(true);
@@ -82,6 +82,15 @@ const CategoryManagement: React.FC = () => {
     if (deleteModalId) {
       deleteMutation.mutate(deleteModalId);
     }
+  };
+
+  const handleNameChange = (val: string) => {
+    const isHoliday = val.toLowerCase().includes("holiday");
+    setFormData(prev => ({
+      ...prev,
+      name: val,
+      isEvent: isHoliday ? true : prev.isEvent
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -124,7 +133,14 @@ const CategoryManagement: React.FC = () => {
                       <div className="w-8 h-8 rounded-none bg-brand-50 flex items-center justify-center text-brand-500">
                         <Tag size={16} />
                       </div>
-                      {cat.name}
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-gray-800 dark:text-white/90">{cat.name}</span>
+                        {cat.isEvent && (
+                          <span className="px-1.5 py-0.5 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase tracking-wider rounded-none border border-amber-100 dark:border-amber-500/20">
+                            Holiday Program
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -149,11 +165,22 @@ const CategoryManagement: React.FC = () => {
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ name: e.target.value })}
+              onChange={(e) => handleNameChange(e.target.value)}
               className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
               placeholder="e.g. Academy"
               required
             />
+          </div>
+          <div className="mb-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={formData.isEvent}
+                onChange={(e) => setFormData(prev => ({ ...prev, isEvent: e.target.checked }))}
+                className="w-4 h-4 text-[#031549] border-gray-300 rounded-none focus:ring-[#031549]"
+              />
+              <span className="text-xs font-semibold text-gray-700">Holiday Program</span>
+            </label>
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>

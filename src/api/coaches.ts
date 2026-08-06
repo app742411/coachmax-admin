@@ -31,7 +31,7 @@ export interface TemporaryPlayerPayload {
   sessionDate: string;
 }
 
-export const getAllCoaches = async (page = 1, limit = 100): Promise<CoachesResponse> => {
+export const getAllCoaches = async (page = 1, limit = 10): Promise<CoachesResponse> => {
   const response = await apiClient.get<CoachesResponse>("/admin/coaches", {
     params: { page, limit },
   });
@@ -62,6 +62,12 @@ export const getCoachClasses = async (): Promise<any> => {
   const response = await apiClient.get("/api/coach/classes");
   return response.data;
 };
+
+export const getCoachGetClasses = async (): Promise<any> => {
+  const response = await apiClient.get("/api/coach/getClasses");
+  return response.data;
+};
+
 
 export const markCoachSingleAttendance = async (classId: string, data: { sessionDate: string; playerId: string; status: string }): Promise<any> => {
   const response = await apiClient.post(`/api/coach/attendance/${classId}/single`, data);

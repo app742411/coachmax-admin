@@ -5,11 +5,15 @@ import { X, UploadCloud } from "lucide-react";
 interface MultiImageDropzoneProps {
   onUpload?: (files: File[]) => void;
   maxFiles?: number;
+  initialImages?: string[];
+  onRemoveInitial?: (imagePath: string) => void;
 }
 
 const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({ 
   onUpload, 
-  maxFiles = 5 
+  maxFiles = 5,
+  initialImages = [],
+  onRemoveInitial
 }) => {
   const [files, setFiles] = useState<(File & { preview: string })[]>([]);
 
@@ -24,7 +28,7 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
     }));
 
     setFiles(prevFiles => {
-      const combined = [...prevFiles, ...newFiles].slice(0, maxFiles);
+      const combined = [...prevFiles, ...newFiles].slice(0, maxFiles - initialImages.length);
       if (onUpload) {
         onUpload(combined);
       }
@@ -41,6 +45,9 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
     }
   };
 
+  const totalCount = files.length + initialImages.length;
+  const remainingSlots = maxFiles - totalCount;
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
@@ -49,11 +56,19 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
       "image/webp": [],
       "image/svg+xml": [],
     },
-    maxFiles: maxFiles - files.length, // Only allow remaining slots
+    maxFiles: remainingSlots > 0 ? remainingSlots : 0,
     multiple: true
   });
 
-  const hasReachedMax = files.length >= maxFiles;
+  const hasReachedMax = totalCount >= maxFiles;
+
+  const getImageUrl = (imagePath: string) => {
+    if (imagePath.startsWith("http") || imagePath.startsWith("/images/")) {
+      return imagePath;
+    }
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+    return `${baseUrl.replace(/\/$/, '')}/${imagePath.replace(/^\//, '')}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -81,15 +96,42 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
               Upload up to {maxFiles} images. (PNG, JPG, WEBP, SVG)
             </p>
             <p className="mt-2 text-xs font-semibold text-brand-500">
-              {maxFiles - files.length} slots remaining
+              {remainingSlots} slots remaining
             </p>
           </div>
         </div>
       )}
 
       {/* Previews Grid */}
-      {files.length > 0 && (
+      {totalCount > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* Render initial images */}
+          {initialImages.map((url, idx) => (
+            <div key={`initial-${idx}`} className="relative group rounded-none overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-50 dark:bg-gray-800">
+              <img 
+                src={getImageUrl(url)} 
+                alt={`initial preview ${idx}`} 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onRemoveInitial) {
+                      onRemoveInitial(url);
+                    }
+                  }}
+                  className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                  title="Remove image"
+                  type="button"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Render new local files */}
           {files.map((file, idx) => (
             <div key={file.name + idx} className="relative group rounded-none overflow-hidden border border-gray-200 dark:border-gray-700 aspect-square bg-gray-50 dark:bg-gray-800">
               <img 

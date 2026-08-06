@@ -6,12 +6,15 @@ import { Modal } from "../ui/modal";
 import { getAllTerms, createTerm, updateTerm, deleteTerm } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { Calendar } from "../../icons/lucide-icons";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import DatePicker from "../form/date-picker";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import TermCalendar from "./TermCalendar";
 
 const TermManagement: React.FC = () => {
     const queryClient = useQueryClient();
+    const [showCalendar, setShowCalendar] = useState(true);
+    const [eventFilter, setEventFilter] = useState<"all" | "false" | "true">("all");
 
     // ── UI State (Modals & Forms) ──────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,11 +27,17 @@ const TermManagement: React.FC = () => {
         year: new Date().getFullYear(),
         startDate: "",
         endDate: "",
+        isEvent: false,
     });
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return "N/A";
-        return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+        const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+        if (dateOnly.includes("-")) {
+            const [year, month, day] = dateOnly.split("-");
+            return `${day}/${month}/${year}`;
+        }
+        return dateOnly;
     };
 
     // ── Year filter ────────────────────────────────────────────────
@@ -39,8 +48,8 @@ const TermManagement: React.FC = () => {
     // ── Queries ─────────────────────────────────────────────────────
 
     const { data: termsData, isLoading: loading } = useQuery({
-        queryKey: ["terms", selectedYear],
-        queryFn: () => getAllTerms(selectedYear),
+        queryKey: ["terms", selectedYear, eventFilter],
+        queryFn: () => getAllTerms(selectedYear, eventFilter),
     });
     const terms = Array.isArray(termsData) ? termsData : (termsData?.data || []);
 
@@ -98,11 +107,12 @@ const TermManagement: React.FC = () => {
     // Helper to force conversion if the input is YYYY-MM-DD
     const formatToDDMMYYYY = (dateStr: string) => {
         if (!dateStr) return "";
-        if (dateStr.includes("-")) {
-            const [year, month, day] = dateStr.split("-");
+        const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+        if (dateOnly.includes("-")) {
+            const [year, month, day] = dateOnly.split("-");
             return `${day}/${month}/${year}`;
         }
-        return dateStr;
+        return dateOnly;
     };
 
     const getDaysBetween = (start: string, end: string) => {
@@ -119,6 +129,7 @@ const TermManagement: React.FC = () => {
             year: new Date().getFullYear(),
             startDate: "",
             endDate: "",
+            isEvent: false,
         });
         setIsEditing(false);
         setSelectedId(null);
@@ -126,11 +137,16 @@ const TermManagement: React.FC = () => {
     };
 
     const handleOpenEdit = (term: any) => {
+        const cleanDate = (dateStr: string) => {
+            if (!dateStr) return "";
+            return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+        };
         setFormData({
             name: term.name || "",
             year: term.year || new Date().getFullYear(),
-            startDate: term.startDate || "",
-            endDate: term.endDate || "",
+            startDate: cleanDate(term.startDate),
+            endDate: cleanDate(term.endDate),
+            isEvent: !!term.isEvent,
         });
         setIsEditing(true);
         setSelectedId(term._id);
@@ -162,7 +178,8 @@ const TermManagement: React.FC = () => {
             name: formData.name,
             year: formData.year,
             startDate: formattedStart,
-            endDate: formattedEnd
+            endDate: formattedEnd,
+            isEvent: formData.isEvent,
         };
 
         if (isEditing && selectedId) {
@@ -179,7 +196,35 @@ const TermManagement: React.FC = () => {
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">Academy Terms</h3>
                     <p className="text-xs text-gray-500">Define seasonal training windows</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                        onClick={() => setShowCalendar((v) => !v)}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors rounded-none"
+                    >
+                        {showCalendar ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        {showCalendar ? "Hide Calendar" : "Show Calendar"}
+                    </button>
+
+                    {/* isEvent filter tabs */}
+                    <div className="flex items-center rounded-none border border-gray-200 overflow-hidden">
+                        {([
+                            { value: "all", label: "All" },
+                            { value: "false", label: "Terms" },
+                            { value: "true", label: "Holiday Programs" },
+                        ] as const).map(({ value, label }) => (
+                            <button
+                                key={value}
+                                onClick={() => setEventFilter(value)}
+                                className={`px-3 py-2 text-xs font-bold transition-colors border-r last:border-r-0 border-gray-200 ${eventFilter === value
+                                    ? "bg-[#031549] text-white"
+                                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                    }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
                     <select
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -193,20 +238,32 @@ const TermManagement: React.FC = () => {
                 </div>
             </div>
 
+            {/* ── Term Calendar ── */}
+            {showCalendar && (
+                <div className="mb-6 pb-6 border-b border-gray-100 dark:border-white/[0.05]">
+                    {loading ? (
+                        <div className="text-center text-xs text-gray-400 py-8">Loading calendar...</div>
+                    ) : (
+                        <TermCalendar terms={terms} selectedYear={selectedYear} />
+                    )}
+                </div>
+            )}
+
             <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
                 <Table>
                     <TableHeader className="sticky top-0 z-10 shadow-sm">
                         <TableRow>
                             <TableCell isHeader>Term Detail</TableCell>
                             <TableCell isHeader>Timeline</TableCell>
+                            <TableCell isHeader>Type</TableCell>
                             <TableCell isHeader className="text-center">Actions</TableCell>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={3} className="text-center py-10 text-gray-400">Synchronizing...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-400">Synchronizing...</TableCell></TableRow>
                         ) : terms.length === 0 ? (
-                            <TableRow><TableCell colSpan={3} className="text-center py-10 text-gray-500">No terms defined.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-500">No terms found for this filter.</TableCell></TableRow>
                         ) : (
                             terms.map((term: any) => (
                                 <TableRow key={term._id}>
@@ -228,6 +285,17 @@ const TermManagement: React.FC = () => {
                                                 </span>
                                             )}
                                         </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        {term.isEvent ? (
+                                            <span className="px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold uppercase tracking-wider rounded-none border border-amber-100 dark:border-amber-500/20">
+                                                Holiday Program
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider rounded-none border border-blue-100 dark:border-blue-500/20">
+                                                Term
+                                            </span>
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-3">
@@ -271,7 +339,7 @@ const TermManagement: React.FC = () => {
                             />
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                         <DatePicker
                             id="startDate"
                             label="Start Date"
@@ -284,6 +352,18 @@ const TermManagement: React.FC = () => {
                             defaultDate={formData.endDate}
                             onChange={(_, dateStr) => handleDateChange("endDate", dateStr)}
                         />
+                    </div>
+                    <div className="mb-4">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                name="isEvent"
+                                checked={formData.isEvent}
+                                onChange={(e) => setFormData(prev => ({ ...prev, isEvent: e.target.checked }))}
+                                className="w-4 h-4 text-[#031549] border-gray-300 rounded-none focus:ring-[#031549]"
+                            />
+                            <span className="text-xs font-semibold text-gray-700">Holiday Program / Event</span>
+                        </label>
                     </div>
                     <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
                         <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>

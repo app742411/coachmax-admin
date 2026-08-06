@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
  Tag,
  Package,
@@ -11,10 +11,9 @@ import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import toast from "react-hot-toast";
 import Select from "../form/Select";
-import MultiSelect from "../form/MultiSelect";
 import MultiImageDropzone from "../form/form-elements/MultiImageDropzone";
 import SuccessPopup from "../SuccessPopup";
-import apiClient from "../../api/apiClient";
+import { getStoreCategories, createStoreProduct, updateStoreProduct } from "../../api/orderApi";
 import CategoryModal from "./CategoryModal";
 
 interface ProductFormData {
@@ -27,6 +26,7 @@ interface ProductFormData {
  colors: string;
  stock: string;
  availabilityStatus: string;
+ images?: string[];
  _id?: string;
 }
 
@@ -55,6 +55,161 @@ const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
  </div>
 );
 
+const sizeOptions = [
+  { value: "XS", text: "Extra Small" },
+  { value: "S", text: "Small" },
+  { value: "M", text: "Medium" },
+  { value: "L", text: "Large" },
+  { value: "XL", text: "Extra Large" },
+  { value: "XXL", text: "Double Extra Large" },
+  { value: "One Size", text: "One Size Fits All" }
+];
+
+interface SizeInputProps {
+  value: string[];
+  onChange: (selected: string[]) => void;
+}
+
+const SizeInput: React.FC<SizeInputProps> = ({ value, onChange }) => {
+  const [inputValue, setInputValue] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (size: string) => {
+    if (!value.includes(size)) {
+      onChange([...value, size]);
+    }
+    setInputValue("");
+    setIsOpen(false);
+  };
+
+  const handleRemove = (sizeToRemove: string) => {
+    onChange(value.filter((size) => size !== sizeToRemove));
+  };
+
+  const handleAddCustom = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && !value.includes(trimmed)) {
+      onChange([...value, trimmed]);
+    }
+    setInputValue("");
+    setIsOpen(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddCustom();
+    }
+  };
+
+  const filteredOptions = sizeOptions.filter(
+    (opt) =>
+      opt.text.toLowerCase().includes(inputValue.toLowerCase()) ||
+      opt.value.toLowerCase().includes(inputValue.toLowerCase())
+  ).filter((opt) => !value.includes(opt.value));
+
+  const showCustomOption =
+    inputValue.trim().length > 0 &&
+    !sizeOptions.some((opt) => opt.value.toLowerCase() === inputValue.trim().toLowerCase()) &&
+    !value.some((size) => size.toLowerCase() === inputValue.trim().toLowerCase());
+
+  return (
+    <div className="w-full relative" ref={dropdownRef}>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {value.map((size) => {
+          const label = sizeOptions.find((opt) => opt.value === size)?.text || size;
+          return (
+            <div
+              key={size}
+              className="group flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 py-1 pl-2.5 pr-2 text-sm text-gray-800 dark:text-white/90"
+            >
+              <span className="flex-initial max-w-full text-xs font-semibold">{label} ({size})</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(size)}
+                className="pl-2 text-gray-500 hover:text-red-500 transition-colors"
+                aria-label={`Remove ${label}`}
+              >
+                <svg className="fill-current" width="12" height="12" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M3.40717 4.46881C3.11428 4.17591 3.11428 3.70104 3.40717 3.40815C3.70006 3.11525 4.17494 3.11525 4.46783 3.40815L6.99943 5.93975L9.53095 3.40822C9.82385 3.11533 10.2987 3.11533 10.5916 3.40822C10.8845 3.70112 10.8845 4.17599 10.5916 4.46888L8.06009 7.00041L10.5916 9.53193C10.8845 9.82482 10.8845 10.2997 10.5916 10.5926C10.2987 10.8855 9.82385 10.8855 9.53095 10.5926L6.99943 8.06107L4.46783 10.5927C4.17494 10.8856 3.70006 10.8856 3.40717 10.5927C3.11428 10.2998 3.11428 9.8249 3.40717 9.53201L5.93877 7.00041L3.40717 4.46881Z" />
+                </svg>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Search sizes or type custom size..."
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          className="h-11 w-full rounded-none border px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 bg-white dark:bg-gray-900 text-gray-850 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-800 transition-all"
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+        >
+          <svg className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-none overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          {showCustomOption && (
+            <div
+              onClick={handleAddCustom}
+              className="px-4 py-2.5 text-sm font-bold text-brand-500 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-600 cursor-pointer border-b border-gray-100 dark:border-gray-800 flex justify-between items-center transition-colors group"
+            >
+              <span>Add custom size: "{inputValue.trim()}"</span>
+              <span className="text-[10px] bg-brand-50 text-brand-500 group-hover:bg-white/20 group-hover:text-white px-2 py-0.5 rounded transition-colors">Enter</span>
+            </div>
+          )}
+
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => handleSelect(opt.value)}
+                className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-600 cursor-pointer flex justify-between items-center transition-colors group"
+              >
+                <span>{opt.text}</span>
+                <span className="text-xs text-gray-400 group-hover:text-white/80 font-bold transition-colors">{opt.value}</span>
+              </div>
+            ))
+          ) : (
+            !showCustomOption && (
+              <div className="px-4 py-3 text-xs text-gray-500 text-center">
+                No matching standard sizes. Type to add a custom size.
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface ProductFormProps {
  initialData?: ProductFormData | null;
  isEdit?: boolean;
@@ -64,6 +219,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
  const [categories, setCategories] = useState<{value: string, label: string}[]>([]);
  const [images, setImages] = useState<File[]>([]);
+ const [existingImages, setExistingImages] = useState<string[]>([]);
  const [formData, setFormData] = useState<ProductFormData>({
   name: "",
   shortHighlight: "",
@@ -80,6 +236,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
   if (initialData) {
    // @ts-ignore
    setFormData(prev => ({ ...prev, ...initialData }));
+   if (initialData.images) {
+     setExistingImages(initialData.images);
+   }
   }
  }, [initialData]);
 
@@ -87,8 +246,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
 
  const fetchCategories = async () => {
   try {
-   const response = await apiClient.get("/api/admin/store/categories");
-   const data = response.data.data || response.data;
+    const response = await getStoreCategories();
+    const data = response.data || response;
    const formatted = data.map((item: any) => ({
     value: item.uuid || item.id || item._id,
     label: item.name
@@ -103,16 +262,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
  useEffect(() => {
   fetchCategories();
  }, []);
-
- const sizeOptions = [
-  { value: "XS", text: "Extra Small" },
-  { value: "S", text: "Small" },
-  { value: "M", text: "Medium" },
-  { value: "L", text: "Large" },
-  { value: "XL", text: "Extra Large" },
-  { value: "XXL", text: "Double Extra Large" },
-  { value: "One Size", text: "One Size Fits All" }
- ];
 
  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
   const { name, value } = e.target;
@@ -148,25 +297,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
    });
   }
 
+  if (isEdit) {
+    payload.append("existingImages", JSON.stringify(existingImages));
+    existingImages.forEach(img => {
+      payload.append("existingImages[]", img);
+    });
+  }
+
   try {
-   if (isEdit) {
-    const productId = formData._id || initialData?._id;
-    if (!productId) {
-     toast.error("Product ID is missing for update.");
-     return;
+    if (isEdit) {
+     const productId = formData._id || initialData?._id;
+     if (!productId) {
+      toast.error("Product ID is missing for update.");
+      return;
+     }
+     await updateStoreProduct(productId, payload);
+     toast.success("Merchandise updated successfully!");
+     setShowSuccessPopup(true);
+    } else {
+     await createStoreProduct(payload);
+     toast.success("Merchandise added successfully!");
+     setShowSuccessPopup(true);
     }
-    await apiClient.patch(`/api/admin/store/products/${productId}`, payload, {
-     headers: { "Content-Type": "multipart/form-data" }
-    });
-    toast.success("Merchandise updated successfully!");
-    setShowSuccessPopup(true);
-   } else {
-    await apiClient.post("/api/admin/store/products", payload, {
-     headers: { "Content-Type": "multipart/form-data" }
-    });
-    toast.success("Merchandise added successfully!");
-    setShowSuccessPopup(true);
-   }
   } catch (error) {
    console.error("Failed to add product:", error);
    toast.error("Failed to add product");
@@ -256,12 +408,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
         <div className="grid grid-cols-2 gap-4">
          <div>
           <Label>Available Sizes</Label>
-          <MultiSelect 
-           placeholder="Select multiple" 
-           options={sizeOptions}
-           value={formData.sizes}
-           onChange={handleSizesChange}
-          />
+           <SizeInput 
+            value={formData.sizes}
+            onChange={handleSizesChange}
+           />
          </div>
          <div>
           <Label>Colors</Label>
@@ -305,6 +455,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
       <div className="space-y-4">
         <MultiImageDropzone 
          maxFiles={5}
+         initialImages={existingImages}
+         onRemoveInitial={(url) => setExistingImages(prev => prev.filter(img => img !== url))}
          onUpload={(files: File[]) => setImages(files)} 
         />
       </div>

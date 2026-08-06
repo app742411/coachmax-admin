@@ -37,7 +37,8 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
       }
     } catch (err: any) {
       console.error("Publish announcement error:", err);
-      toast.error("Network error. Failed to publish announcement.");
+      const msg = err?.response?.data?.message || err?.message || "Failed to publish announcement.";
+      toast.error(msg);
     } finally {
       dispatch(setPublishing(false));
     }

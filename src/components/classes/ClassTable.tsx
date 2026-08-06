@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import Badge from "../../components/ui/badge/Badge";
 import { MoreVertical } from "lucide-react";
+import { useAppDispatch } from "../../store";
+import { setActiveRoomId } from "../../store/slices/chatSlice";
+import { chatApi } from "../../services/chatApi";
+import toast from "react-hot-toast";
 
 interface ClassItem {
   _id: string;
@@ -18,6 +23,7 @@ interface ClassItem {
   category?: { name: string };
   coach?: { name: string };
   players?: any[];
+  broadcastChatRoomId?: string;
 }
 
 interface ClassTableProps {
@@ -29,6 +35,47 @@ interface ClassTableProps {
 
 export default function ClassTable({ classes, isLoading, onEditClass, onViewPlayers }: ClassTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const handleClassChat = async (cls: ClassItem) => {
+    try {
+      let roomId = cls.broadcastChatRoomId || "";
+
+      // If room already exists, use it directly (Text Class)
+      if (!roomId) {
+        // No existing room — create it via broadcast API (Chat Active)
+        const broadcastRes = await chatApi.broadcastToClass(cls._id, "Broadcast channel active");
+        if (broadcastRes && broadcastRes.success) {
+          toast.success(broadcastRes.message || "Broadcast message sent successfully");
+          if (broadcastRes.data?.room?._id) {
+            roomId = broadcastRes.data.room._id;
+          }
+        } else if (broadcastRes && !broadcastRes.success) {
+          toast.error(broadcastRes.message || "Failed to send broadcast");
+        }
+      }
+
+      if (roomId) {
+        dispatch(setActiveRoomId(roomId));
+      }
+
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          isCoach = parsed?.role === "COACH";
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      navigate(isCoach ? "/messages" : "/communication");
+    } catch (error) {
+      console.error("Error setting up class broadcast:", error);
+      navigate("/messages");
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdownId(null);
@@ -49,6 +96,7 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
               <th className="py-3 px-3 min-w-[120px]">Location</th>
               <th className="py-3 px-3 min-w-[120px]">Coach</th>
               <th className="py-3 px-3 min-w-[80px]">Status</th>
+              <th className="py-3 px-3 min-w-[110px]">Chat</th>
               <th className="py-3 px-4 w-[50px] text-right">Action</th>
             </tr>
           </thead>
@@ -94,6 +142,21 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                     <Badge color={cls.status === "ACTIVE" ? "success" : "warning"}>
                       {cls.status}
                     </Badge>
+                  </td>
+                  <td className="py-4 px-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClassChat(cls);
+                      }}
+                      className="flex items-center gap-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700/50 px-2.5 py-1 rounded-[4px] text-[10px] font-semibold transition-all active:scale-95 cursor-pointer shadow-sm"
+                      title={cls.broadcastChatRoomId ? "Open Class Chat" : "Start Class Broadcast"}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      {cls.broadcastChatRoomId ? "Text Class" : "Chat Active"}
+                    </button>
                   </td>
                   <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
                     <button

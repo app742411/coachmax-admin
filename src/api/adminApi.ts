@@ -116,9 +116,11 @@ export const deleteCategory = async (id: string): Promise<any> => {
 
 // ================= TERMS =================
 
-export const getAllTerms = async (year?: number): Promise<any> => {
-  const params = year ? { params: { year } } : undefined;
-  const res = await apiClient.get(ENDPOINTS.GET_ALL_TERMS, params);
+export const getAllTerms = async (year?: number, isEvent?: "all" | "true" | "false"): Promise<any> => {
+  const params: Record<string, any> = {};
+  if (year) params.year = year;
+  if (isEvent !== undefined) params.isEvent = isEvent;
+  const res = await apiClient.get(ENDPOINTS.GET_ALL_TERMS, { params });
   return res.data;
 };
 

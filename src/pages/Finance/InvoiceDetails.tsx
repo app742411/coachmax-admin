@@ -3,6 +3,28 @@ import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useInvoiceDetails } from "../../hooks/useInvoices";
 
+const formatDate = (dateString: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "N/A";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const formatDateTime = (dateString: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "N/A";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year}, ${hours}:${minutes}`;
+};
+
 export default function InvoiceDetails() {
   const { id } = useParams();
   const { data, isLoading, isError } = useInvoiceDetails(id || "");
@@ -42,8 +64,8 @@ export default function InvoiceDetails() {
               }`}>
                 {inv.paymentStatus || "UNPAID"}
               </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">Issued: {new Date(inv.createdAt).toLocaleDateString()}</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Due Date: {new Date(inv.dueDate).toLocaleDateString()}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">Issued: {formatDate(inv.createdAt)}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Due Date: {formatDate(inv.dueDate)}</p>
               <p className="text-sm text-gray-500">Type: {inv.type}</p>
             </div>
           </div>
@@ -73,6 +95,56 @@ export default function InvoiceDetails() {
               </div>
             </div>
           </div>
+
+          {/* Payment Details (Only if Paid) */}
+          {inv.paymentStatus === "PAID" && (
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 p-5 rounded-none mb-8">
+              <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-3">
+                Payment Information
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block">Payment Method</span>
+                  <span className="font-semibold text-gray-800 dark:text-white/90">
+                    {inv.paymentMethod === "COD" ? "Cash on Delivery (COD)" :
+                     inv.paymentMethod === "ONLINE" ? "Online Payment" : 
+                     inv.paymentMethod || "N/A"}
+                  </span>
+                </div>
+
+                {inv.paymentMethod === "ONLINE" && (inv.transactionId || inv.transaction?.transactionId || inv.transaction?._id || inv.transactionRef || inv.paymentDetails) && (
+                  <div>
+                    <span className="text-gray-500 block">Transaction Reference</span>
+                    <span className="font-semibold text-[#0047FF]">
+                      {inv.transactionId || 
+                       inv.transaction?.transactionId || 
+                       inv.transaction?._id || 
+                       inv.transactionRef || 
+                       inv.paymentDetails}
+                    </span>
+                  </div>
+                )}
+
+                {inv.verifiedBy && (
+                  <div>
+                    <span className="text-gray-500 block">Verified By</span>
+                    <span className="font-semibold text-gray-800 dark:text-white/90">
+                      {inv.verifiedBy.name || inv.verifiedBy.email}
+                    </span>
+                  </div>
+                )}
+                
+                {inv.verifiedAt && (
+                  <div>
+                    <span className="text-gray-500 block">Verified Date</span>
+                    <span className="font-semibold text-gray-800 dark:text-white/90">
+                      {formatDateTime(inv.verifiedAt)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Items Table */}
           <div className="mb-8 overflow-x-auto">

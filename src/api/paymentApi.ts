@@ -25,3 +25,20 @@ export const getDashboardPayments = async () => {
   const response = await apiClient.get(`/api/admin/dashboard/payments`);
   return response.data;
 };
+
+export interface PaymentSettingsData {
+  isOnlineEnabled: boolean;
+  isCodEnabled: boolean;
+  allowedPaymentMethods?: string[];
+  updatedAt?: string;
+}
+
+export const getPaymentSettings = async () => {
+  const response = await apiClient.get("/api/admin/payments/settings");
+  return response.data;
+};
+
+export const updatePaymentSettings = async (data: { isOnlineEnabled: boolean; isCodEnabled: boolean }) => {
+  const response = await apiClient.put("/api/admin/payments/settings", data);
+  return response.data;
+};
