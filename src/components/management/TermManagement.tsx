@@ -14,6 +14,7 @@ import TermCalendar from "./TermCalendar";
 const TermManagement: React.FC = () => {
     const queryClient = useQueryClient();
     const [showCalendar, setShowCalendar] = useState(true);
+    const [showList, setShowList] = useState(false);
     const [eventFilter, setEventFilter] = useState<"all" | "false" | "true">("all");
 
     // ── UI State (Modals & Forms) ──────────────────────────────────
@@ -205,6 +206,14 @@ const TermManagement: React.FC = () => {
                         {showCalendar ? "Hide Calendar" : "Show Calendar"}
                     </button>
 
+                    <button
+                        onClick={() => setShowList((v) => !v)}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors rounded-none"
+                    >
+                        {showList ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        {showList ? "Hide List" : "Show List"}
+                    </button>
+
                     {/* isEvent filter tabs */}
                     <div className="flex items-center rounded-none border border-gray-200 overflow-hidden">
                         {([
@@ -249,66 +258,68 @@ const TermManagement: React.FC = () => {
                 </div>
             )}
 
-            <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
-                <Table>
-                    <TableHeader className="sticky top-0 z-10 shadow-sm">
-                        <TableRow>
-                            <TableCell isHeader>Term Detail</TableCell>
-                            <TableCell isHeader>Timeline</TableCell>
-                            <TableCell isHeader>Type</TableCell>
-                            <TableCell isHeader className="text-center">Actions</TableCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-400">Synchronizing...</TableCell></TableRow>
-                        ) : terms.length === 0 ? (
-                            <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-500">No terms found for this filter.</TableCell></TableRow>
-                        ) : (
-                            terms.map((term: any) => (
-                                <TableRow key={term._id}>
-                                    <TableCell>
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-sm text-gray-800 dark:text-white/90 uppercase tracking-tight">{term.name}</span>
-                                            <span className="text-[10px] text-brand-500 font-extrabold">{term.year} Season</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2 font-bold text-xs text-gray-500 tracking-tighter">
-                                            <Calendar size={14} className="text-gray-300" />
-                                            <span>{formatDate(term.startDate)}</span>
-                                            <span className="text-gray-300">→</span>
-                                            <span>{formatDate(term.endDate)}</span>
-                                            {getDaysBetween(term.startDate, term.endDate) !== null && (
-                                                <span className="ml-2 px-2 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-extrabold uppercase rounded-none shadow-sm border border-brand-100">
-                                                    {getDaysBetween(term.startDate, term.endDate)} days
+            {showList && (
+                <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+                    <Table>
+                        <TableHeader className="sticky top-0 z-10 shadow-sm">
+                            <TableRow>
+                                <TableCell isHeader>Term Detail</TableCell>
+                                <TableCell isHeader>Timeline</TableCell>
+                                <TableCell isHeader>Type</TableCell>
+                                <TableCell isHeader className="text-center">Actions</TableCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loading ? (
+                                <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-400">Synchronizing...</TableCell></TableRow>
+                            ) : terms.length === 0 ? (
+                                <TableRow><TableCell colSpan={4} className="text-center py-10 text-gray-500">No terms found for this filter.</TableCell></TableRow>
+                            ) : (
+                                terms.map((term: any) => (
+                                    <TableRow key={term._id}>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-sm text-gray-800 dark:text-white/90 uppercase tracking-tight">{term.name}</span>
+                                                <span className="text-[10px] text-brand-500 font-extrabold">{term.year} Season</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2 font-bold text-xs text-gray-500 tracking-tighter">
+                                                <Calendar size={14} className="text-gray-300" />
+                                                <span>{formatDate(term.startDate)}</span>
+                                                <span className="text-gray-300">→</span>
+                                                <span>{formatDate(term.endDate)}</span>
+                                                {getDaysBetween(term.startDate, term.endDate) !== null && (
+                                                    <span className="ml-2 px-2 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-extrabold uppercase rounded-none shadow-sm border border-brand-100">
+                                                        {getDaysBetween(term.startDate, term.endDate)} days
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {term.isEvent ? (
+                                                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold uppercase tracking-wider rounded-none border border-amber-100 dark:border-amber-500/20">
+                                                    Holiday Program
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider rounded-none border border-blue-100 dark:border-blue-500/20">
+                                                    Term
                                                 </span>
                                             )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {term.isEvent ? (
-                                            <span className="px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-extrabold uppercase tracking-wider rounded-none border border-amber-100 dark:border-amber-500/20">
-                                                Holiday Program
-                                            </span>
-                                        ) : (
-                                            <span className="px-2 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider rounded-none border border-blue-100 dark:border-blue-500/20">
-                                                Term
-                                            </span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center justify-center gap-3">
-                                            <button onClick={() => handleOpenEdit(term)} className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"><Pencil size={14} /></button>
-                                            <button onClick={() => handleDeleteClick(term._id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-center gap-3">
+                                                <button onClick={() => handleOpenEdit(term)} className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"><Pencil size={14} /></button>
+                                                <button onClick={() => handleDeleteClick(term._id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8">
                 <h4 className="text-xl font-bold mb-2">{isEditing ? "Modify Term" : "Schedule New Term"}</h4>

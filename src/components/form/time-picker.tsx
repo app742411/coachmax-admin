@@ -8,6 +8,8 @@ type TimePickerProps = {
   value?: string;
   onChange?: (time: string) => void;
   placeholder?: string;
+  className?: string;
+  leftIcon?: React.ReactNode;
 };
 
 export default function TimePicker({
@@ -15,6 +17,8 @@ export default function TimePicker({
   value,
   onChange,
   placeholder = "Select time",
+  className = "",
+  leftIcon,
 }: TimePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -40,14 +44,21 @@ export default function TimePicker({
   }, []); // Empty dependency array to prevent re-initialization on every render
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
+      {leftIcon && (
+        <span className="absolute text-gray-400 -translate-y-1/2 pointer-events-none left-3.5 top-1/2 dark:text-gray-500 z-10">
+          {leftIcon}
+        </span>
+      )}
       <input
         ref={inputRef}
         id={id}
         placeholder={placeholder}
-        className="h-11 w-full rounded-none border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3  dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30  bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700  dark:focus:border-brand-800"
+        className={`h-[46px] w-full rounded-none border appearance-none ${
+          leftIcon ? "pl-10" : "px-4"
+        } pr-10 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 bg-white text-gray-800 border-gray-200 dark:border-gray-700 ${className}`}
       />
-      <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+      <span className="absolute text-gray-400 -translate-y-1/2 pointer-events-none right-3.5 top-1/2 dark:text-gray-500">
         <Clock className="size-5" />
       </span>
     </div>

@@ -5,6 +5,7 @@ import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
 import { Player } from "../../types/player";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import { createPortal } from "react-dom";
 
 interface PlayerTableProps {
   players: Player[];
@@ -31,9 +32,85 @@ export default function PlayerTable({
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  const updatePosition = () => {
+    if (!openDropdownId) return;
+    const trigger = document.getElementById(`trigger-${openDropdownId}`);
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = 160;
+    
+    const menuEl = document.getElementById("player-portal-action-menu");
+    const menuHeight = menuEl ? menuEl.offsetHeight : 180;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let top = rect.bottom + window.scrollY;
+    let placement: 'top' | 'bottom' = 'bottom';
+
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      top = rect.top - menuHeight + window.scrollY;
+      placement = 'top';
+    }
+
+    let left = rect.right - menuWidth + window.scrollX;
+    if (left < 0) {
+      left = rect.left + window.scrollX;
+    }
+
+    setMenuPosition({ top, left, placement });
+  };
+
+  useEffect(() => {
+    if (openDropdownId) {
+      updatePosition();
+      
+      const handle = requestAnimationFrame(() => {
+        updatePosition();
+      });
+
+      window.addEventListener("scroll", updatePosition, true);
+      window.addEventListener("resize", updatePosition);
+      
+      return () => {
+        cancelAnimationFrame(handle);
+        window.removeEventListener("scroll", updatePosition, true);
+        window.removeEventListener("resize", updatePosition);
+      };
+    } else {
+      setMenuPosition(null);
+    }
+  }, [openDropdownId]);
+
+  useEffect(() => {
+    if (!openDropdownId) return;
+    
+    const handleOutsideClick = (e: MouseEvent) => {
+      const menu = document.getElementById("player-portal-action-menu");
+      const trigger = document.getElementById(`trigger-${openDropdownId}`);
+      if (menu && !menu.contains(e.target as Node) && trigger && !trigger.contains(e.target as Node)) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openDropdownId]);
 
   const handleChatWithParent = async (player: Player) => {
     const parentId = (player.parentId as any)?.id || (player.parentId as any)?._id || player.parentId;
@@ -69,15 +146,9 @@ export default function PlayerTable({
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = () => setOpenDropdownId(null);
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
   return (
-    <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
-      <div className="overflow-visible no-scrollbar">
+    <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+      <div className="max-w-full overflow-x-auto custom-scrollbar">
         <table className="w-full text-left border-collapse text-xs [&_th]:border [&_th]:border-slate-700/50 [&_td]:border [&_td]:border-slate-200 dark:[&_td]:border-slate-700">
           <thead>
             <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
@@ -113,11 +184,11 @@ export default function PlayerTable({
                   <td className="py-4 px-4 font-semibold text-slate-500">{idx + 1}</td>
                   <td className="py-4 px-3">
                     <span
-                      className={`inline-flex items-center gap-1 font-bold ${status === "PAID" || status === "APPROVED" ? "text-emerald-600" : status === "UNPAID" || status === "REJECTED" || status === "TRIAL" ? "text-rose-600" : "text-amber-500"
+                      className={`inline-flex items-center gap-1 font-bold ${status === "PAID" || status === "APPROVED" ? "text-emerald-600" : status === "OTHERS" ? "text-blue-600" : status === "UNPAID" || status === "REJECTED" || status === "TRIAL" ? "text-rose-600" : "text-amber-500"
                         }`}
                     >
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${status === "PAID" || status === "APPROVED" ? "bg-emerald-600" : status === "UNPAID" || status === "REJECTED" || status === "TRIAL" ? "bg-rose-600" : "bg-amber-500"
+                        className={`w-1.5 h-1.5 rounded-full ${status === "PAID" || status === "APPROVED" ? "bg-emerald-600" : status === "OTHERS" ? "bg-blue-600" : status === "UNPAID" || status === "REJECTED" || status === "TRIAL" ? "bg-rose-600" : "bg-amber-500"
                           }`}
                       />
                       {status}
@@ -239,9 +310,14 @@ export default function PlayerTable({
                   <td className="py-4 px-3 font-semibold text-slate-600 dark:text-slate-400">
                     {player.parentId?.phone ? player.parentId.phone.replace(/^(\+\d{2,3})(\d+)$/, "$1 $2") : "N/A"}
                   </td>
-                  <td className="py-4 px-4 text-center relative" onClick={(e) => e.stopPropagation()}>
+                  <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <button
-                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-none bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center"
+                      id={`trigger-${player._id}`}
+                      className={`text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center ${
+                        openDropdownId === player._id 
+                          ? 'border-[#0047FF] bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF]' 
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                      }`}
                       title="More Options"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -253,8 +329,17 @@ export default function PlayerTable({
                       </svg>
                     </button>
 
-                    {openDropdownId === player._id && (
-                      <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                    {openDropdownId === player._id && menuPosition && createPortal(
+                      <div
+                        id="player-portal-action-menu"
+                        style={{
+                          position: "absolute",
+                          top: `${menuPosition.top}px`,
+                          left: `${menuPosition.left}px`,
+                          width: "160px",
+                        }}
+                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl z-[99999] py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100 rounded-none flex flex-col"
+                      >
                         {(() => {
                           const userStr = localStorage.getItem("user");
                           let isCoach = false;
@@ -373,7 +458,8 @@ export default function PlayerTable({
                             </>
                           );
                         })()}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </td>
                 </tr>

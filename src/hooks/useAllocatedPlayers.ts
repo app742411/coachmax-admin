@@ -28,8 +28,8 @@ const mapAllocatedToCard = (data: any): UnallocatedPlayer => {
 };
 
 export const useAllocatedPlayers = (
-  category?: string, 
-  program?: string, 
+  category?: string,
+  program?: string,
   search?: string,
   enabled: boolean = true
 ) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllNews, deleteNews } from "../../api/adminApi";
+import { getAllNews, deleteNews, getNewsCategories } from "../../api/adminApi";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import {
@@ -8,7 +8,8 @@ import {
   Clock,
   Bookmark,
   Eye,
-  Heart
+  Heart,
+  Search
 } from "lucide-react";
 import toast from "react-hot-toast";
 import EditNewsModal from "../../components/ContentManagement/EditNewsModal";
@@ -16,10 +17,11 @@ import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
 
 const ContentListPage = ({ type = "news" }) => {
  const [activeTab, setActiveTab] = useState("Latest");
+ const [searchQuery, setSearchQuery] = useState("");
+ const [newsCategories, setNewsCategories] = useState<string[]>(["Latest", "Business", "Sports", "League"]);
 
- const newsTabs = ["Latest", "Business", "Sports", "League"];
  const blogTabs = ["All Posts", "Training", "Nutrition", "Analysis"];
- const tabs = type === "news" ? newsTabs : blogTabs;
+ const tabs = type === "news" ? newsCategories : blogTabs;
 
  const [contentItems, setContentItems] = useState<any[]>([]);
  const [loading, setLoading] = useState(true);
@@ -66,6 +68,22 @@ const ContentListPage = ({ type = "news" }) => {
   useEffect(() => {
    if (type === "news") {
     fetchNews();
+    const fetchCategories = async () => {
+      try {
+        const res = await getNewsCategories();
+        if (res && res.success) {
+          const data = res.data || res;
+          if (Array.isArray(data)) {
+            const parsed = data.map((c: any) => typeof c === 'string' ? c : (c.name || c.title || ""));
+            const uniqueCategories = Array.from(new Set(["Latest", ...parsed.filter(Boolean)]));
+            setNewsCategories(uniqueCategories);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching news categories:", error);
+      }
+    };
+    fetchCategories();
    } else {
     // Keep mock data for blog type for now
     setContentItems([
@@ -125,8 +143,39 @@ const ContentListPage = ({ type = "news" }) => {
    }
   };
 
-  const featured = contentItems.find(item => item.isFeatured);
-  const items = contentItems.filter(item => !item.isFeatured);
+  const isSearching = searchQuery.trim().length > 0;
+  const query = searchQuery.toLowerCase();
+
+  const featured = isSearching
+    ? null
+    : contentItems.find(item => {
+        if (!item.isFeatured) return false;
+        const isLatestOrAll = activeTab === "Latest" || activeTab === "All Posts" || activeTab === "All";
+        if (isLatestOrAll) return true;
+        return item.category?.toLowerCase() === activeTab.toLowerCase();
+      });
+  
+  const items = contentItems
+    .filter(item => {
+      if (featured && item.id === featured.id) return false;
+      return true;
+    })
+    .filter(item => {
+      const isLatestOrAll = activeTab === "Latest" || activeTab === "All Posts" || activeTab === "All";
+      if (!isLatestOrAll) {
+        if (item.category?.toLowerCase() !== activeTab.toLowerCase()) return false;
+      }
+      
+      if (isSearching) {
+        return (
+          item.title?.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query) ||
+          item.category?.toLowerCase().includes(query)
+        );
+      }
+      
+      return true;
+    });
 
   return (
    <>
@@ -137,22 +186,37 @@ const ContentListPage = ({ type = "news" }) => {
     <div className="space-y-6">
      <PageBreadcrumb pageTitle={type === "news" ? "News & Updates" : "Blogs & Hub"} />
 
-     {/* Categories Tab Bar */}
-     <div className="flex items-center gap-6 overflow-x-auto no-scrollbar pb-2">
-       {tabs.map((tab) => (
-        <button
-         key={tab}
-         onClick={() => setActiveTab(tab)}
-         className={`text-sm font-bold  whitespace-nowrap transition-all border-b-2 pb-2 ${
-          activeTab === tab
-           ? "text-brand-500 border-brand-500"
-           : "text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
-         }`}
-        >
-         {tab}
-        </button>
-       ))}
-     </div>
+      {/* Categories Tab Bar & Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-2">
+        <div className="flex items-center gap-6 overflow-x-auto no-scrollbar">
+          {tabs.map((tab) => (
+           <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`text-sm font-bold whitespace-nowrap transition-all border-b-2 pb-2 -mb-[10px] ${
+             activeTab === tab
+              ? "text-brand-500 border-brand-500"
+              : "text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+           >
+            {tab}
+           </button>
+          ))}
+        </div>
+
+        <div className="relative w-full md:w-72">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <Search size={16} />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search news..."
+            className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-none outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] dark:text-white"
+          />
+        </div>
+      </div>
 
      {/* Main Content Layout */}
      {loading ? (
@@ -173,11 +237,25 @@ const ContentListPage = ({ type = "news" }) => {
             alt="featured"
            />
            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent"></div>
-           <div className="absolute top-6 right-6">
-            <div className="p-3 bg-brand-500 text-white rounded-none shadow-lg shadow-brand-500/40">
-              <Bookmark size={20} fill="white" />
+            <div className="absolute top-6 right-6 flex items-center gap-3">
+              <div 
+               onClick={(e) => handleEdit(featured, e)}
+               className="p-3 bg-blue-600 text-white rounded-none shadow-lg shadow-blue-600/40 hover:bg-blue-700 cursor-pointer transition-colors"
+               title="Edit"
+              >
+               <Edit2 size={20} />
+              </div>
+              <div 
+               onClick={(e) => handleDeleteClick(featured.id, e)}
+               className="p-3 bg-red-600 text-white rounded-none shadow-lg shadow-red-600/40 hover:bg-red-700 cursor-pointer transition-colors"
+               title="Delete"
+              >
+               <Trash2 size={20} />
+              </div>
+              <div className="p-3 bg-brand-500 text-white rounded-none shadow-lg shadow-brand-500/40">
+               <Bookmark size={20} fill="white" />
+              </div>
             </div>
-           </div>
            <div className="absolute bottom-10 left-10 right-10">
             <div className="flex items-center gap-3 mb-4">
               <span className="bg-brand-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold  shadow-lg">

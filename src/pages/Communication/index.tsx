@@ -8,6 +8,7 @@ import { setAnnouncements } from "../../store/slices/broadcastSlice";
 import { broadcastApi } from "../../services/broadcastApi";
 import PageMeta from "../../components/common/PageMeta";
 import { isCoachOrAdmin } from "../../services/chatApi";
+import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 
 export const CommunicationPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -52,11 +53,17 @@ export const CommunicationPage: React.FC = () => {
 
       <div className="w-full h-full text-slate-100">
         {isBroadcastRoute ? (
-          <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
-            {isCoachOrAdmin() && (
-              <BroadcastComposer onSuccess={refreshAnnouncements} />
-            )}
-            <BroadcastList />
+          <div className="w-full">
+            <PageBreadcrumb 
+              pageTitle="Class Broadcast Announcements" 
+              items={[{ name: "Communication", path: "/communication" }]} 
+            />
+            <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+              {isCoachOrAdmin() && (
+                <BroadcastComposer onSuccess={refreshAnnouncements} />
+              )}
+              <BroadcastList />
+            </div>
           </div>
         ) : (
           <ChatList />

@@ -6,12 +6,13 @@ import ClassFullTable from "../../components/academy/ClassFullTable";
 import UnallocatedPlayersCard from "../../components/academy/UnallocatedPlayersCard";
 import AllocatedPlayersCard from "../../components/academy/AllocatedPlayersCard";
 import SidebarPlayersFilter from "../../components/academy/SidebarPlayersFilter";
-import { useClassFiltersWithTimeSlots } from "../../hooks/usePlayers";
+import { useClassFiltersWithTimeSlots, useAssignClassesToPlayer } from "../../hooks/usePlayers";
 import { useUnallocatedPlayers } from "../../hooks/useUnallocatedPlayers";
 import { useAllocatedPlayers } from "../../hooks/useAllocatedPlayers";
 import AddClassModal from "../../components/classes/AddClassModal";
 import TermManagement from "../../components/management/TermManagement";
 import { Modal } from "../../components/ui/modal";
+
 
 
 interface AcademyProps {
@@ -25,14 +26,16 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   const [programId, setProgramId] = useState("");
   const [programName, setProgramName] = useState("");
   const [, setYear] = useState("");
+  const [termId, setTermId] = useState("");
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
-  
+  const assignClassesMutation = useAssignClassesToPlayer();
+
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isTermModalOpen, setIsTermModalOpen] = useState(false);
 
-  const { data: filtersData } = useClassFiltersWithTimeSlots(categoryId, programId, activeDay.toUpperCase());
+  const { data: filtersData } = useClassFiltersWithTimeSlots(categoryId, programId, activeDay.toUpperCase(), termId);
   const timeSlots = filtersData?.timeSlots || [];
-  
+
   useEffect(() => {
     if (timeSlots && timeSlots.length > 0) {
       const now = new Date();
@@ -47,37 +50,86 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         let [hours, minutes] = time.split(':').map(Number);
         if (modifier === 'PM' && hours < 12) hours += 12;
         if (modifier === 'AM' && hours === 12) hours = 0;
-        
+
         const slotMinutes = hours * 60 + (minutes || 0);
         const diff = slotMinutes - currentMinutes;
-        
-        if (diff >= -90 && diff < minDiff) { 
+
+        if (diff >= -90 && diff < minDiff) {
           minDiff = diff;
           closestSlot = slot;
         }
       }
-      
+
       setExpandedClassId(closestSlot.classId);
     }
   }, [timeSlots, activeDay]);
-  
+
+  const [pendingAssignPlayer, setPendingAssignPlayer] = useState<any | null>(null);
+  const [selectedAssignClassId, setSelectedAssignClassId] = useState<string>("");
+  const [selectedAssignStatus, setSelectedAssignStatus] = useState<string>("TRIAL");
+
+  useEffect(() => {
+    if (pendingAssignPlayer) {
+      const matchesExpanded = timeSlots.some((slot: any) => slot.classId === expandedClassId);
+      if (matchesExpanded && expandedClassId) {
+        setSelectedAssignClassId(expandedClassId);
+      } else if (timeSlots.length > 0) {
+        setSelectedAssignClassId(timeSlots[0].classId);
+      } else {
+        setSelectedAssignClassId("");
+      }
+      setSelectedAssignStatus(pendingAssignPlayer.paymentStatus || "TRIAL");
+    }
+  }, [pendingAssignPlayer, timeSlots, expandedClassId]);
+
   const [sidebarCategory, setSidebarCategory] = useState("");
   const [sidebarProgram, setSidebarProgram] = useState("");
   const [sidebarSearch, setSidebarSearch] = useState("");
-  const [playerType, setPlayerType] = useState<"BOTH" | "ALLOCATED" | "UNALLOCATED">("UNALLOCATED");
+
+  const [showSidebar, setShowSidebar] = useState<boolean>(() => {
+    const stored = localStorage.getItem("show_players_sidebar");
+    return stored !== null ? JSON.parse(stored) : true;
+  });
+  const [showAllocated, setShowAllocated] = useState<boolean>(() => {
+    const stored = localStorage.getItem("show_allocated_players");
+    return stored !== null ? JSON.parse(stored) : true;
+  });
+  const [showUnallocated, setShowUnallocated] = useState<boolean>(() => {
+    const stored = localStorage.getItem("show_unallocated_players");
+    return stored !== null ? JSON.parse(stored) : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("show_players_sidebar", JSON.stringify(showSidebar));
+  }, [showSidebar]);
+
+  useEffect(() => {
+    localStorage.setItem("show_allocated_players", JSON.stringify(showAllocated));
+  }, [showAllocated]);
+
+  useEffect(() => {
+    localStorage.setItem("show_unallocated_players", JSON.stringify(showUnallocated));
+  }, [showUnallocated]);
+
+  const effectivePlayerType = (() => {
+    if (showAllocated && showUnallocated) return "BOTH";
+    if (showAllocated) return "ALLOCATED";
+    if (showUnallocated) return "UNALLOCATED";
+    return "BOTH"; // unselected -> show all data
+  })();
 
   const { data: unallocatedPlayers } = useUnallocatedPlayers(
-    sidebarCategory, 
-    sidebarProgram, 
-    sidebarSearch, 
-    playerType === "BOTH" || playerType === "UNALLOCATED"
-  );
-  
-  const { data: allocatedPlayers } = useAllocatedPlayers(
-    sidebarCategory, 
-    sidebarProgram, 
+    sidebarCategory,
+    sidebarProgram,
     sidebarSearch,
-    playerType === "BOTH" || playerType === "ALLOCATED"
+    effectivePlayerType === "BOTH" || effectivePlayerType === "UNALLOCATED"
+  );
+
+  const { data: allocatedPlayers } = useAllocatedPlayers(
+    sidebarCategory,
+    sidebarProgram,
+    sidebarSearch,
+    effectivePlayerType === "BOTH" || effectivePlayerType === "ALLOCATED"
   );
 
   return (
@@ -89,19 +141,24 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
       <AcademyHeader
         programType={programType}
-        onCategoryChange={(id, name) => { 
-          setCategoryId(id); 
-          if (name) setCategoryName(name); 
+        onCategoryChange={(id, name) => {
+          setCategoryId(id);
+          if (name) setCategoryName(name);
         }}
-        onProgramChange={(id, name) => { 
-          setProgramId(id); 
-          if (name) setProgramName(name); 
+        onProgramChange={(id, name) => {
+          setProgramId(id);
+          if (name) setProgramName(name);
         }}
         onYearChange={(year) => { setYear(year); }}
+        onTermChange={setTermId}
         onOpenCreateClass={() => setIsClassModalOpen(true)}
         onOpenTermSettings={() => setIsTermModalOpen(true)}
-        playerType={playerType}
-        onPlayerTypeChange={setPlayerType}
+        showSidebar={showSidebar}
+        onShowSidebarChange={setShowSidebar}
+        showAllocated={showAllocated}
+        onShowAllocatedChange={setShowAllocated}
+        showUnallocated={showUnallocated}
+        onShowUnallocatedChange={setShowUnallocated}
       />
       <DayTabs activeDay={activeDay} onChangeDay={(day) => { setActiveDay(day); }} />
 
@@ -134,6 +191,8 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
         {/* Right Side: Sidebar Cards Panel */}
         {(() => {
+          if (!showSidebar) return null;
+
           const userStr = localStorage.getItem("user");
           let isCoach = false;
           if (userStr) {
@@ -159,11 +218,17 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                 onProgramChange={setSidebarProgram}
                 onSearchChange={setSidebarSearch}
               />
-              {(playerType === "BOTH" || playerType === "UNALLOCATED") && (
-                <UnallocatedPlayersCard players={unallocatedPlayers || []} />
+              {(effectivePlayerType === "BOTH" || effectivePlayerType === "UNALLOCATED") && (
+                <UnallocatedPlayersCard
+                  players={unallocatedPlayers || []}
+                  onAssignPlayer={(player) => setPendingAssignPlayer(player)}
+                />
               )}
-              {(playerType === "BOTH" || playerType === "ALLOCATED") && (
-                <AllocatedPlayersCard players={allocatedPlayers || []} />
+              {(effectivePlayerType === "BOTH" || effectivePlayerType === "ALLOCATED") && (
+                <AllocatedPlayersCard
+                  players={allocatedPlayers || []}
+                  onAssignPlayer={(player) => setPendingAssignPlayer(player)}
+                />
               )}
               {/* <WaitlistCard items={mockWaitlist} /> */}
               {/* <TrialsCard items={mockTrials} /> */}
@@ -172,10 +237,14 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         })()}
       </div>
 
-      <AddClassModal 
-        isOpen={isClassModalOpen} 
-        onClose={() => setIsClassModalOpen(false)} 
-        onSuccess={() => { /* re-fetch could be handled via query invalidation if needed */ }} 
+      <AddClassModal
+        isOpen={isClassModalOpen}
+        onClose={() => setIsClassModalOpen(false)}
+        onSuccess={() => { /* re-fetch could be handled via query invalidation if needed */ }}
+        prefilledCategoryId={categoryId}
+        prefilledProgramId={programId}
+        prefilledDayOfWeek={activeDay.toUpperCase()}
+        prefilledTermId={termId}
       />
 
       <Modal
@@ -185,6 +254,126 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
       >
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-none shadow-sm">
           <TermManagement />
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!pendingAssignPlayer} onClose={() => setPendingAssignPlayer(null)} className="max-w-2xl p-6">
+        <div className="w-full bg-white dark:bg-slate-900">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 uppercase tracking-wider">Confirm Assignment</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+            {categoryId && programId && pendingAssignPlayer?.categoryId && pendingAssignPlayer?.programId &&
+              (categoryId !== pendingAssignPlayer.categoryId || programId !== pendingAssignPlayer.programId)
+              ? "The player requested a different program or category than the one you are assigning them to. Please review the details below, choose status, and confirm assignment."
+              : "Please select the player's status and confirm assignment of the player to this class."}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 p-4 rounded border border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-bold text-slate-500 mb-3 uppercase">Requested</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Category:</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{pendingAssignPlayer?.categoryName || "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Program:</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{pendingAssignPlayer?.fullProgramName || pendingAssignPlayer?.programName || "N/A"}</span>
+                </div>
+                {pendingAssignPlayer?.preferredClasses && pendingAssignPlayer.preferredClasses.length > 0 && (
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 mt-3">
+                    <span className="text-slate-500 dark:text-slate-400 block mb-1">Preferred Classes:</span>
+                    <ul className="space-y-1">
+                      {pendingAssignPlayer.preferredClasses.map((c: any) => (
+                        <li key={c.id} className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2 py-1">
+                          {c.dayOfWeek.substring(0, 3)} {c.startTime}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-800">
+              <h4 className="text-xs font-bold text-[#0047FF] mb-3 uppercase">Assigning To</h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Category:</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{categoryName || "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Program:</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{programName || "N/A"}</span>
+                </div>
+                <div className="pt-3 border-t border-blue-200 dark:border-blue-800/50 mt-3 flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-slate-400">Class:</span>
+                  <select
+                    value={selectedAssignClassId}
+                    onChange={(e) => setSelectedAssignClassId(e.target.value)}
+                    className="text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded px-2 py-1 focus:outline-none cursor-pointer"
+                  >
+                    {timeSlots.map((slot: any) => (
+                      <option key={slot.classId} value={slot.classId}>
+                        {slot.startTime} - {slot.endTime} - {activeDay} ({slot.startTime} - {slot.endTime})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2.5 uppercase tracking-widest">Select Assignment Status</label>
+            <div className="grid grid-cols-5 gap-4">
+              {[
+                { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "UNPAID", label: "Unpaid", desc: "Requires Payment", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "PAID", label: "Paid (Allocate)", desc: "Payment Completed", activeClass: "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", inactiveClass: "border-slate-200 hover:border-emerald-300/50 hover:bg-emerald-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "OVER_DUE", label: "Overdue", desc: "Payment Overdue", activeClass: "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400", inactiveClass: "border-slate-200 hover:border-red-300/50 hover:bg-red-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "OTHERS", label: "Others", desc: "Other Status", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400", inactiveClass: "border-slate-200 hover:border-blue-300/50 hover:bg-blue-500/[0.02] text-slate-500 dark:border-slate-800" }
+              ].map((status) => (
+                <button
+                  key={status.value}
+                  type="button"
+                  onClick={() => setSelectedAssignStatus(status.value)}
+                  className={`p-4 border text-center rounded-none transition-all flex flex-col items-center justify-center gap-1 cursor-pointer select-none ${selectedAssignStatus === status.value ? status.activeClass + " ring-1 ring-offset-0 font-extrabold" : status.inactiveClass
+                    }`}
+                >
+                  <span className="text-xs font-black uppercase tracking-wide">{status.label}</span>
+                  <span className="text-[9px] font-bold opacity-80">{status.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={() => setPendingAssignPlayer(null)}
+              className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors border border-transparent hover:border-slate-300 rounded-none"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (!pendingAssignPlayer || !selectedAssignClassId) return;
+                assignClassesMutation.mutate({
+                  playerId: pendingAssignPlayer.id || pendingAssignPlayer.playerId,
+                  classIds: [selectedAssignClassId],
+                  paymentStatus: selectedAssignStatus,
+                  registrationRequestId: pendingAssignPlayer.registrationRequestId,
+                }, {
+                  onSuccess: () => {
+                    setPendingAssignPlayer(null);
+                  }
+                });
+              }}
+              disabled={assignClassesMutation.isPending}
+              className="px-6 py-2 text-sm font-bold bg-[#0047FF] text-white rounded-none hover:bg-blue-700 transition-colors shadow-theme-xs disabled:opacity-50"
+            >
+              {assignClassesMutation.isPending ? "Assigning..." : "Assign Player"}
+            </button>
+          </div>
         </div>
       </Modal>
     </>

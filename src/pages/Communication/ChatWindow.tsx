@@ -260,15 +260,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId }) => {
       />
 
       {/* Messages log */}
-      <div
-        className="flex-1 overflow-y-auto p-4 flex flex-col space-y-4 min-h-0 scrollbar-thin scrollbar-thumb-slate-800"
-        style={{
-          backgroundImage: "url('/images/chat/chatbg.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
+      <div className="flex-1 overflow-y-auto chat-scrollbar p-4 flex flex-col space-y-4 min-h-0 bg-[#eff6ff] dark:bg-slate-950">
         {loading ? (
           <div className="flex items-center justify-center h-full text-slate-400 text-xs">
             <span className="animate-spin mr-2">🌀</span> Loading conversation messages...

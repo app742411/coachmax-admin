@@ -23,9 +23,56 @@ export default function ViewClassPlayersModal({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-none" showCloseButton={true}>
-        <div className="flex flex-col h-full max-h-[85vh] p-8">
-          
+      <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-none" showCloseButton={false}>
+        {/* Header Section matching Create Class UI */}
+        <div className="relative overflow-hidden bg-[#0A1930] px-8 py-5 text-white border-l-[6px] border-[#0047FF]">
+          {/* Faint Pitch Schematic Background */}
+          <svg className="absolute right-0 top-0 h-full w-auto opacity-10 pointer-events-none text-white/70" viewBox="0 0 120 80" fill="none" stroke="currentColor" strokeWidth="0.8">
+            <rect x="2" y="2" width="116" height="76" rx="2" />
+            <line x1="60" y1="2" x2="60" y2="78" />
+            <circle cx="60" cy="40" r="15" />
+            <circle cx="60" cy="40" r="1" fill="currentColor" />
+            <path d="M 2 20 L 18 20 L 18 60 L 2 60" />
+            <path d="M 118 20 L 102 20 L 102 60 L 118 60" />
+            <path d="M 2 28 L 8 28 L 8 52 L 2 52" />
+            <path d="M 118 28 L 112 28 L 112 52 L 118 52" />
+          </svg>
+
+          {/* Dotted Grid Accent */}
+          <div className="absolute right-12 bottom-4 grid grid-cols-5 gap-1 opacity-60">
+            {[...Array(15)].map((_, i) => (
+              <div key={i} className="w-1 h-1 rounded-full bg-[#0047FF]" />
+            ))}
+          </div>
+
+          <div className="flex items-start justify-between relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full border border-white/20 bg-white/5 text-white">
+                <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold tracking-wide text-white">
+                  Class Active Roster
+                </h3>
+                <p className="text-xs text-gray-300 mt-1 font-medium">
+                  Explore enrolled participants, contact access information, and parent credentials.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white/60 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-colors cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col h-full max-h-[70vh] p-8 overflow-y-auto">
           {/* Top Info Card */}
           <div className="border border-slate-100 dark:border-slate-800 rounded-none p-5 mb-8 bg-white dark:bg-slate-900 shadow-sm flex items-center flex-wrap gap-y-4">
             <div className="flex-1 min-w-[150px] px-2 border-r border-slate-100 dark:border-slate-800 last:border-0">

@@ -29,6 +29,13 @@ export interface TemporaryPlayerPayload {
   allergies?: string;
   classId: string;
   sessionDate: string;
+  categories?: string[];
+  programs?: string[];
+  preferredTerm?: string;
+  preferredClasses?: string[];
+  prefferedFoot?: string;
+  preferredFoot?: string;
+  gender?: string;
 }
 
 export const getAllCoaches = async (page = 1, limit = 10): Promise<CoachesResponse> => {

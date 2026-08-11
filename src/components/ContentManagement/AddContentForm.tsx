@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { 
-  Upload, 
-  Trash2, 
-  Tag, 
-  FileText, 
+import {
+  Upload,
+  Trash2,
+  Tag,
+  FileText,
   Bookmark,
   ArrowRight,
   Loader2,
@@ -13,6 +13,7 @@ import {
 import toast from "react-hot-toast";
 import { createNews } from "../../api/adminApi";
 import SuccessPopup from "../SuccessPopup";
+import HtmlEditor from "../form/HtmlEditor";
 
 interface SectionHeaderProps {
   icon: LucideIcon;
@@ -37,7 +38,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -45,22 +46,11 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
     description: ""
   });
 
-  const newsCategories = [
-    { value: "sports", label: "Sports" },
-    { value: "business", label: "Business" },
-    { value: "latest", label: "Latest News" },
-    { value: "liga", label: "La Liga" }
-  ];
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCategoryChange = (val: string) => {
-    setFormData((prev) => ({ ...prev, category: val }));
   };
 
   const handleFeaturedChange = (val: string) => {
@@ -99,7 +89,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
       toast.error("Headline Title is required");
       return;
@@ -125,7 +115,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
       }
 
       const response = await createNews(data);
-      
+
       if (response && response.success === false) {
         toast.error(response.message || "Failed to create news.");
         return;
@@ -133,7 +123,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
 
       toast.success(response.message || "News announcement published successfully");
       setShowSuccessPopup(true);
-      
+
       // Reset form
       setFormData({
         title: "",
@@ -154,159 +144,155 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
 
   return (
     <div className="bg-gray-50/50 dark:bg-gray-950/20 py-4 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-         {/* Main Form */}
+      <div className="max-w-5xl mx-auto">
+        {/* Main Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          
+
           {/* Card Wrapper */}
           <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xl shadow-gray-100/50 dark:shadow-none p-6 space-y-6 rounded-none">
             <SectionHeader icon={Newspaper} title="Create News Article" />
-            
-            {/* 1. Featured Image Dropzone (At the Top) */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                Featured Banner Image
-              </label>
-              
-              {!imagePreview ? (
-                <div 
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  className="group relative border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-brand-500 dark:hover:border-brand-500 transition-all rounded-none cursor-pointer p-8 text-center flex flex-col items-center justify-center min-h-[220px]"
-                >
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-none group-hover:scale-110 transition-transform mb-4">
-                    <Upload className="w-6 h-6 text-gray-400 group-hover:text-brand-500" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                    Drag & drop banner here
-                  </h3>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Supports JPG, PNG, WEBP (Max 5MB)
-                  </p>
-                  <span className="mt-4 text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">
-                    Browse Local Files
-                  </span>
-                </div>
-              ) : (
-                <div className="relative border border-gray-100 dark:border-gray-800 rounded-none overflow-hidden group aspect-[16/9] max-h-[300px]">
-                  <img 
-                    src={imagePreview} 
-                    alt="Preview" 
-                    className="w-full h-full object-cover" 
-                  />
-                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <button 
-                      type="button"
-                      onClick={removeImage}
-                      className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-none transition-transform hover:scale-110 shadow-lg shadow-red-600/30"
-                      title="Remove Image"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
 
-            {/* 2. Headline Title */}
-            <div className="space-y-2">
-              <label htmlFor="title" className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                Headline Title
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  placeholder="e.g., Real Madrid confirm Xabi Alonso as new head coach"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all"
-                  required
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+              {/* Top Left: Headline Title, Category & Pin as Featured */}
+              <div className="lg:col-span-7 space-y-4 flex flex-col justify-between">
+                {/* Headline Title */}
+                <div className="space-y-2">
+                  <label htmlFor="title" className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Headline Title
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    placeholder="e.g., Real Madrid confirm Xabi Alonso as new head coach"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all"
+                    required
+                  />
+                </div>
+
+                {/* Category & Featured Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Category */}
+                  <div className="space-y-2">
+                    <label htmlFor="category" className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      <Tag size={12} />
+                      Category
+                    </label>
+                    <input
+                      type="text"
+                      id="category"
+                      name="category"
+                      placeholder="e.g., Sports, Latest"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all"
+                      required
+                    />
+                  </div>
+
+                  {/* Featured */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      <Bookmark size={12} />
+                      Pin as Featured
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-gray-50 dark:bg-gray-850 rounded-none border border-gray-200 dark:border-gray-800">
+                      <button
+                        type="button"
+                        onClick={() => handleFeaturedChange("true")}
+                        className={`py-2 px-4 text-xs font-bold rounded-none transition-all ${formData.featured === "true"
+                            ? "bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-md border border-gray-100 dark:border-gray-800"
+                            : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                          }`}
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFeaturedChange("false")}
+                        className={`py-2 px-4 text-xs font-bold rounded-none transition-all ${formData.featured === "false"
+                            ? "bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-md border border-gray-100 dark:border-gray-800"
+                            : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                          }`}
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Right: Featured Banner Image Dropzone */}
+              <div className="lg:col-span-5 flex flex-col justify-end">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                  Featured Banner Image
+                </label>
+
+                <div className="flex-1 flex flex-col justify-stretch">
+                  {!imagePreview ? (
+                    <div
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      className="group relative border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-brand-500 dark:hover:border-brand-500 transition-all rounded-none cursor-pointer p-4 text-center flex flex-col items-center justify-center min-h-[145px]"
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="p-2 bg-gray-50 dark:bg-gray-800/40 rounded-none group-hover:scale-110 transition-transform mb-2">
+                        <Upload className="w-4 h-4 text-gray-400 group-hover:text-brand-500" />
+                      </div>
+                      <h3 className="text-xs font-semibold text-gray-900 dark:text-white">
+                        Drag & drop banner here
+                      </h3>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        JPG, PNG, WEBP (Max 5MB)
+                      </p>
+                      <span className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline">
+                        Browse Local Files
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="relative border border-gray-100 dark:border-gray-800 rounded-none overflow-hidden group aspect-[16/6] min-h-[145px]">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-none transition-transform hover:scale-110 shadow-lg shadow-red-600/30"
+                          title="Remove Image"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom: News Description HTML Editor (Full Width) */}
+              <div className="lg:col-span-12 space-y-2">
+                <label htmlFor="description" className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <FileText size={12} />
+                  News Description
+                </label>
+                <HtmlEditor
+                  value={formData.description}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, description: val }))}
+                  placeholder="Write your news article description here..."
+                  className="min-h-[160px]"
                 />
               </div>
-            </div>
 
-            {/* 3. Category & Featured Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              
-              {/* Category */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  <Tag size={12} />
-                  Category
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all cursor-pointer"
-                  required
-                >
-                  <option value="" disabled>Select Category</option>
-                  {newsCategories.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Featured */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  <Bookmark size={12} />
-                  Pin as Featured
-                </label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-50 dark:bg-gray-850 rounded-none border border-gray-200 dark:border-gray-800">
-                  <button
-                    type="button"
-                    onClick={() => handleFeaturedChange("true")}
-                    className={`py-2 px-4 text-xs font-bold rounded-none transition-all ${
-                      formData.featured === "true"
-                        ? "bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-md border border-gray-100 dark:border-gray-800"
-                        : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
-                    }`}
-                  >
-                    Yes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFeaturedChange("false")}
-                    className={`py-2 px-4 text-xs font-bold rounded-none transition-all ${
-                      formData.featured === "false"
-                        ? "bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-md border border-gray-100 dark:border-gray-800"
-                        : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
-                    }`}
-                  >
-                    No
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* 4. Description */}
-            <div className="space-y-2">
-              <label htmlFor="description" className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                <FileText size={12} />
-                News Description
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                rows={8}
-                placeholder="Write your news article description here..."
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all resize-y min-h-[160px]"
-                required
-              />
             </div>
 
           </div>

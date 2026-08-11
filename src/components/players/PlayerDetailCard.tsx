@@ -30,13 +30,15 @@ interface PlayerDetailCardProps {
   isRegistrationRequest?: boolean;
 }
 
-export default function PlayerDetailCard({ player, onClose, isRegistrationRequest }: PlayerDetailCardProps) {
+export default function PlayerDetailCard({ player: initialPlayer, onClose, isRegistrationRequest }: PlayerDetailCardProps) {
   const [activeTab, setActiveTab] = useState<
     "Overview" | "Details" | "Development" | "Medical" | "Note"
   >("Overview");
 
-  usePlayerProfile(player._id);
-  const { data: notesRes } = useCoachNotes(player._id);
+  const { data: profileRes } = usePlayerProfile(initialPlayer._id);
+  const player = profileRes?.data || initialPlayer;
+
+  const { data: notesRes } = useCoachNotes(initialPlayer._id);
   const notes = notesRes?.data || [];
   const [editingNote, setEditingNote] = useState<any | null>(null);
 

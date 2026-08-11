@@ -4,9 +4,10 @@ import PlayersListModal from "./PlayersListModal";
 
 interface AllocatedPlayersCardProps {
   players: UnallocatedPlayer[];
+  onAssignPlayer?: (player: any) => void;
 }
 
-export default function AllocatedPlayersCard({ players }: AllocatedPlayersCardProps) {
+export default function AllocatedPlayersCard({ players, onAssignPlayer }: AllocatedPlayersCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const renderStars = (count: number) => {
@@ -77,7 +78,23 @@ export default function AllocatedPlayersCard({ players }: AllocatedPlayersCardPr
                 <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
                   {p.details}
                 </span>
-                <div className="mt-1">{renderStars(p.rating)}</div>
+                 <div className="mt-1">{renderStars(p.rating)}</div>
+                {onAssignPlayer && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAssignPlayer(p);
+                    }}
+                    className="mt-2.5 w-full flex items-center justify-center gap-1 py-1 px-2 border border-[#0047FF] hover:bg-[#0047FF] text-[#0047FF] hover:text-white dark:hover:bg-blue-950/20 text-[9px] font-bold transition-all rounded-none cursor-pointer"
+                    title="Assign to the currently opened class"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Assign to Class</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -100,6 +117,7 @@ export default function AllocatedPlayersCard({ players }: AllocatedPlayersCardPr
         onClose={() => setIsModalOpen(false)}
         title="Allocated Players"
         players={players}
+        onAssignPlayer={onAssignPlayer}
       />
     </div>
   );

@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router";
 import { ChevronDownIcon, HorizontaLDots } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 import apiClient from "../api/apiClient";
-
+import { Trophy, Shield, Calendar, ClipboardList, Copy } from "lucide-react";
 type NavItem = {
   name: string;
   icon: React.ReactNode;
@@ -105,11 +105,6 @@ const AppSidebar: React.FC = () => {
     </svg>
   );
 
-  const HelpIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
 
   const coachMenuSections: MenuSection[] = [
     {
@@ -225,21 +220,21 @@ const AppSidebar: React.FC = () => {
             { name: "Class Broadcast Announcements", path: "/announcements" },
           ],
         },
-        // {
-        //   name: "Leagues",
-        //   icon: <Trophy size={18} />,
-        //   path: "/leagues"
-        // },
-        // {
-        //   name: "Teams Management",
-        //   icon: <Shield size={18} />,
-        //   path: "/teams"
-        // },
-        // {
-        //   name: "Fixtures",
-        //   icon: <Calendar size={18} />,
-        //   path: "/fixtures"
-        // },
+        {
+          name: "Leagues",
+          icon: <Trophy size={18} />,
+          path: "/leagues"
+        },
+        {
+          name: "Teams Management",
+          icon: <Shield size={18} />,
+          path: "/teams"
+        },
+        {
+          name: "Fixtures",
+          icon: <Calendar size={18} />,
+          path: "/fixtures"
+        },
 
         {
           name: "Finance",
@@ -298,6 +293,8 @@ const AppSidebar: React.FC = () => {
         { name: "Coaching Management", icon: <UserIcon />, path: "/coaching-management" },
         { name: "Coach Manage", icon: <UserIcon />, path: "/coaches" },
         { name: "Sponsors", icon: <GridIcon />, path: "/sponsors" },
+        { name: "Audit Logs", icon: <ClipboardList size={18} />, path: "/audit-logs" },
+        { name: "Clone Term", icon: <Copy size={18} />, path: "/clone-term" },
       ],
     },
     {
@@ -460,12 +457,12 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-[#031549] text-gray-300 h-screen transition-all duration-300 ease-in-out z-50 border-r border-[#082269] 
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-4 2xl:px-5 left-0 bg-[#031549] text-gray-300 h-screen transition-all duration-300 ease-in-out z-50 border-r border-[#082269] 
         ${isExpanded || isMobileOpen
-          ? "w-[290px]"
+          ? "w-[240px] 2xl:w-[290px]"
           : isHovered
-            ? "w-[290px]"
-            : "w-[90px]"
+            ? "w-[240px] 2xl:w-[290px]"
+            : "w-[80px] xl:w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
@@ -504,18 +501,6 @@ const AppSidebar: React.FC = () => {
           </div>
         </nav>
 
-        {/* Help & Support fixed at the bottom when sidebar is expanded */}
-        {(isExpanded || isHovered || isMobileOpen) && (
-          <div className="mt-auto pt-6 border-t border-[#082269]">
-            <Link
-              to="/help"
-              className="flex items-center gap-3 px-3 py-3 rounded-none text-theme-sm text-slate-400 hover:bg-white/5 hover:text-white transition-all"
-            >
-              <HelpIcon />
-              <span>Help & Support</span>
-            </Link>
-          </div>
-        )}
       </div>
     </aside>
   );

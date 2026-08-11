@@ -18,6 +18,7 @@ export interface Sponsor {
   image?: string;
   isActive?: boolean | string;
   status?: string;
+  createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
 }

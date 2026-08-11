@@ -23,6 +23,7 @@ import RegistrationRequests from "./pages/PlayersManagement/RegistrationRequests
 import Academy from "./pages/Academy/Academy";
 import ProgramsManagement from "./pages/Programs/ProgramsManagement";
 import ClassesList from "./pages/Classes/ClassesList";
+import CloneTermPage from "./pages/Classes/CloneTermPage";
 import ProductList from "./pages/Store/ProductList";
 import AddProductPage, { EditProductPage } from "./pages/Store/AddProductPage";
 import OrdersList from "./pages/Store/OrdersList";
@@ -49,9 +50,10 @@ import InvoiceDetails from "./pages/Finance/InvoiceDetails";
 import Transactions from "./pages/Finance/Transactions";
 import NotificationsPage from "./pages/Notifications/NotificationsPage";
 import CommunicationPage from "./pages/Communication";
-// import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
-// import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
-// import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
+import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
+import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
+import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
+import AuditLogsPage from "./pages/AuditLogs/AuditLogsPage";
 import { Toaster } from "react-hot-toast";
 
 function DynamicProgramRoute() {
@@ -71,13 +73,13 @@ export default function App() {
       <Toaster
         position="top-right"
         containerStyle={{
-          zIndex: 99999,
+          zIndex: 999999,
         }}
         toastOptions={{
           style: {
             background: '#333',
             color: '#fff',
-            borderRadius: '10px',
+            borderRadius: '0px',
             padding: '16px',
             fontWeight: '500',
             fontSize: '14px',
@@ -107,6 +109,7 @@ export default function App() {
             <Route path="/players" element={<PlayersManagement />} />
             <Route path="/programs" element={<ProgramsManagement />} />
             <Route path="/classes" element={<ClassesList />} />
+            <Route path="/clone-term" element={<CloneTermPage />} />
             <Route path="/program/:programType" element={<DynamicProgramRoute />} />
 
             {/* Store */}
@@ -120,9 +123,9 @@ export default function App() {
             <Route path="/coaching-management" element={<CoachingManagementPage />} />
             <Route path="/coaches" element={<CoachesPage />} />
             <Route path="/add-temporary-players" element={<AddTempPlayers />} />
-            {/* <Route path="/leagues" element={<LeaguesManagementPage />} /> */}
-            {/* <Route path="/teams" element={<TeamsManagementPage />} /> */}
-            {/* <Route path="/fixtures" element={<FixturesManagementPage />} /> */}
+            <Route path="/leagues" element={<LeaguesManagementPage />} />
+            <Route path="/teams" element={<TeamsManagementPage />} />
+            <Route path="/fixtures" element={<FixturesManagementPage />} />
             <Route path="/events" element={<EventList />} />
             <Route path="/add-event" element={<AddEvent />} />
             <Route path="/edit-event/:id" element={<EditEvent />} />
@@ -140,6 +143,9 @@ export default function App() {
             <Route path="/invoices" element={<InvoiceList />} />
             <Route path="/invoices/:id" element={<InvoiceDetails />} />
             <Route path="/transactions" element={<Transactions />} />
+
+            {/* Audit */}
+            <Route path="/audit-logs" element={<AuditLogsPage />} />
 
             {/* Notifications */}
             <Route path="/notifications" element={<NotificationsPage />} />

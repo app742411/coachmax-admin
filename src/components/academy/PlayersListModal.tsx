@@ -6,9 +6,10 @@ interface PlayersListModalProps {
   onClose: () => void;
   title: string;
   players: UnallocatedPlayer[];
+  onAssignPlayer?: (player: any) => void;
 }
 
-export default function PlayersListModal({ isOpen, onClose, title, players }: PlayersListModalProps) {
+export default function PlayersListModal({ isOpen, onClose, title, players, onAssignPlayer }: PlayersListModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-3xl mx-auto">
       <div className="bg-white dark:bg-slate-900 shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -101,10 +102,26 @@ export default function PlayersListModal({ isOpen, onClose, title, players }: Pl
                         )}
                       </div>
 
-                      <div className="mt-3 flex items-center justify-end">
+                      <div className="mt-3 flex items-center justify-between gap-4">
                         <span className="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
                           REQ: {p.requested}
                         </span>
+                        {onAssignPlayer && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAssignPlayer(p);
+                            }}
+                            className="flex items-center gap-1.5 py-1 px-2.5 border border-[#0047FF] hover:bg-[#0047FF] text-[#0047FF] hover:text-white dark:hover:bg-blue-950/20 text-[10px] font-bold transition-all rounded-none cursor-pointer"
+                            title="Assign to the currently opened class"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Assign to Class</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

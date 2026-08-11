@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
-import { useInvoices } from "../../hooks/useInvoices";
+import { useInvoices, useUpdateInvoice } from "../../hooks/useInvoices";
 
 const formatDate = (dateString: string) => {
   if (!dateString) return "N/A";
@@ -14,6 +14,12 @@ const formatDate = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
+const STATUS_STYLES: Record<string, { dot: string; text: string }> = {
+  PAID:    { dot: "bg-emerald-500", text: "text-emerald-600" },
+  UNPAID:  { dot: "bg-amber-500",   text: "text-amber-500"   },
+  OVERDUE: { dot: "bg-rose-500",    text: "text-rose-600"    },
+};
+
 export default function InvoiceList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -22,6 +28,7 @@ export default function InvoiceList() {
   const limit = 10;
 
   const { data, isLoading, isError } = useInvoices(search, paymentStatus, page, limit);
+  const updateInvoiceMutation = useUpdateInvoice();
 
   const invoices = data?.data || [];
   const total = data?.pagination?.total || 0;
@@ -33,6 +40,12 @@ export default function InvoiceList() {
 
   const handleNextPage = () => {
     if (page < totalPages) setPage(page + 1);
+  };
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>, invoiceId: string) => {
+    e.stopPropagation();
+    const newStatus = e.target.value;
+    updateInvoiceMutation.mutate({ id: invoiceId, payload: { paymentStatus: newStatus } });
   };
 
   return (
@@ -75,7 +88,7 @@ export default function InvoiceList() {
                   <th className="py-3 px-3">Type</th>
                   <th className="py-3 px-3">Total Amount</th>
                   <th className="py-3 px-3">Due Date</th>
-                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Payment Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,36 +105,51 @@ export default function InvoiceList() {
                     <td colSpan={6} className="px-6 py-8 text-center text-gray-500">No invoices found.</td>
                   </tr>
                 ) : (
-                  invoices.map((inv: any) => (
-                    <tr
-                      key={inv._id}
-                      onClick={() => navigate(`/invoices/${inv._id}`)}
-                      className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all"
-                    >
-                      <td className="py-4 px-4 font-semibold text-[#0047FF]">
-                        {inv.invoiceNumber || inv._id.substring(inv._id.length - 8)}
-                      </td>
-                      <td className="py-4 px-3">
-                        <div className="font-bold text-slate-800 dark:text-slate-200">{inv.parent?.fullName || "N/A"}</div>
-                        <div className="font-semibold text-slate-500">{inv.players?.map((p: any) => p.fullName).join(", ")}</div>
-                      </td>
-                      <td className="py-4 px-3 font-semibold text-slate-500">{inv.type}</td>
-                      <td className="py-4 px-3 font-bold text-slate-800 dark:text-slate-200">${inv.totalAmount || inv.amount || 0}</td>
-                      <td className="py-4 px-3 font-semibold text-slate-500">{formatDate(inv.dueDate)}</td>
-                      <td className="py-4 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 font-bold ${inv.paymentStatus === "PAID" ? "text-emerald-600" : inv.paymentStatus === "OVERDUE" ? "text-rose-600" : "text-amber-500"
-                            }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${inv.paymentStatus === "PAID" ? "bg-emerald-600" : inv.paymentStatus === "OVERDUE" ? "bg-rose-600" : "bg-amber-500"
-                              }`}
-                          />
-                          {inv.paymentStatus || "UNPAID"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
+                  invoices.map((inv: any) => {
+                    const st = STATUS_STYLES[inv.paymentStatus] || STATUS_STYLES["UNPAID"];
+                    const isPending = updateInvoiceMutation.isPending && (updateInvoiceMutation.variables as any)?.id === inv._id;
+                    return (
+                      <tr
+                        key={inv._id}
+                        onClick={() => navigate(`/invoices/${inv._id}`)}
+                        className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all"
+                      >
+                        <td className="py-4 px-4 font-semibold text-[#0047FF]">
+                          {inv.invoiceNumber || inv._id.substring(inv._id.length - 8)}
+                        </td>
+                        <td className="py-4 px-3">
+                          <div className="font-bold text-slate-800 dark:text-slate-200">{inv.parent?.fullName || "N/A"}</div>
+                          <div className="font-semibold text-slate-500">{inv.players?.map((p: any) => p.fullName).join(", ")}</div>
+                        </td>
+                        <td className="py-4 px-3 font-semibold text-slate-500">{inv.type}</td>
+                        <td className="py-4 px-3 font-bold text-slate-800 dark:text-slate-200">${inv.totalAmount || inv.amount || 0}</td>
+                        <td className="py-4 px-3 font-semibold text-slate-500">{formatDate(inv.dueDate)}</td>
+                        <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
+                            <select
+                              value={inv.paymentStatus || "UNPAID"}
+                              onChange={(e) => handleStatusChange(e, inv._id)}
+                              disabled={isPending}
+                              className={`text-xs font-bold border rounded-none px-2 py-1 outline-none cursor-pointer transition-all disabled:opacity-50
+                                ${st.text}
+                                border-slate-200 dark:border-slate-700
+                                bg-white dark:bg-slate-900
+                                hover:border-[#0047FF] focus:border-[#0047FF]
+                              `}
+                            >
+                              <option value="UNPAID">UNPAID</option>
+                              <option value="PAID">PAID</option>
+                              <option value="OVERDUE">OVERDUE</option>
+                            </select>
+                            {isPending && (
+                              <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-[#0047FF] rounded-full animate-spin" />
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

@@ -34,7 +34,8 @@ export default function TemporaryPlayersList() {
   const deletePlayerMutation = useDeleteTemporaryPlayer();
 
   const handleDeletePlayer = (player: Player) => {
-    deletePlayerMutation.mutate(player._id);
+    const idToDelete = (player as any).requestId || player._id;
+    deletePlayerMutation.mutate(idToDelete);
     if (selectedPlayer?._id === player._id) {
       setSelectedPlayer(null);
     }

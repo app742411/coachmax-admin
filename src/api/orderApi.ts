@@ -61,9 +61,15 @@ export const createStoreProduct = async (payload: FormData) => {
 };
 
 export const updateStoreProduct = async (id: string, payload: FormData) => {
-  const response = await apiClient.patch(`/api/admin/store/products/${id}`, payload, {
+  const response = await apiClient.put(`/api/admin/store/products/${id}`, payload, {
     headers: { "Content-Type": "multipart/form-data" }
   });
   return response.data;
 };
+
+export const deleteStoreProduct = async (id: string) => {
+  const response = await apiClient.delete(`/api/admin/store/products/${id}`);
+  return response.data;
+};
+
 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { setPublishing } from "../../store/slices/broadcastSlice";
 import { broadcastApi } from "../../services/broadcastApi";
+import { Megaphone, Bell, Loader2, Send } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 interface BroadcastComposerProps {
@@ -45,31 +46,41 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none p-5 flex flex-col gap-4 shadow-sm">
-      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">✍️ Create Class Broadcast</h3>
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none p-6 flex flex-col gap-4 shadow-theme-xs">
+      <div className="flex items-center gap-2">
+        <Megaphone size={16} className="text-[#0047FF]" />
+        <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wide">
+          Create Class Broadcast
+        </h3>
+      </div>
 
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Write announcement for parents... (Schedule changes, gear details, etc.)"
-        className="w-full min-h-[90px] p-3 text-xs bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-gray-800 rounded-none text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 leading-relaxed resize-y"
+        className="w-full min-h-[100px] p-4 text-xs font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-none text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] leading-relaxed resize-y"
       />
 
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
-          📢 Reaches all class parents via Real-Time Notifications
-        </span>
+      <div className="flex justify-between items-center flex-wrap gap-3">
+        <div className="flex items-center gap-1.5 text-[10px] text-[#0047FF] dark:text-blue-400 font-black uppercase tracking-wider">
+          <Bell size={12} className="shrink-0" />
+          <span>Reaches all class parents via Real-Time Notifications</span>
+        </div>
         <button
           onClick={handlePublish}
           disabled={publishing || !activeClassId}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-none text-xs transition-colors shrink-0 shadow-lg cursor-pointer flex items-center gap-1.5"
+          className="px-5 py-2.5 bg-[#0047FF] hover:bg-blue-700 disabled:bg-[#0047FF]/50 text-white font-extrabold rounded-none text-[11px] uppercase tracking-wider transition-colors shrink-0 shadow-md hover:shadow-lg disabled:shadow-none disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
         >
           {publishing ? (
             <>
-              <span className="animate-spin text-xs">🌀</span> Publishing...
+              <Loader2 size={12} className="animate-spin" />
+              <span>Publishing...</span>
             </>
           ) : (
-            "Publish Broadcast 🚀"
+            <>
+              <span>Publish Broadcast</span>
+              <Send size={12} />
+            </>
           )}
         </button>
       </div>

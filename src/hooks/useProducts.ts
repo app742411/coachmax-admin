@@ -12,7 +12,8 @@ import {
   ProductsResponse,
   ProductResponse,
 } from "../types/product";
-import { getStoreProducts, getStoreProductDetails } from "../api/orderApi";
+import { getStoreProducts, getStoreProductDetails, deleteStoreProduct } from "../api/orderApi";
+
 
 export const useStoreProducts = (params?: {
   search?: string;
@@ -81,3 +82,14 @@ export const useDeleteProduct = () => {
     },
   });
 };
+
+export const useDeleteStoreProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation<any, Error, string>({
+    mutationFn: deleteStoreProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["storeProducts"] });
+    },
+  });
+};
+

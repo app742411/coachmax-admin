@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
- Tag,
- Package,
- Image as ImageIcon,
- Info,
- LucideIcon
+  Tag,
+  Package,
+  Image as ImageIcon,
+  Info,
+  LucideIcon
 } from "lucide-react";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
@@ -17,22 +17,22 @@ import { getStoreCategories, createStoreProduct, updateStoreProduct } from "../.
 import CategoryModal from "./CategoryModal";
 
 interface ProductFormData {
- name: string;
- shortHighlight: string;
- price: string;
- category: string;
- description: string;
- sizes: string[];
- colors: string;
- stock: string;
- availabilityStatus: string;
- images?: string[];
- _id?: string;
+  name: string;
+  shortHighlight: string;
+  price: string;
+  category: string;
+  description: string;
+  sizes: string[];
+  colors: string;
+  stock: string;
+  availabilityStatus: string;
+  images?: string[];
+  _id?: string;
 }
 
 interface SectionHeaderProps {
- icon: LucideIcon;
- title: string;
+  icon: LucideIcon;
+  title: string;
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
@@ -45,14 +45,14 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
 );
 
 interface FormCardProps {
- children: React.ReactNode;
- className?: string;
+  children: React.ReactNode;
+  className?: string;
 }
 
 const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
- <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
-  {children}
- </div>
+  <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
+    {children}
+  </div>
 );
 
 const sizeOptions = [
@@ -126,7 +126,7 @@ const SizeInput: React.FC<SizeInputProps> = ({ value, onChange }) => {
 
   return (
     <div className="w-full relative" ref={dropdownRef}>
-      <div className="flex flex-wrap gap-2 mb-2">
+      <div className="flex flex-wrap gap-2">
         {value.map((size) => {
           const label = sizeOptions.find((opt) => opt.value === size)?.text || size;
           return (
@@ -211,283 +211,355 @@ const SizeInput: React.FC<SizeInputProps> = ({ value, onChange }) => {
 };
 
 interface ProductFormProps {
- initialData?: ProductFormData | null;
- isEdit?: boolean;
+  initialData?: ProductFormData | null;
+  isEdit?: boolean;
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = false }) => {
- const [showSuccessPopup, setShowSuccessPopup] = useState(false);
- const [categories, setCategories] = useState<{value: string, label: string}[]>([]);
- const [images, setImages] = useState<File[]>([]);
- const [existingImages, setExistingImages] = useState<string[]>([]);
- const [formData, setFormData] = useState<ProductFormData>({
-  name: "",
-  shortHighlight: "",
-  price: "",
-  category: "",
-  description: "",
-  sizes: [],
-  colors: "",
-  stock: "0",
-  availabilityStatus: "IN_STOCK"
- });
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [categories, setCategories] = useState<{ value: string, label: string }[]>([]);
+  const [images, setImages] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [formData, setFormData] = useState<ProductFormData>({
+    name: "",
+    shortHighlight: "",
+    price: "",
+    category: "",
+    description: "",
+    sizes: [],
+    colors: "",
+    stock: "0",
+    availabilityStatus: "IN_STOCK"
+  });
 
- useEffect(() => {
-  if (initialData) {
-   // @ts-ignore
-   setFormData(prev => ({ ...prev, ...initialData }));
-   if (initialData.images) {
-     setExistingImages(initialData.images);
-   }
-  }
- }, [initialData]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
- const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const validate = (data: ProductFormData) => {
+    const errors: Record<string, string> = {};
+    if (!data.name.trim()) errors.name = "Product name is required.";
+    if (!data.category) errors.category = "Please select a category.";
+    if (!data.price.trim() || isNaN(Number(data.price)) || Number(data.price) <= 0)
+      errors.price = "A valid price is required.";
+    if (!data.sizes || data.sizes.length === 0) errors.sizes = "At least one size is required.";
+    if (!data.colors.trim()) errors.colors = "At least one color is required.";
+    return errors;
+  };
 
- const fetchCategories = async () => {
-  try {
-    const response = await getStoreCategories();
-    const data = response.data || response;
-   const formatted = data.map((item: any) => ({
-    value: item.uuid || item.id || item._id,
-    label: item.name
-   }));
-   setCategories(formatted);
-  } catch (error) {
-   console.error("Failed to fetch categories:", error);
-   toast.error("Failed to fetch categories");
-  }
- };
+  const isFormValid = Object.keys(validate(formData)).length === 0;
 
- useEffect(() => {
-  fetchCategories();
- }, []);
-
- const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  const { name, value } = e.target;
-  setFormData(prev => ({ ...prev, [name]: value }));
- };
-
- const handleSizesChange = (selectedSizes: string[]) => {
-  setFormData(prev => ({ ...prev, sizes: selectedSizes }));
- };
-
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  const payload = new FormData();
-  payload.append("name", formData.name);
-  payload.append("shortHighlight", formData.shortHighlight);
-  payload.append("description", formData.description);
-  payload.append("category", formData.category);
-  payload.append("price", formData.price);
-  payload.append("stock", formData.stock);
-  payload.append("availabilityStatus", formData.availabilityStatus);
-  
-  payload.append("sizes", JSON.stringify(formData.sizes));
-  
-  if (formData.colors) {
-   const colorsArray = formData.colors.split(",").map(c => c.trim()).filter(Boolean);
-   payload.append("colors", JSON.stringify(colorsArray));
-  }
-  
-  if (images.length > 0) {
-   images.forEach(file => {
-    payload.append("images", file);
-   });
-  }
-
-  if (isEdit) {
-    payload.append("existingImages", JSON.stringify(existingImages));
-    existingImages.forEach(img => {
-      payload.append("existingImages[]", img);
-    });
-  }
-
-  try {
-    if (isEdit) {
-     const productId = formData._id || initialData?._id;
-     if (!productId) {
-      toast.error("Product ID is missing for update.");
-      return;
-     }
-     await updateStoreProduct(productId, payload);
-     toast.success("Merchandise updated successfully!");
-     setShowSuccessPopup(true);
-    } else {
-     await createStoreProduct(payload);
-     toast.success("Merchandise added successfully!");
-     setShowSuccessPopup(true);
+  useEffect(() => {
+    if (initialData) {
+      // @ts-ignore
+      setFormData(prev => ({ ...prev, ...initialData }));
+      if (initialData.images) {
+        setExistingImages(initialData.images);
+      }
     }
-  } catch (error) {
-   console.error("Failed to add product:", error);
-   toast.error("Failed to add product");
-  }
- };
+  }, [initialData]);
 
- return (
-  <div className="max-w-5xl mx-auto p-4 sm:p-6">
-   <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-    
-    {/* Left Column: Basic Details & Pricing */}
-    <div className="lg:col-span-7 space-y-6">
-     <FormCard>
-      <SectionHeader icon={Tag} title="Core Product Identity" />
-      <div className="space-y-5">
-        <div>
-         <Label>Product Name</Label>
-         <Input 
-          placeholder="e.g., CM Training Kit - Personalized" 
-          name="name" 
-          value={formData.name} 
-          onChange={handleInputChange} 
-         />
-        </div>
-        <div>
-         <Label>Short Highlight (Subtitle)</Label>
-         <Input 
-          placeholder="e.g., Jersey + Shorts + Sock Sleeve" 
-          name="shortHighlight" 
-          value={formData.shortHighlight} 
-          onChange={handleInputChange} 
-         />
-        </div>
-        <div className="grid grid-cols-2 gap-6">
-         <div>
-           <Label>Price (AUD)</Label>
-           <div className="relative">
-            <Input 
-             type="number" 
-             placeholder="90.00" 
-             name="price" 
-             value={formData.price} 
-             onChange={handleInputChange} 
-            />
-            <span className="absolute right-3 top-3.5 text-[10px] font-bold text-gray-400">AUD</span>
-           </div>
-         </div>
-         <div>
-           <div className="flex justify-between items-end mb-1">
-             <Label>Category</Label>
-             <button 
-               type="button" 
-               onClick={() => setShowCategoryModal(true)} 
-               className="text-[10px] font-bold text-brand-500 hover:underline"
-             >
-               Manage Categories
-             </button>
-           </div>
-           <Select 
-            options={categories} 
-            value={formData.category}
-            onChange={(val: string) => setFormData(prev => ({...prev, category: val}))}
-           />
-         </div>
-        </div>
-      </div>
-     </FormCard>
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-     <FormCard>
-      <SectionHeader icon={Info} title="Extended Description" />
-      <textarea 
-        className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
-        placeholder="Detailed product specifics, material info, or sizing guide..."
-        rows={8}
-        name="description"
-        value={formData.description}
-        onChange={handleInputChange}
-      ></textarea>
-     </FormCard>
-    </div>
+  const fetchCategories = async () => {
+    try {
+      const response = await getStoreCategories();
+      const data = response.data || response;
+      const formatted = data.map((item: any) => ({
+        value: item.uuid || item.id || item._id,
+        label: item.name
+      }));
+      setCategories(formatted);
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+      toast.error("Failed to fetch categories");
+    }
+  };
 
-    {/* Right Column: Inventory & Media */}
-    <div className="lg:col-span-5 space-y-6">
-     <FormCard>
-      <SectionHeader icon={Package} title="Inventory & Stock" />
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-         <div>
-          <Label>Available Sizes</Label>
-           <SizeInput 
-            value={formData.sizes}
-            onChange={handleSizesChange}
-           />
-         </div>
-         <div>
-          <Label>Colors</Label>
-          <Input 
-           placeholder="e.g., Red, Blue" 
-           name="colors" 
-           value={formData.colors} 
-           onChange={handleInputChange} 
-          />
-         </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-         <div>
-           <Label>Starting Stock</Label>
-           <Input 
-            type="number" 
-            placeholder="50" 
-            name="stock" 
-            value={formData.stock} 
-            onChange={handleInputChange} 
-           />
-         </div>
-         <div>
-           <Label>Availability Status</Label>
-           <Select 
-            options={[
-             {value: "IN_STOCK", label: "In Stock"}, 
-             {value: "OUT_OF_STOCK", label: "Out of Stock"}, 
-             {value: "PRE_ORDER", label: "Pre-order"}
-            ]}
-            value={formData.availabilityStatus}
-            onChange={(val: string) => setFormData(prev => ({...prev, availabilityStatus: val}))}
-           />
-         </div>
-        </div>
-      </div>
-     </FormCard>
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
-     <FormCard>
-      <SectionHeader icon={ImageIcon} title="Product Visuals" />
-      <div className="space-y-4">
-        <MultiImageDropzone 
-         maxFiles={5}
-         initialImages={existingImages}
-         onRemoveInitial={(url) => setExistingImages(prev => prev.filter(img => img !== url))}
-         onUpload={(files: File[]) => setImages(files)} 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      setFormErrors(validate(updated));
+      return updated;
+    });
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    setFormErrors(validate(formData));
+  };
+
+  const handleSizesChange = (selectedSizes: string[]) => {
+    setFormData(prev => {
+      const updated = { ...prev, sizes: selectedSizes };
+      setFormErrors(validate(updated));
+      return updated;
+    });
+    setTouched(prev => ({ ...prev, sizes: true }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors = validate(formData);
+    setFormErrors(errors);
+    // Touch all validated fields
+    setTouched({ name: true, category: true, price: true, sizes: true, colors: true });
+    if (Object.keys(errors).length > 0) {
+      toast.error(Object.values(errors)[0]);
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append("name", formData.name);
+    payload.append("shortHighlight", formData.shortHighlight);
+    payload.append("description", formData.description);
+    payload.append("category", formData.category);
+    payload.append("price", formData.price);
+    payload.append("stock", formData.stock);
+    payload.append("availabilityStatus", formData.availabilityStatus);
+
+    payload.append("sizes", JSON.stringify(formData.sizes));
+
+    if (formData.colors) {
+      const colorsArray = formData.colors.split(",").map(c => c.trim()).filter(Boolean);
+      payload.append("colors", JSON.stringify(colorsArray));
+    }
+
+    if (images.length > 0) {
+      images.forEach(file => {
+        payload.append("images", file);
+      });
+    }
+
+    if (isEdit) {
+      payload.append("existingImages", JSON.stringify(existingImages));
+      existingImages.forEach(img => {
+        payload.append("existingImages[]", img);
+      });
+    }
+
+    try {
+      if (isEdit) {
+        const productId = formData._id || initialData?._id;
+        if (!productId) {
+          toast.error("Product ID is missing for update.");
+          return;
+        }
+        await updateStoreProduct(productId, payload);
+        toast.success("Merchandise updated successfully!");
+        setShowSuccessPopup(true);
+      } else {
+        await createStoreProduct(payload);
+        toast.success("Merchandise added successfully!");
+        setShowSuccessPopup(true);
+      }
+    } catch (error: any) {
+      console.error("Failed to save product:", error);
+      const backendMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to save product.";
+      toast.error(backendMessage);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        {/* Left Column: Basic Details & Pricing */}
+        <div className="lg:col-span-7 space-y-6">
+          <FormCard>
+            <SectionHeader icon={Tag} title="Core Product Identity" />
+            <div className="space-y-5">
+              <div>
+                <Label>Product Name <span className="text-red-500">*</span></Label>
+                <Input
+                  placeholder="e.g., CM Training Kit - Personalized"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  onBlur={() => handleBlur("name")}
+                />
+                {touched.name && formErrors.name && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.name}</p>
+                )}
+              </div>
+              <div>
+                <Label>Short Highlight (Subtitle)</Label>
+                <Input
+                  placeholder="e.g., Jersey + Shorts + Sock Sleeve"
+                  name="shortHighlight"
+                  value={formData.shortHighlight}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <Label>Price (AUD) <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="90.00"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      onBlur={() => handleBlur("price")}
+                    />
+                    <span className="absolute right-3 top-3.5 text-[10px] font-bold text-gray-400">AUD</span>
+                  </div>
+                  {touched.price && formErrors.price && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.price}</p>
+                  )}
+                </div>
+                <div>
+                  <div className="flex justify-between items-end mb-1">
+                    <Label>Category <span className="text-red-500">*</span></Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryModal(true)}
+                      className="text-[10px] font-bold text-brand-500 hover:underline"
+                    >
+                      Manage Categories
+                    </button>
+                  </div>
+                  <Select
+                    options={categories}
+                    value={formData.category}
+                    onChange={(val: string) => {
+                      setFormData(prev => {
+                        const updated = { ...prev, category: val };
+                        setFormErrors(validate(updated));
+                        return updated;
+                      });
+                      setTouched(prev => ({ ...prev, category: true }));
+                    }}
+                  />
+                  {touched.category && formErrors.category && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.category}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </FormCard>
+
+          <FormCard>
+            <SectionHeader icon={Info} title="Extended Description" />
+            <textarea
+              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
+              placeholder="Detailed product specifics, material info, or sizing guide..."
+              rows={8}
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+            ></textarea>
+          </FormCard>
+        </div>
+
+        {/* Right Column: Inventory & Media */}
+        <div className="lg:col-span-5 space-y-6">
+          <FormCard>
+            <SectionHeader icon={Package} title="Inventory & Stock" />
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Available Sizes <span className="text-red-500">*</span></Label>
+                  <SizeInput
+                    value={formData.sizes}
+                    onChange={handleSizesChange}
+                  />
+                  {touched.sizes && formErrors.sizes && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.sizes}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Colors <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="e.g., Red, Blue"
+                    name="colors"
+                    value={formData.colors}
+                    onChange={handleInputChange}
+                    onBlur={() => handleBlur("colors")}
+                  />
+                  {touched.colors && formErrors.colors && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.colors}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Starting Stock</Label>
+                  <Input
+                    type="number"
+                    placeholder="50"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <Label>Availability Status</Label>
+                  <Select
+                    options={[
+                      { value: "IN_STOCK", label: "In Stock" },
+                      { value: "OUT_OF_STOCK", label: "Out of Stock" },
+                      { value: "PRE_ORDER", label: "Pre-order" }
+                    ]}
+                    value={formData.availabilityStatus}
+                    onChange={(val: string) => setFormData(prev => ({ ...prev, availabilityStatus: val }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </FormCard>
+
+          <FormCard>
+            <SectionHeader icon={ImageIcon} title="Product Visuals" />
+            <div className="space-y-4">
+              <MultiImageDropzone
+                maxFiles={5}
+                initialImages={existingImages}
+                onRemoveInitial={(url) => setExistingImages(prev => prev.filter(img => img !== url))}
+                onUpload={(files: File[]) => setImages(files)}
+              />
+            </div>
+          </FormCard>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              type="submit"
+              disabled={!isFormValid}
+              className={`w-full rounded-none py-4 font-bold shadow-2xl shadow-brand-500/30 active:scale-95 transition-all text-base ${!isFormValid ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {isEdit ? "Update Merchandise" : "Publish to Store"}
+            </Button>
+            {!isFormValid && (
+              <p className="text-xs text-center text-slate-400 font-medium">
+                Fill in all required fields to enable publishing.
+              </p>
+            )}
+          </div>
+        </div>
+      </form>
+
+      {showSuccessPopup && (
+        <SuccessPopup
+          message={`Fantastic! The ${formData.name || "item"} has been ${isEdit ? "updated" : "added"} to the CoachMax merchandise catalog.`}
+          onClose={() => setShowSuccessPopup(false)}
         />
-      </div>
-     </FormCard>
+      )}
 
-     <div className="flex flex-col gap-3">
-       <Button 
-        type="submit" 
-        className="w-full rounded-none py-4 font-bold  shadow-2xl shadow-brand-500/30 active:scale-95 transition-all text-base"
-       >
-        {isEdit ? "Update Merchandise" : "Publish to Store"}
-       </Button>
-
-     </div>
+      <CategoryModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onCategoriesUpdated={fetchCategories}
+      />
     </div>
-   </form>
-
-   {showSuccessPopup && (
-    <SuccessPopup 
-     message={`Fantastic! The ${formData.name || "item"} has been ${isEdit ? "updated" : "added"} to the CoachMax merchandise catalog.`} 
-     onClose={() => setShowSuccessPopup(false)} 
-    />
-   )}
-
-   <CategoryModal 
-    isOpen={showCategoryModal} 
-    onClose={() => setShowCategoryModal(false)} 
-    onCategoriesUpdated={fetchCategories} 
-   />
-  </div>
- );
+  );
 };
 
 export default ProductForm;

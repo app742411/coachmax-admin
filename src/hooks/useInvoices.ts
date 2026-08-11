@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { generateInvoice, getInvoices, getInvoiceDetails, InvoicePayload } from "../api/invoiceApi";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { generateInvoice, getInvoices, getInvoiceDetails, updateInvoice, InvoicePayload } from "../api/invoiceApi";
 import toast from "react-hot-toast";
 
 export const useGenerateInvoice = () => {
@@ -29,5 +29,21 @@ export const useInvoiceDetails = (id: string) => {
     queryKey: ["invoice", id],
     queryFn: () => getInvoiceDetails(id),
     enabled: !!id,
+  });
+};
+
+export const useUpdateInvoice = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<{ paymentStatus: string; status: string; dueDate: string; notes: string }> }) =>
+      updateInvoice(id, payload),
+    onSuccess: (data: any, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice", variables.id] });
+      toast.success(data?.message || "Invoice updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to update invoice");
+    },
   });
 };

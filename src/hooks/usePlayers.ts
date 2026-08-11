@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile } from "../api/players";
-import { getAllClassesForAssign, assignClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer } from "../api/adminApi";
+import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer } from "../api/adminApi";
 import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
 
@@ -81,10 +81,10 @@ export const useAssignClass = () => {
   });
 };
 
-export const useClassFiltersWithTimeSlots = (categoryId: string, programId: string, day: string) => {
+export const useClassFiltersWithTimeSlots = (categoryId: string, programId: string, day: string, termId?: string) => {
   return useQuery({
-    queryKey: ["classFiltersWithTimeSlots", categoryId, programId, day],
-    queryFn: () => getClassFiltersWithTimeSlots(categoryId, programId, day),
+    queryKey: ["classFiltersWithTimeSlots", categoryId, programId, day, termId],
+    queryFn: () => getClassFiltersWithTimeSlots(categoryId, programId, day, termId),
     enabled: !!categoryId && !!programId && !!day,
   });
 };
@@ -121,7 +121,8 @@ export const useMarkSingleAttendance = (classId: string) => {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
-      toast.success(data?.message || "Attendance marked");
+      const statusSuffix = data?.data?.status ? `: ${data.data.status}` : "";
+      toast.success((data?.message || "Attendance marked") + statusSuffix);
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || error.message || "Failed to mark attendance");
@@ -252,6 +253,21 @@ export const useRemoveClassFromPlayer = () => {
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || error.message || "Failed to remove player from class");
+    }
+  });
+};
+
+export const useTransferClass = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, fromClassId, toClassId }: { userId: string; fromClassId: string; toClassId: string }) =>
+      transferClass(userId, { fromClassId, toClassId }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["classFullTable"] });
+      toast.success(data?.message || "Player transferred successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to transfer player");
     }
   });
 };

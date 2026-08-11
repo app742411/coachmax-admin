@@ -11,6 +11,7 @@ import { MoreVertical } from "lucide-react";
 import { Sponsor, deleteSponsor, toggleBannerStatus } from "../../api/sponsorApi";
 import toast from "react-hot-toast";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import SponsorDetailsModal from "./SponsorDetailsModal";
 
 interface SponsorTableProps {
  sponsors: Sponsor[];
@@ -23,6 +24,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
  const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
  const [deleteModalId, setDeleteModalId] = React.useState<string | null>(null);
  const [isDeleting, setIsDeleting] = React.useState(false);
+ const [viewingSponsor, setViewingSponsor] = React.useState<Sponsor | null>(null);
 
  const handleDeleteClick = (id: string) => {
   setDeleteModalId(id);
@@ -78,7 +80,11 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
        </TableRow>
       ) : sponsors.length > 0 ? (
        sponsors.map((sponsor) => (
-        <TableRow key={sponsor._id}>
+        <TableRow 
+          key={sponsor._id}
+          onClick={() => setViewingSponsor(sponsor)}
+          className="cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+        >
          <TableCell className="px-5">
           <img
            src={`${import.meta.env.VITE_API_BASE_URL}/${sponsor.image}`}
@@ -104,6 +110,7 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
            href={sponsor.link}
            target="_blank"
            rel="noopener noreferrer"
+           onClick={(e) => e.stopPropagation()}
            className="text-xs font-medium text-blue-500 hover:underline truncate max-w-[150px] block font-mono"
           >
            {sponsor.link}
@@ -112,7 +119,10 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
          <TableCell className="px-5">
           <div className="flex items-center gap-2">
            <button
-            onClick={() => handleToggleStatus(sponsor._id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleStatus(sponsor._id);
+            }}
             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(sponsor.isActive === "active" || sponsor.isActive === "Active" || sponsor.isActive === true)
              ? "bg-success-500"
              : "bg-gray-200 dark:bg-gray-700"
@@ -152,9 +162,19 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
                 onClick={(e) => {
                   e.stopPropagation();
                   setOpenMenuId(null);
+                  setViewingSponsor(sponsor);
+                }}
+                className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                View Details
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenMenuId(null);
                   onEdit(sponsor);
                 }}
-                className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-1.5"
               >
                 Edit
               </button>
@@ -189,6 +209,11 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
     loading={isDeleting}
     title="Delete Sponsor"
     message="Are you sure you want to delete this sponsor? This action cannot be undone."
+   />
+   <SponsorDetailsModal
+    isOpen={!!viewingSponsor}
+    onClose={() => setViewingSponsor(null)}
+    sponsor={viewingSponsor}
    />
    </>
   );

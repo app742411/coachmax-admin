@@ -151,8 +151,12 @@ export const assignClass = async (playerId: string, data: any): Promise<any> => 
   return res.data;
 };
 
-export const getClassFiltersWithTimeSlots = async (categoryId: string, programId: string, day: string): Promise<any> => {
-  const res = await apiClient.get(`${ENDPOINTS.GET_CLASS_FILTERS_WITH_TIME_SLOTS}?categoryId=${categoryId}&programId=${programId}&day=${day}`);
+export const getClassFiltersWithTimeSlots = async (categoryId: string, programId: string, day: string, termId?: string): Promise<any> => {
+  let url = `${ENDPOINTS.GET_CLASS_FILTERS_WITH_TIME_SLOTS}?categoryId=${categoryId}&programId=${programId}&day=${day}`;
+  if (termId) {
+    url += `&termId=${termId}`;
+  }
+  const res = await apiClient.get(url);
   return res.data;
 };
 
@@ -180,6 +184,11 @@ export const getClassPlayers = async (classId: string): Promise<any> => {
 
 export const getAllNews = async (): Promise<any> => {
   const res = await apiClient.get('/api/user/news');
+  return res.data;
+};
+
+export const getNewsCategories = async (): Promise<any> => {
+  const res = await apiClient.get('/api/admin/news/categories');
   return res.data;
 };
 
@@ -356,6 +365,15 @@ export const removeClassFromPlayer = async (
   });
   return response.data;
 };
+
+export const transferClass = async (
+  userId: string,
+  data: { fromClassId: string; toClassId: string }
+): Promise<any> => {
+  const response = await apiClient.post(`/api/admin/transferClass/${userId}`, data);
+  return response.data;
+};
+
 
 export const getAllocatedPlayers = async (
   category?: string,

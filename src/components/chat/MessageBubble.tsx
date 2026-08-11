@@ -64,10 +64,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
 
       <div
-        className={`px-4 py-2.5 rounded-none shadow-sm text-sm relative break-words leading-relaxed ${
+        className={`px-4 py-2.5 rounded-[18px] shadow-sm text-sm relative break-words leading-relaxed ${
           isSelf
-            ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white"
-            : "bg-gray-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-gray-200 dark:border-slate-700/60"
+            ? "bg-[#031549] dark:bg-[#336eff] text-white"
+            : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-gray-200/80 dark:border-slate-700/60"
         } ${message.isFailed ? "border-red-500 border-2" : ""}`}
       >
         <div>{message.text}</div>

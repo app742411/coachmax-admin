@@ -1,12 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { useAppDispatch } from "../../store";
 import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
-import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer, useRemoveClassFromPlayer } from "../../hooks/usePlayers";
+import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer, useRemoveClassFromPlayer, useClassesForAssign, useTransferClass } from "../../hooks/usePlayers";
 import { Modal } from "../ui/modal";
+import Button from "../ui/button/Button";
 import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
 import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
@@ -68,10 +70,149 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const assignClassesMutation = useAssignClassesToPlayer();
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pendingDropData, setPendingDropData] = useState<any>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>("TRIAL");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
+
+  const updatePosition = () => {
+    if (!openMenuId) return;
+    const trigger = document.getElementById(`trigger-${openMenuId}`);
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = 240;
+
+    const menuEl = document.getElementById("portal-action-menu");
+    const menuHeight = menuEl ? menuEl.offsetHeight : 280;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let top = rect.bottom + window.scrollY;
+    let placement: 'top' | 'bottom' = 'bottom';
+
+    // If space below is not enough, open upward
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      top = rect.top - menuHeight + window.scrollY;
+      placement = 'top';
+    }
+
+    let left = rect.right - menuWidth + window.scrollX;
+    if (left < 0) {
+      left = rect.left + window.scrollX;
+    }
+
+    setMenuPosition({ top, left, placement });
+  };
+
+  useEffect(() => {
+    if (openMenuId) {
+      updatePosition();
+
+      const handle = requestAnimationFrame(() => {
+        updatePosition();
+      });
+
+      window.addEventListener("scroll", updatePosition, true);
+      window.addEventListener("resize", updatePosition);
+
+      return () => {
+        cancelAnimationFrame(handle);
+        window.removeEventListener("scroll", updatePosition, true);
+        window.removeEventListener("resize", updatePosition);
+      };
+    } else {
+      setMenuPosition(null);
+    }
+  }, [openMenuId]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    const handleOutsideClick = (e: MouseEvent) => {
+      const menu = document.getElementById("portal-action-menu");
+      const trigger = document.getElementById(`trigger-${openMenuId}`);
+      if (menu && !menu.contains(e.target as Node) && trigger && !trigger.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openMenuId]);
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
   const removeClassMutation = useRemoveClassFromPlayer();
+  const transferClassMutation = useTransferClass();
+  const [transferPlayer, setTransferPlayer] = useState<any | null>(null);
+  const [assignPlayer, setAssignPlayer] = useState<any | null>(null);
+  const [allTerms, setAllTerms] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (transferPlayer || assignPlayer) {
+      const fetchTerms = async () => {
+        try {
+          const res = await apiClient.get("/api/admin/getAllTerms", { params: { isEvent: "all" } });
+          if (res.data && Array.isArray(res.data.data)) {
+            setAllTerms(res.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch terms in ClassFullTable:", err);
+        }
+      };
+      fetchTerms();
+    }
+  }, [transferPlayer, assignPlayer]);
+
+  const { data: classesForAssignRes, isLoading: loadingClasses } = useClassesForAssign(
+    categoryId || "",
+    programId || "",
+    (!!transferPlayer || !!assignPlayer) && !!categoryId && !!programId
+  );
+  const classesForAssign = classesForAssignRes?.data || [];
+
+  const handleTransferSubmit = async (targetClassId: string) => {
+    if (!transferPlayer || !targetClassId) return;
+
+    try {
+      await transferClassMutation.mutateAsync({
+        userId: transferPlayer.playerId,
+        fromClassId: classId,
+        toClassId: targetClassId,
+      });
+
+      toast.success("Player transferred successfully");
+      setTransferPlayer(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || err.message || "Failed to transfer player");
+    }
+  };
+
+  const handleAssignSubmit = async (targetClassId: string) => {
+    if (!assignPlayer || !targetClassId) return;
+
+    try {
+      await assignClassesMutation.mutateAsync({
+        playerId: assignPlayer.playerId,
+        classIds: [targetClassId],
+        paymentStatus: assignPlayer.paymentStatus || "TRIAL"
+      });
+      setAssignPlayer(null);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
   const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
   const queryClient = useQueryClient();
   const [invoicePlayer, setInvoicePlayer] = useState<any | null>(null);
@@ -177,10 +318,11 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   };
 
   const handleToggleAttendance = (playerId: string, sessionDate: string, currentStatus: string) => {
-    // Cycle: NOT_MARKED -> PRESENT -> ABSENT -> NOT_MARKED
+    // Cycle: NOT_MARKED -> PRESENT -> LATE -> ABSENT -> PRESENT
     let newStatus = "PRESENT";
-    if (currentStatus === "PRESENT") newStatus = "ABSENT";
-    else if (currentStatus === "ABSENT") newStatus = "NOT_MARKED";
+    if (currentStatus === "PRESENT") newStatus = "LATE";
+    else if (currentStatus === "LATE") newStatus = "ABSENT";
+    else if (currentStatus === "ABSENT") newStatus = "PRESENT";
 
     markSingleMutation.mutate({
       sessionDate,
@@ -239,22 +381,9 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       const data = JSON.parse(dataStr);
 
       if (data.playerId) {
-        // If categories/programs are available on both sides and mismatch, show confirmation
-        if (
-          categoryId && programId && data.categoryId && data.programId &&
-          (categoryId !== data.categoryId || programId !== data.programId)
-        ) {
-          setPendingDropData(data);
-          setIsConfirmModalOpen(true);
-        } else {
-          // Direct assignment
-          assignClassesMutation.mutate({
-            playerId: data.playerId,
-            classIds: [classId],
-            paymentStatus: data.paymentStatus,
-            registrationRequestId: data.registrationRequestId,
-          });
-        }
+        setPendingDropData(data);
+        setSelectedStatus(data.paymentStatus || "TRIAL");
+        setIsConfirmModalOpen(true);
       }
     } catch (err) {
       console.error("Failed to parse drop data", err);
@@ -266,7 +395,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       assignClassesMutation.mutate({
         playerId: pendingDropData.playerId,
         classIds: [classId],
-        paymentStatus: pendingDropData.paymentStatus,
+        paymentStatus: selectedStatus,
         registrationRequestId: pendingDropData.registrationRequestId,
       });
       setIsConfirmModalOpen(false);
@@ -350,14 +479,15 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
       {/* Attendance Grid Table */}
       {isExpanded && (
-        <div className={`overflow-x-auto custom-scrollbar transition-[min-height] duration-150 ${openMenuId ? 'min-h-[260px]' : ''}`}>
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-separate border-spacing-0 text-[11px]">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
                 <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-4 min-w-[40px] w-[40px] border-b border-slate-100 dark:border-slate-800">#</th>
-                <th className="sticky left-[40px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[150px] w-[150px] border-b border-slate-100 dark:border-slate-800">Player</th>
-                <th className="sticky left-[190px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[90px] w-[90px] border-b border-slate-100 dark:border-slate-800">DOB</th>
-                <th className="sticky left-[280px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 text-center min-w-[130px] w-[130px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Medical Conditions</th>
+                <th className="sticky left-[40px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[300px] w-[300px] border-b border-slate-100 dark:border-slate-800">Player</th>
+                <th className="sticky left-[340px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[90px] w-[90px] border-b border-slate-100 dark:border-slate-800">DOB</th>
+                <th className="sticky left-[430px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 text-center min-w-[130px] w-[130px] border-b border-slate-100 dark:border-slate-800">Medical Conditions</th>
+                <th className="sticky left-[560px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 text-center min-w-[60px] w-[60px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Rating</th>
                 {sessions.map((sessionDate: string, idx: number) => {
                   const formatted = formatDateLabel(sessionDate);
                   return (
@@ -387,19 +517,23 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
               {players.length > 0 ? players.map((row: any, idx: number) => (
                 <tr key={row.playerId} className={`group border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10 ${openMenuId === row.playerId ? 'relative z-30' : ''}`}>
                   <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 font-semibold text-slate-400 min-w-[40px] w-[40px] border-b border-slate-50 dark:border-slate-800/40">{idx + 1}</td>
-                  <td className="sticky left-[40px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 min-w-[150px] w-[150px] border-b border-slate-50 dark:border-slate-800/40">
+                  <td className="sticky left-[40px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 min-w-[300px] w-[300px] border-b border-slate-50 dark:border-slate-800/40">
                     <div className="flex items-center gap-2">
-                      <span
-                        title={row.paymentStatus || "UNKNOWN"}
-                        className={`w-3 h-3 rounded-full shrink-0 border border-white dark:border-slate-800 shadow-sm ${row.paymentStatus === "PAID" || row.paymentStatus === "APPROVED" ? "bg-emerald-500" :
-                          row.paymentStatus === "REJECTED" || row.paymentStatus === "TRIAL" ? "bg-rose-500" :
-                            row.paymentStatus === "UNPAID" ? "bg-amber-500" :
-                              "bg-amber-500"
-                          }`}
-                      />
-                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
-                        <span className="text-[10px] font-bold">{row.name.charAt(0)}</span>
-                      </div>
+                      {row.profileImage ? (
+                        <img
+                          src={row.profileImage.startsWith('http') ? row.profileImage : `${import.meta.env.VITE_API_BASE_URL}/${row.profileImage}`}
+                          alt={row.name}
+                          className="w-6 h-6 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${row.name}`;
+                          }}
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-bold">{row.name.charAt(0)}</span>
+                        </div>
+                      )}
                       <button
                         onClick={() => setSelectedPlayer({
                           _id: row.playerId,
@@ -409,22 +543,47 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                           preferredFoot: row.preferredFoot || "N/A",
                           status: row.paymentStatus || "PENDING",
                           program: schedule?.program,
-                          category: schedule?.category
+                          category: schedule?.category,
+                          profileImage: row.profileImage,
+                          rating: row.rating
                         })}
                         className="font-bold text-slate-700 dark:text-slate-200 hover:text-[#0047FF] dark:hover:text-[#336eff] text-left hover:underline transition-all"
                       >
                         {row.name}
                       </button>
+                      <span className={`px-2 py-0.5 text-[8px] font-black uppercase rounded-none shrink-0 border ${row.paymentStatus === "PAID" || row.paymentStatus === "APPROVED"
+                        ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+                        : row.paymentStatus === "REJECTED" || row.paymentStatus === "TRIAL"
+                          ? "bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800/30"
+                          : row.paymentStatus === "OTHERS"
+                            ? "bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
+                            : "bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/30"
+                        }`}>
+                        {row.paymentStatus || "UNPAID"}
+                      </span>
                     </div>
                   </td>
-                  <td className="sticky left-[190px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 font-semibold text-slate-500 min-w-[90px] w-[90px] border-b border-slate-50 dark:border-slate-800/40">{new Date(row.dob).toLocaleDateString()}</td>
-                  <td className="sticky left-[280px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 text-center min-w-[130px] w-[130px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                  <td className="sticky left-[340px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 font-semibold text-slate-500 min-w-[90px] w-[90px] border-b border-slate-50 dark:border-slate-800/40">{new Date(row.dob).toLocaleDateString()}</td>
+                  <td className="sticky left-[430px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 text-center min-w-[130px] w-[130px] border-b border-slate-50 dark:border-slate-800/40">
                     {row.isMedicalCondition ? (
                       <span className="text-rose-600 font-bold text-xs truncate block max-w-full" title={row.medicalConditionDetails}>
                         {row.medicalConditionDetails || "Yes"}
                       </span>
                     ) : (
                       <span className="text-slate-500 font-semibold">- No</span>
+                    )}
+                  </td>
+                  <td className="sticky left-[560px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 text-center min-w-[60px] w-[60px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                    {row.rating !== undefined ? (
+                      <div className="flex items-center justify-center gap-0.5 text-amber-500">
+                        {Array.from({ length: Math.max(1, Math.min(5, row.rating)) }).map((_, i) => (
+                          <svg key={i} className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 font-semibold">-</span>
                     )}
                   </td>
                   {sessions.map((sessionDate: string) => {
@@ -439,22 +598,32 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       </td>
                     );
                   })}
-                  <td className={`sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 text-center border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] ${openMenuId === row.playerId ? 'z-40' : 'z-10'}`}>
+                  <td className="sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 text-center border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-10">
                     <div className="flex items-center justify-center relative">
                       <button
+                        id={`trigger-${row.playerId}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuId(openMenuId === row.playerId ? null : row.playerId);
                         }}
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded-none bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center"
+                        className={`text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm inline-flex items-center justify-center ${openMenuId === row.playerId ? 'border-[#0047FF] bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF]' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}
                       >
                         <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                         </svg>
                       </button>
                     </div>
-                    {openMenuId === row.playerId && (
-                      <div className={`absolute right-10 ${idx >= 3 || (players.length > 1 && idx >= players.length - 2) ? 'bottom-8' : 'top-8'} w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-[500] animate-in fade-in zoom-in-95 duration-100 py-1.5 overflow-hidden`}>
+                    {openMenuId === row.playerId && menuPosition && createPortal(
+                      <div
+                        id="portal-action-menu"
+                        style={{
+                          position: "absolute",
+                          top: `${menuPosition.top}px`,
+                          left: `${menuPosition.left}px`,
+                          width: "240px",
+                        }}
+                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl z-[99999] py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100 rounded-none flex flex-col"
+                      >
                         {(() => {
                           const userStr = localStorage.getItem("user");
                           let isCoach = false;
@@ -505,17 +674,24 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                               <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
                                 Update Status
                               </div>
-                              {["TRIAL", "UNPAID", "PAID", "OVER_DUE"]
+                              {["TRIAL", "UNPAID", "PAID", "OVER_DUE", "OTHERS"]
                                 .filter(status => status !== row.paymentStatus)
                                 .map((status) => {
                                   let activeClasses = "";
+                                  let dotColor = "";
 
                                   if (status === "PAID") {
                                     activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20";
+                                    dotColor = "bg-emerald-500";
                                   } else if (status === "UNPAID") {
                                     activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20";
+                                    dotColor = "bg-amber-500";
                                   } else if (status === "OVER_DUE" || status === "TRIAL") {
                                     activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20";
+                                    dotColor = "bg-rose-500";
+                                  } else if (status === "OTHERS") {
+                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20";
+                                    dotColor = "bg-blue-500";
                                   }
 
                                   return (
@@ -526,8 +702,9 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                                         setOpenMenuId(null);
                                         handleUpdateStatus(row.playerId, status);
                                       }}
-                                      className={`w-full text-left px-4 py-1.5 text-xs font-semibold transition-colors ${activeClasses}`}
+                                      className={`w-full text-left px-4 py-1.5 text-xs font-semibold transition-colors flex items-center gap-2 ${activeClasses}`}
                                     >
+                                      <span className={`w-2 h-2 rounded-full ${dotColor}`} />
                                       {status.replace("_", " ")}
                                     </button>
                                   );
@@ -565,6 +742,30 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setOpenMenuId(null);
+                                    setTransferPlayer(row);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                  Transfer Class
+                                </button>
+                              </div>
+                              <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    setAssignPlayer(row);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                  Assign to other class
+                                </button>
+                              </div>
+                              <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
                                     if (window.confirm("Are you sure you want to remove this player from this class?")) {
                                       removeClassMutation.mutate({ userId: row.playerId, classId });
                                     }
@@ -578,17 +779,19 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                             </>
                           );
                         })()}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5 + sessions.length} className="text-center py-4 text-sm text-slate-500">
+                  <td colSpan={6 + sessions.length} className="text-center py-4 text-sm text-slate-500">
                     No players in this class.
                   </td>
                 </tr>
               )}
+
             </tbody>
           </table>
         </div>
@@ -598,7 +801,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
         <div className="w-full">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 uppercase tracking-wider">Confirm Assignment</h3>
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-            The player requested a different program or category than the one you are assigning them to. Please review the details below before proceeding.
+            {categoryId && programId && pendingDropData?.categoryId && pendingDropData?.programId &&
+              (categoryId !== pendingDropData.categoryId || programId !== pendingDropData.programId)
+              ? "The player requested a different program or category than the one you are assigning them to. Please review the details below, choose status, and confirm assignment."
+              : "Please select the player's status and confirm assignment of the player to this class."}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -630,7 +836,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
             <div className="flex-1 bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-800">
               <h4 className="text-xs font-bold text-[#0047FF] mb-3 uppercase">Assigning To</h4>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500 dark:text-slate-400">Category:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-300">{categoryName || schedule.category?.name || "N/A"}</span>
@@ -639,13 +845,37 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                   <span className="text-slate-500 dark:text-slate-400">Program:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-300">{programName || schedule.program?.name || "N/A"}</span>
                 </div>
-                <div className="pt-3 border-t border-blue-200 dark:border-blue-800/50 mt-3">
-                  <span className="text-slate-500 dark:text-slate-400 block mb-1">Class:</span>
-                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded px-2 py-1 inline-block">
+                <div className="pt-3 border-t border-blue-200 dark:border-blue-800/50 mt-3 flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-slate-400">Class:</span>
+                  <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded px-2 py-1 inline-block">
                     {timeSlotStr} - {schedule.className}
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2.5 uppercase tracking-widest">Select Assignment Status</label>
+            <div className="grid grid-cols-5 gap-4">
+              {[
+                { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "UNPAID", label: "Unpaid", desc: "Requires Payment", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "PAID", label: "Paid (Allocate)", desc: "Payment Completed", activeClass: "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", inactiveClass: "border-slate-200 hover:border-emerald-300/50 hover:bg-emerald-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "OVER_DUE", label: "Overdue", desc: "Payment Overdue", activeClass: "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400", inactiveClass: "border-slate-200 hover:border-red-300/50 hover:bg-red-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "OTHERS", label: "Others", desc: "Other Status", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400", inactiveClass: "border-slate-200 hover:border-blue-300/50 hover:bg-blue-500/[0.02] text-slate-500 dark:border-slate-800" }
+              ].map((status) => (
+                <button
+                  key={status.value}
+                  type="button"
+                  onClick={() => setSelectedStatus(status.value)}
+                  className={`p-4 border text-center rounded-none transition-all flex flex-col items-center justify-center gap-1 cursor-pointer select-none ${selectedStatus === status.value ? status.activeClass + " ring-1 ring-offset-0 font-extrabold" : status.inactiveClass
+                    }`}
+                >
+                  <span className="text-xs font-black uppercase tracking-wide">{status.label}</span>
+                  <span className="text-[9px] font-bold opacity-80">{status.desc}</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -689,6 +919,144 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
           classId={coachNotePlayer.classId}
         />
       )}
+
+      {/* Transfer Class Modal */}
+      <Modal isOpen={!!transferPlayer} onClose={() => setTransferPlayer(null)} className="max-w-[450px] p-6 lg:p-8 rounded-none shadow-2xl">
+        <h4 className="text-xl font-bold mb-2 tracking-tight">Transfer Player</h4>
+        <p className="text-xs text-gray-500 mb-6 font-medium">
+          Transfer <span className="text-[#031549] font-bold">{transferPlayer?.name}</span> to another class in this program.
+        </p>
+
+        {loadingClasses ? (
+          <div className="text-center py-6 text-xs text-slate-400 font-bold uppercase tracking-wider animate-pulse">
+            Loading classes...
+          </div>
+        ) : classesForAssign.length === 0 ? (
+          <div className="text-center py-6 text-xs text-slate-400 italic">
+            No other classes available for this program.
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Select Target Class</label>
+            {classesForAssign
+              .filter((c: any) => c._id !== classId)
+              .map((c: any) => (
+                <button
+                  key={c._id}
+                  onClick={() => handleTransferSubmit(c._id)}
+                  disabled={transferClassMutation.isPending}
+                  className="w-full text-left p-4 border border-slate-200 dark:border-slate-700 hover:border-[#0047FF] hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all flex justify-between items-center rounded-none group"
+                >
+                  <div className="flex flex-col gap-1 flex-grow min-w-0">
+                    <span className="text-slate-900 dark:text-slate-100 font-bold text-sm truncate">
+                      {c.name}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500 font-medium">
+                      <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        {c.category?.name || schedule.category?.name || categoryName || "Academy"}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600">/</span>
+                      <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 uppercase tracking-wider">
+                        {c.program?.name || schedule.program?.name || programName || "Elite Program"}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600">/</span>
+                      <span className="text-slate-500 font-semibold">
+                        {(() => {
+                          const matchedTermObj = allTerms.find(t => t._id === c.term);
+                          return c.term?.name || (matchedTermObj ? `${matchedTermObj.name} (${matchedTermObj.year})` : "N/A Term");
+                        })()}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                      <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>
+                        {c.dayOfWeek} ({c.startTime} - {c.endTime})
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[#0047FF] font-bold opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+                    Transfer &rarr;
+                  </span>
+                </button>
+              ))}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <Button variant="outline" onClick={() => setTransferPlayer(null)}>Cancel</Button>
+        </div>
+      </Modal>
+
+      {/* Assign Class Modal */}
+      <Modal isOpen={!!assignPlayer} onClose={() => setAssignPlayer(null)} className="max-w-[450px] p-6 lg:p-8 rounded-none shadow-2xl">
+        <h4 className="text-xl font-bold mb-2 tracking-tight">Assign Player to Class</h4>
+        <p className="text-xs text-gray-500 mb-6 font-medium">
+          Assign <span className="text-[#031549] font-bold">{assignPlayer?.name}</span> to another class in this program.
+        </p>
+
+        {loadingClasses ? (
+          <div className="text-center py-6 text-xs text-slate-400 font-bold uppercase tracking-wider animate-pulse">
+            Loading classes...
+          </div>
+        ) : classesForAssign.length === 0 ? (
+          <div className="text-center py-6 text-xs text-slate-400 italic">
+            No other classes available for this program.
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Select Class to Assign</label>
+            {classesForAssign
+              .filter((c: any) => c._id !== classId)
+              .map((c: any) => (
+                <button
+                  key={c._id}
+                  onClick={() => handleAssignSubmit(c._id)}
+                  disabled={assignClassesMutation.isPending}
+                  className="w-full text-left p-4 border border-slate-200 dark:border-slate-700 hover:border-[#0047FF] hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all flex justify-between items-center rounded-none group"
+                >
+                  <div className="flex flex-col gap-1 flex-grow min-w-0">
+                    <span className="text-slate-900 dark:text-slate-100 font-bold text-sm truncate">
+                      {c.name}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500 font-medium">
+                      <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        {c.category?.name || schedule.category?.name || categoryName || "Academy"}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600">/</span>
+                      <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 uppercase tracking-wider">
+                        {c.program?.name || schedule.program?.name || programName || "Elite Program"}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600">/</span>
+                      <span className="text-slate-500 font-semibold">
+                        {(() => {
+                          const matchedTermObj = allTerms.find(t => t._id === c.term);
+                          return c.term?.name || (matchedTermObj ? `${matchedTermObj.name} (${matchedTermObj.year})` : "N/A Term");
+                        })()}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                      <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>
+                        {c.dayOfWeek} ({c.startTime} - {c.endTime})
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[#0047FF] font-bold opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+                    Assign &rarr;
+                  </span>
+                </button>
+              ))}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <Button variant="outline" onClick={() => setAssignPlayer(null)}>Cancel</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

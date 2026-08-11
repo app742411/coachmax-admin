@@ -37,3 +37,8 @@ export const getInvoiceDetails = async (id: string) => {
   const response = await apiClient.get(`/api/admin/invoices/${id}`);
   return response.data;
 };
+
+export const updateInvoice = async (id: string, payload: Partial<{ paymentStatus: string; status: string; dueDate: string; notes: string }>) => {
+  const response = await apiClient.patch(`/api/admin/invoices/${id}`, payload);
+  return response.data;
+};

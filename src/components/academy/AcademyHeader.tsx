@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import apiClient from "../../api/apiClient";
 import Select from "../form/Select";
@@ -8,10 +8,15 @@ interface AcademyHeaderProps {
   onCategoryChange?: (categoryId: string, name?: string) => void;
   onProgramChange?: (programId: string, name?: string) => void;
   onYearChange?: (year: string) => void;
+  onTermChange?: (termId: string) => void;
   onOpenCreateClass?: () => void;
   onOpenTermSettings?: () => void;
-  playerType?: "BOTH" | "ALLOCATED" | "UNALLOCATED";
-  onPlayerTypeChange?: (val: "BOTH" | "ALLOCATED" | "UNALLOCATED") => void;
+  showSidebar: boolean;
+  onShowSidebarChange: (val: boolean) => void;
+  showAllocated: boolean;
+  onShowAllocatedChange: (val: boolean) => void;
+  showUnallocated: boolean;
+  onShowUnallocatedChange: (val: boolean) => void;
 }
 
 export default function AcademyHeader({
@@ -19,20 +24,48 @@ export default function AcademyHeader({
   onCategoryChange,
   onProgramChange,
   onYearChange,
+  onTermChange,
   onOpenCreateClass,
   onOpenTermSettings,
-  playerType,
-  onPlayerTypeChange
+  showSidebar,
+  onShowSidebarChange,
+  showAllocated,
+  onShowAllocatedChange,
+  showUnallocated,
+  onShowUnallocatedChange,
 }: AcademyHeaderProps) {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [programs, setPrograms] = useState<{ _id: string; name: string }[]>([]);
-  const [terms, setTerms] = useState<{ _id: string; name: string; year: number }[]>([]);
+  const [terms, setTerms] = useState<any[]>([]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedTerm, setSelectedTerm] = useState<string>("");
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const getDropdownLabel = () => {
+    if (showAllocated && showUnallocated) return "Show All Players";
+    if (showAllocated) return "Allocated Players";
+    if (showUnallocated) return "Unallocated Players";
+    return "Show All Players";
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // 1. Fetch categories
   useEffect(() => {
@@ -81,40 +114,109 @@ export default function AcademyHeader({
     fetchPrograms();
   }, [selectedCategory]);
 
-  // 3. Fetch terms
+  // 3. Fetch all terms on mount to get available years and select initial term
   useEffect(() => {
-    const fetchTerms = async () => {
+    const fetchAllTerms = async () => {
       try {
-        const termsRes = await apiClient.get("/api/admin/getAllTerms");
+        const termsRes = await apiClient.get("/api/admin/getAllTerms", { params: { isEvent: "all" } });
         if (termsRes.data && termsRes.data.data && Array.isArray(termsRes.data.data)) {
           const allTerms = termsRes.data.data;
-          setTerms(allTerms);
-          if (allTerms.length > 0) {
-            const now = new Date();
-            let currentTerm = allTerms.find((t: any) => {
-              if (!t.startDate || !t.endDate) return false;
-              const start = new Date(t.startDate);
-              const end = new Date(t.endDate);
-              return now >= start && now <= end;
-            });
+          const years = Array.from(new Set(allTerms.map((t: any) => t.year.toString()))).sort() as string[];
+          setAvailableYears(years);
 
-            if (!currentTerm) {
-              currentTerm = allTerms[0];
-            }
+          const now = new Date();
+          let currentTerm = allTerms.find((t: any) => {
+            if (!t.startDate || !t.endDate) return false;
+            const start = new Date(t.startDate);
+            const end = new Date(t.endDate);
+            return now >= start && now <= end;
+          });
 
+          if (!currentTerm && allTerms.length > 0) {
+            currentTerm = allTerms[0];
+          }
+
+          if (currentTerm) {
             setSelectedYear(currentTerm.year.toString());
             setSelectedTerm(currentTerm._id);
+            onTermChange?.(currentTerm._id);
           }
         }
       } catch (error) {
-        console.error("Failed to fetch terms:", error);
+        console.error("Failed to fetch all terms on mount:", error);
       }
     };
-    fetchTerms();
+    fetchAllTerms();
   }, []);
 
-  const uniqueYears = Array.from(new Set(terms.map((t) => t.year.toString())));
-  const filteredTerms = terms.filter(t => t.year.toString() === selectedYear);
+  // Fetch terms dynamically when selectedYear changes
+  useEffect(() => {
+    if (!selectedYear) return;
+    const fetchTermsForYear = async () => {
+      try {
+        const termsRes = await apiClient.get("/api/admin/getAllTerms", { 
+          params: { isEvent: "all", year: selectedYear } 
+        });
+        if (termsRes.data && termsRes.data.data && Array.isArray(termsRes.data.data)) {
+          setTerms(termsRes.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch terms for year:", error);
+      }
+    };
+    fetchTermsForYear();
+  }, [selectedYear]);
+
+  // 4. Update initial term selection when categories or terms are loaded
+  useEffect(() => {
+    if (categories.length === 0 || terms.length === 0 || !selectedCategory) return;
+
+    const activeCat = categories.find((c: any) => c._id === selectedCategory);
+    const activeIsEvent = activeCat ? !!activeCat.isEvent : false;
+
+    // Check if current selection already satisfies the isEvent filter
+    if (selectedTerm) {
+      const match = terms.find((t: any) => t._id === selectedTerm);
+      if (match && !!match.isEvent === activeIsEvent) {
+        return;
+      }
+    }
+
+    const now = new Date();
+    let matchedTerm = terms.find((t: any) => {
+      if (!!t.isEvent !== activeIsEvent) return false;
+      if (!t.startDate || !t.endDate) return false;
+      const start = new Date(t.startDate);
+      const end = new Date(t.endDate);
+      return now >= start && now <= end;
+    });
+
+    if (!matchedTerm) {
+      matchedTerm = terms.find((t: any) => !!t.isEvent === activeIsEvent);
+    }
+
+    if (matchedTerm) {
+      if (matchedTerm.year.toString() !== selectedYear) {
+        setSelectedYear(matchedTerm.year.toString());
+      }
+      setSelectedTerm(matchedTerm._id);
+      onTermChange?.(matchedTerm._id);
+    } else {
+      setSelectedTerm("");
+      onTermChange?.("");
+    }
+  }, [categories, terms, selectedCategory]);
+
+  const uniqueYears = availableYears.length > 0 
+    ? availableYears 
+    : Array.from(new Set(terms.map((t) => t.year.toString())));
+  
+  // Filter terms by selectedCategory's isEvent flag (year filter is already handled by API)
+  const filteredTerms = terms.filter(t => {
+    const activeCat = categories.find((c: any) => c._id === selectedCategory);
+    const activeIsEvent = activeCat ? !!activeCat.isEvent : false;
+    return !!t.isEvent === activeIsEvent;
+  });
 
   return (
     <div className="flex flex-col gap-4 mb-6 xl:flex-row xl:items-center xl:justify-between">
@@ -133,8 +235,10 @@ export default function AcademyHeader({
             value={selectedCategory}
             onChange={(val) => {
               setSelectedCategory(val);
-              const matched = categories.find(c => c._id === val);
+              const matched = categories.find((c: any) => c._id === val);
               onCategoryChange?.(val, matched?.name);
+              setSelectedTerm("");
+              onTermChange?.("");
               if (matched) {
                 const newPath = `/program/${matched.name.toLowerCase().replace(/\s+/g, '-')}`;
                 navigate(newPath);
@@ -144,7 +248,7 @@ export default function AcademyHeader({
               categories.length === 0
                 ? [{ label: programType, value: "" }]
                 : categories.map(cat => ({
-                  label: cat.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
+                  label: cat.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
                   value: cat._id
                 }))
             }
@@ -167,7 +271,7 @@ export default function AcademyHeader({
               programs.length === 0
                 ? [{ label: "Sub-category", value: "" }]
                 : programs.map(prog => ({
-                  label: prog.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
+                  label: prog.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
                   value: prog._id
                 }))
             }
@@ -187,8 +291,10 @@ export default function AcademyHeader({
               const termsForNewYear = terms.filter(t => t.year.toString() === val);
               if (termsForNewYear.length > 0) {
                 setSelectedTerm(termsForNewYear[0]._id);
+                onTermChange?.(termsForNewYear[0]._id);
               } else {
                 setSelectedTerm("");
+                onTermChange?.("");
               }
             }}
             options={uniqueYears.map(year => ({ label: year, value: year }))}
@@ -200,7 +306,10 @@ export default function AcademyHeader({
         <div className="relative flex items-center bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-none min-w-[100px]">
           <Select
             value={selectedTerm}
-            onChange={(val) => setSelectedTerm(val)}
+            onChange={(val) => {
+              setSelectedTerm(val);
+              onTermChange?.(val);
+            }}
             options={
               filteredTerms.length === 0
                 ? [{ label: "Select Term", value: "" }]
@@ -220,24 +329,58 @@ export default function AcademyHeader({
           <span>New Trial</span>
         </button> */}
 
-        <div className="relative">
-          <select
-            value={playerType}
-            onChange={(e) => onPlayerTypeChange?.(e.target.value as "BOTH" | "ALLOCATED" | "UNALLOCATED")}
-            className="appearance-none flex items-center gap-1.5 pl-3.5 pr-8 py-2 border border-slate-200 rounded-none bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
+        <div className="relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-1.5 pl-3.5 pr-8 py-2 border border-slate-200 rounded-none bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer text-xs font-semibold relative h-[34px]"
           >
-            <option value="BOTH">Show All Players</option>
-            <option value="ALLOCATED">Allocated Players</option>
-            <option value="UNALLOCATED">Unallocated Players</option>
-          </select>
-          <svg
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+            <span>{getDropdownLabel()}</span>
+            <svg
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-1 w-60 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg py-1.5 z-[100] rounded-none flex flex-col text-slate-700 dark:text-slate-300">
+              <label className="flex items-center gap-2.5 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer select-none text-xs font-medium">
+                <input
+                  type="checkbox"
+                  checked={showSidebar}
+                  onChange={(e) => onShowSidebarChange(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded-none border-slate-300 dark:border-slate-600 text-[#0047FF] focus:ring-[#0047FF] cursor-pointer"
+                />
+                <span>Show Sidebar</span>
+              </label>
+
+              <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+
+              <label className="flex items-center gap-2.5 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer select-none text-xs font-medium">
+                <input
+                  type="checkbox"
+                  checked={showAllocated}
+                  onChange={(e) => onShowAllocatedChange(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded-none border-slate-300 dark:border-slate-600 text-[#0047FF] focus:ring-[#0047FF] cursor-pointer"
+                />
+                <span>Show Allocated Players</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer select-none text-xs font-medium">
+                <input
+                  type="checkbox"
+                  checked={showUnallocated}
+                  onChange={(e) => onShowUnallocatedChange(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded-none border-slate-300 dark:border-slate-600 text-[#0047FF] focus:ring-[#0047FF] cursor-pointer"
+                />
+                <span>Show Unallocated Players</span>
+              </label>
+            </div>
+          )}
         </div>
 
         {(() => {

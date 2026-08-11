@@ -4,9 +4,10 @@ import PlayersListModal from "./PlayersListModal";
 
 interface UnallocatedPlayersCardProps {
   players: UnallocatedPlayer[];
+  onAssignPlayer?: (player: any) => void;
 }
 
-export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCardProps) {
+export default function UnallocatedPlayersCard({ players, onAssignPlayer }: UnallocatedPlayersCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -79,7 +80,7 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
                     </span>
                   )}
                 </div>
-                
+
                 {p.preferredClasses && p.preferredClasses.length > 0 && (
                   <div className="mt-1 w-full">
                     <style>{`
@@ -95,6 +96,22 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
                       ))}
                     </div>
                   </div>
+                )}
+                {onAssignPlayer && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAssignPlayer(p);
+                    }}
+                    className="mt-2.5 w-full flex items-center justify-center gap-1 py-1 px-2 border border-[#0047FF] hover:bg-[#0047FF] text-[#0047FF] hover:text-white dark:hover:bg-blue-950/20 text-[9px] font-bold transition-all rounded-none cursor-pointer"
+                    title="Assign to the currently opened class"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Assign to Class</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -129,6 +146,7 @@ export default function UnallocatedPlayersCard({ players }: UnallocatedPlayersCa
         onClose={() => setIsModalOpen(false)}
         title="Unallocated Players"
         players={players}
+        onAssignPlayer={onAssignPlayer}
       />
     </div>
   );
