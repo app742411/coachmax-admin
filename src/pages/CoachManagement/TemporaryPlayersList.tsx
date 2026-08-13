@@ -108,9 +108,9 @@ export default function TemporaryPlayersList() {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             programFilter="All"
-            setProgramFilter={() => {}}
+            setProgramFilter={() => { }}
             ageFilter="All"
-            setAgeFilter={() => {}}
+            setAgeFilter={() => { }}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             medicalFilter={medicalFilter}

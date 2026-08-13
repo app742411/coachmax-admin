@@ -104,13 +104,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   return (
     <div
-      className="w-[340px] border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shrink-0"
-      style={{
-        backgroundImage: "url('/images/chat/chatsidebg.png')",
-        backgroundSize: "cover",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-      }}
+      className="w-[340px] border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shrink-0 bg-white dark:bg-slate-900"
     >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex flex-col gap-3">

@@ -76,7 +76,10 @@ const CoachingManagementPage: React.FC = () => {
       toast.success("Category created");
       setCatModalOpen(false);
     },
-    onError: () => toast.error("Failed to create category"),
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || "Failed to create category";
+      toast.error(message, { duration: 5000 });
+    },
   });
 
   const updateCatMutation = useMutation({
@@ -86,7 +89,10 @@ const CoachingManagementPage: React.FC = () => {
       toast.success("Category updated");
       setCatModalOpen(false);
     },
-    onError: () => toast.error("Failed to update category"),
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || "Failed to update category";
+      toast.error(message, { duration: 5000 });
+    },
   });
 
   const deleteCatMutation = useMutation({
@@ -98,7 +104,11 @@ const CoachingManagementPage: React.FC = () => {
       setSelectedCategoryId("");
       setSelectedCategoryName("");
     },
-    onError: () => toast.error("Failed to delete category"),
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || "Failed to delete category";
+      toast.error(message, { duration: 5000 });
+      setCatDeleteId(null);
+    },
   });
 
   // ── Program Mutations ──────────────────────────────────────────
@@ -109,7 +119,10 @@ const CoachingManagementPage: React.FC = () => {
       toast.success("Program created");
       setProgModalOpen(false);
     },
-    onError: () => toast.error("Failed to create program"),
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || "Failed to create program";
+      toast.error(message, { duration: 5000 });
+    },
   });
 
   const updateProgMutation = useMutation({
@@ -119,7 +132,10 @@ const CoachingManagementPage: React.FC = () => {
       toast.success("Program updated");
       setProgModalOpen(false);
     },
-    onError: () => toast.error("Failed to update program"),
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || "Failed to update program";
+      toast.error(message, { duration: 5000 });
+    },
   });
 
   const deleteProgMutation = useMutation({
@@ -129,7 +145,11 @@ const CoachingManagementPage: React.FC = () => {
       toast.success("Program deleted");
       setProgDeleteId(null);
     },
-    onError: () => toast.error("Failed to delete program"),
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || "Failed to delete program";
+      toast.error(message, { duration: 5000 });
+      setProgDeleteId(null);
+    },
   });
 
   // ── Category Handlers ──────────────────────────────────────────
@@ -214,7 +234,7 @@ const CoachingManagementPage: React.FC = () => {
           {/* ── Header ────────────────────────────────────────────── */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/[0.05]">
             <div>
-              <h2 className="text-lg font-bold text-gray-800 dark:text-white/90">Categoreis Manage</h2>
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white/90">Categories Manage</h2>
               <p className="text-xs text-gray-500 mt-0.5">Select a category to view its programs</p>
             </div>
           </div>
@@ -257,17 +277,17 @@ const CoachingManagementPage: React.FC = () => {
                             : "hover:bg-brand-50 dark:hover:bg-white/[0.04] text-gray-700 dark:text-gray-300"
                           }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
                           <div className={`w-5 h-5 rounded-none flex items-center justify-center flex-shrink-0
                           ${isSelected ? "bg-white/20 text-white" : "bg-brand-50 text-brand-500"}`}>
                             <Tag size={11} />
                           </div>
-                          <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className={`text-sm font-semibold truncate ${isSelected ? "text-white" : ""}`}>
                               {cat.name}
                             </span>
                             {cat.isEvent && (
-                              <span className={`text-[9px] font-bold uppercase tracking-wider rounded-none self-start ${
+                              <span className={`text-[9px] font-bold uppercase tracking-wider rounded-none self-start truncate max-w-full ${
                                 isSelected
                                   ? "text-white/80"
                                   : "text-amber-600 dark:text-amber-400"
@@ -277,7 +297,7 @@ const CoachingManagementPage: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isSelected ? "opacity-100" : ""}`}>
+                        <div className={`flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${isSelected ? "opacity-100" : ""}`}>
                           <span
                             onClick={(e) => handleCatEdit(e, cat)}
                             className={`p-1 rounded transition-colors cursor-pointer ${isSelected ? "hover:bg-white/20 text-white" : "hover:bg-brand-100 text-gray-400 hover:text-brand-500"}`}

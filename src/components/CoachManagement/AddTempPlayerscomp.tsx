@@ -427,26 +427,23 @@ export default function AddTempPlayerscomp() {
             </div>
 
             <div>
-              {watchYear && (
-                <>
-                  <Label>Preferred Term <span className="text-error-500">*</span></Label>
-                  <select
-                    className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer"
-                    {...register("preferredTerm", { required: "Please select a term" })}
-                  >
-                    <option value="">Select Term</option>
-                    {allTerms
-                      .filter((t: any) => t.year?.toString() === watchYear)
-                      .map((term: any) => (
-                        <option key={term._id} value={term._id}>
-                          {term.name}
-                        </option>
-                      ))}
-                  </select>
-                  {errors.preferredTerm && (
-                    <p className="mt-1 text-xs text-error-500 font-semibold">{errors.preferredTerm.message}</p>
-                  )}
-                </>
+              <Label>Preferred Term <span className="text-error-500">*</span></Label>
+              <select
+                className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer disabled:bg-gray-100 disabled:opacity-50 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
+                disabled={!watchYear}
+                {...register("preferredTerm", { required: watchYear ? "Please select a term" : false })}
+              >
+                <option value="">{!watchYear ? "Select Year first" : "Select Term"}</option>
+                {watchYear && allTerms
+                  .filter((t: any) => t.year?.toString() === watchYear)
+                  .map((term: any) => (
+                    <option key={term._id} value={term._id}>
+                      {term.name}
+                    </option>
+                  ))}
+              </select>
+              {errors.preferredTerm && (
+                <p className="mt-1 text-xs text-error-500 font-semibold">{errors.preferredTerm.message}</p>
               )}
             </div>
           </div>
@@ -475,25 +472,27 @@ export default function AddTempPlayerscomp() {
             </div>
 
             <div>
-              {watchCategory && (
-                <>
-                  <Label>Sub Category (Program) <span className="text-error-500">*</span></Label>
-                  <select
-                    className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer"
-                    disabled={loadingPrograms}
-                    {...register("selectedProgram", { required: "Please select a program" })}
-                  >
-                    <option value="">{loadingPrograms ? "Loading programs..." : "Select Program"}</option>
-                    {programs.map((prog) => (
-                      <option key={prog._id} value={prog._id}>
-                        {prog.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.selectedProgram && (
-                    <p className="mt-1 text-xs text-error-500 font-semibold">{errors.selectedProgram.message}</p>
-                  )}
-                </>
+              <Label>Sub Category (Program) <span className="text-error-500">*</span></Label>
+              <select
+                className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer disabled:bg-gray-100 disabled:opacity-50 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
+                disabled={!watchCategory || loadingPrograms}
+                {...register("selectedProgram", { required: watchCategory ? "Please select a program" : false })}
+              >
+                <option value="">
+                  {loadingPrograms
+                    ? "Loading programs..."
+                    : !watchCategory
+                    ? "Select Main Category first"
+                    : "Select Program"}
+                </option>
+                {watchCategory && programs.map((prog) => (
+                  <option key={prog._id} value={prog._id}>
+                    {prog.name}
+                  </option>
+                ))}
+              </select>
+              {errors.selectedProgram && (
+                <p className="mt-1 text-xs text-error-500 font-semibold">{errors.selectedProgram.message}</p>
               )}
             </div>
           </div>

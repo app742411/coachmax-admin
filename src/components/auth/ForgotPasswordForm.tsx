@@ -226,7 +226,7 @@ export default function ForgotPasswordForm() {
                       />
                       <span
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                        className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-[22px]"
                       >
                         {showPassword ? (
                           <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />

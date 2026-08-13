@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-hot-toast";
 
 // Create custom Axios instance
 const apiClient = axios.create({
@@ -27,7 +28,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    if (!error.response || error.message === 'Network Error') {
+      toast.error("Network error");
+    } else if (error.response && error.response.status === 401) {
       // Handle unauthorized (e.g., redirect to login or clear storage)
       localStorage.removeItem("token");
     }

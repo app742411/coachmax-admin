@@ -6,6 +6,7 @@ import ClassTable from "../../components/classes/ClassTable";
 import ViewClassPlayersModal from "../../components/classes/ViewClassPlayersModal";
 import AddClassModal from "../../components/classes/AddClassModal";
 import Select from "../../components/form/Select";
+import Pagination from "../../components/common/Pagination";
 
 interface ClassItem {
   _id: string;
@@ -30,6 +31,11 @@ export default function ClassesList() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalClasses, setTotalClasses] = useState(0);
+
   // Filter States
   const [categories, setCategories] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
@@ -38,7 +44,7 @@ export default function ClassesList() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
-  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedDay, setSelectedDay] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,9 +53,19 @@ export default function ClassesList() {
 
   const fetchClasses = async () => {
     try {
-      const response = await apiClient.get("/api/admin/getAllClasses");
+      setIsLoading(true);
+      const params: any = { page, limit };
+      if (searchQuery) params.search = searchQuery;
+      if (selectedCategory) params.categoryId = selectedCategory;
+      if (selectedProgram) params.programId = selectedProgram;
+      if (selectedTerm) params.termId = selectedTerm;
+      if (selectedDay) params.day = selectedDay;
+
+      const response = await apiClient.get("/api/admin/getAllClasses", { params });
       if (response.data && response.data.data && Array.isArray(response.data.data)) {
         setClasses(response.data.data);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalClasses(response.data.totalClasses || response.data.total || response.data.data.length);
       }
     } catch (error) {
       console.error("Failed to fetch classes:", error);
@@ -60,7 +76,9 @@ export default function ClassesList() {
 
   useEffect(() => {
     fetchClasses();
+  }, [page, limit, searchQuery, selectedCategory, selectedProgram, selectedTerm, selectedDay]);
 
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
         const catRes = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
@@ -113,25 +131,7 @@ export default function ClassesList() {
     fetchPrograms();
   }, [selectedCategory]);
 
-  const filteredClasses = classes.filter((c) => {
-    const matchesSearch = searchQuery === "" ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.program?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const classCategoryId = (c.category as any)?._id || c.category;
-    const matchesCategory = selectedCategory === "" || classCategoryId === selectedCategory;
-
-    const classProgramId = (c.program as any)?._id || c.program;
-    const matchesProgram = selectedProgram === "" || classProgramId === selectedProgram;
-
-    const classTermId = (c.term as any)?._id || c.term;
-    const matchesTerm = selectedTerm === "" || classTermId === selectedTerm;
-
-    const matchesDay = selectedDay === "" || c.dayOfWeek?.toLowerCase() === selectedDay.toLowerCase();
-
-    return matchesSearch && matchesCategory && matchesProgram && matchesTerm && matchesDay;
-  });
+  // Frontend filtering removed as backend now handles it
 
   return (
     <>
@@ -275,7 +275,7 @@ export default function ClassesList() {
             setSearchQuery={setSearchQuery}
           />
           <ClassTable
-            classes={filteredClasses}
+            classes={classes}
             isLoading={isLoading}
             onEditClass={(cls) => {
               setClassToEdit(cls);
@@ -283,6 +283,15 @@ export default function ClassesList() {
             }}
             onViewPlayers={(cls) => setViewPlayersClassId(cls._id)}
           />
+          {!isLoading && totalPages > 1 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalClasses}
+              limit={limit}
+              onPageChange={setPage}
+            />
+          )}
         </div>
       </div>
 

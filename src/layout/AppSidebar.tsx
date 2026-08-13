@@ -379,18 +379,16 @@ const AppSidebar: React.FC = () => {
               >
                 {nav.icon}
               </span>
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <span className="menu-item-text">{nav.name}</span>
-              )}
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <ChevronDownIcon
-                  className={`ml-auto w-4 h-4 transition-transform duration-200 ${openSubmenu?.sectionKey === sectionKey &&
-                    openSubmenu?.index === index
-                    ? "rotate-180 text-white"
-                    : "text-slate-400"
-                    }`}
-                />
-              )}
+              <span className={`menu-item-text ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}`}>
+                {nav.name}
+              </span>
+              <ChevronDownIcon
+                className={`ml-auto w-4 h-4 transition-transform duration-200 ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"} ${openSubmenu?.sectionKey === sectionKey &&
+                  openSubmenu?.index === index
+                  ? "rotate-180 text-white"
+                  : "text-slate-400"
+                  }`}
+              />
             </button>
           ) : (
             nav.path && (
@@ -407,15 +405,15 @@ const AppSidebar: React.FC = () => {
                 >
                   {nav.icon}
                 </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className="menu-item-text">{nav.name}</span>
-                )}
+                <span className={`menu-item-text ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}`}>
+                  {nav.name}
+                </span>
               </Link>
             )
           )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+          {nav.subItems && (
             <div
-              className="overflow-hidden transition-all duration-300"
+              className={`overflow-hidden transition-all duration-300 ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}`}
               style={{
                 height:
                   openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
@@ -471,11 +469,12 @@ const AppSidebar: React.FC = () => {
     >
       <div className="py-6 flex justify-center w-full">
         <Link to="/">
-          {isExpanded || isHovered || isMobileOpen ? (
+          <span className={isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}>
             <img src="/images/logo/newlogo.png" alt="CoachMax" className="h-12 object-contain" />
-          ) : (
+          </span>
+          <span className={!isExpanded && !isHovered && !isMobileOpen ? "block" : "hidden"}>
             <span className="text-white font-bold text-xl">C</span>
-          )}
+          </span>
         </Link>
       </div>
       <div className="flex flex-col flex-1 overflow-y-auto duration-300 ease-linear no-scrollbar pb-6">
@@ -489,11 +488,12 @@ const AppSidebar: React.FC = () => {
                     : "justify-start"
                     }`}
                 >
-                  {isExpanded || isHovered || isMobileOpen ? (
-                    section.title
-                  ) : (
+                  <span className={isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}>
+                    {section.title}
+                  </span>
+                  <span className={!isExpanded && !isHovered && !isMobileOpen ? "block" : "hidden"}>
                     <HorizontaLDots className="size-6" />
-                  )}
+                  </span>
                 </h2>
                 {renderMenuItems(section.items, section.key)}
               </div>

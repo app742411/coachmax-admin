@@ -83,7 +83,11 @@ const TermManagement: React.FC = () => {
             toast.success("Term deleted");
             setDeleteModalId(null);
         },
-        onError: () => toast.error("Failed to delete term"),
+        onError: (error: any) => {
+            const message = error?.response?.data?.message || "Failed to delete term";
+            toast.error(message, { duration: 5000 });
+            setDeleteModalId(null);
+        }
     });
 
     // ── Event Handlers ─────────────────────────────────────────────

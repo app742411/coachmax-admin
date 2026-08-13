@@ -32,3 +32,13 @@ export const getPlayerProfile = async (playerId: string): Promise<any> => {
   const response = await apiClient.get(`/api/user/player/profile/${playerId}`);
   return response.data;
 };
+
+export const getAdminPlayerDetails = async (playerId: string): Promise<any> => {
+  const response = await apiClient.get(`/api/admin/player/${playerId}`);
+  return response.data;
+};
+
+export const updatePlayerStatistics = async (playerId: string, data: any): Promise<any> => {
+  const response = await apiClient.put(`/api/admin/player-statistics/${playerId}`, data);
+  return response.data;
+};

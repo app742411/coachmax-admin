@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile } from "../api/players";
+import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile, getAdminPlayerDetails, updatePlayerStatistics } from "../api/players";
 import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer } from "../api/adminApi";
 import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
@@ -315,5 +315,29 @@ export const useCoachAllNotes = (page = 1, limit = 20) => {
   return useQuery({
     queryKey: ["coachAllNotes", page, limit],
     queryFn: () => getCoachAllNotes(page, limit),
+  });
+};
+
+export const useAdminPlayerDetails = (playerId: string | undefined) => {
+  return useQuery({
+    queryKey: ["adminPlayerDetails", playerId],
+    queryFn: () => getAdminPlayerDetails(playerId!),
+    enabled: !!playerId,
+  });
+};
+
+export const useUpdatePlayerStatistics = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ playerId, data }: { playerId: string; data: any }) => 
+      updatePlayerStatistics(playerId, data),
+    onSuccess: (data: any, variables: any) => {
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails", variables.playerId] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile", variables.playerId] });
+      toast.success(data?.message || "Player statistics updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to update statistics");
+    }
   });
 };

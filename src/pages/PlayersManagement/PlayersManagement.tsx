@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { Player } from "../../types/player";
 import PlayerStatsCards from "../../components/players/PlayerStatsCards";
@@ -9,6 +9,7 @@ import AssignClassModal from "../../components/players/AssignClassModal";
 import GenerateInvoiceModal from "../../components/InvoiceManagement/GenerateInvoiceModal";
 import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
 import { usePlayers, useDeletePlayer } from "../../hooks/usePlayers";
+import Pagination from "../../components/common/Pagination";
 
 export default function PlayersManagement() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -17,8 +18,14 @@ export default function PlayersManagement() {
   const [ageFilter, setAgeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   
-  const { data: playersResponse, isLoading } = usePlayers(1, 100);
+  // Page state for 10-player backend pagination
+  const [page, setPage] = useState(1);
+
+  // Fetch exactly 10 players per page from the backend
+  const { data: playersResponse, isLoading } = usePlayers(page, 10);
   const players = playersResponse?.users || [];
+  const totalPages = playersResponse?.totalPages || 1;
+  const totalPlayers = playersResponse?.total || 0;
   
   const deletePlayerMutation = useDeletePlayer();
   
@@ -26,14 +33,17 @@ export default function PlayersManagement() {
   const [playerForInvoice, setPlayerForInvoice] = useState<Player | null>(null);
   const [coachNotePlayer, setCoachNotePlayer] = useState<Player | null>(null);
 
+  // Reset page to 1 when filters change to avoid out-of-bound pages
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, programFilter, statusFilter, ageFilter]);
+
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
     if (selectedPlayer?._id === player._id) {
       setSelectedPlayer(null);
     }
   };
-
-
 
   const handleAssignPlayer = (player: Player) => {
     setPlayerToAssign(player);
@@ -57,7 +67,6 @@ export default function PlayersManagement() {
     const matchesProgram =
       programFilter === "All" || programStr.toUpperCase().includes(programFilter.toUpperCase());
     
-    // Status from backend
     const playerStatus = p.status || "PENDING"; 
     const matchesStatus =
       statusFilter === "All" || playerStatus.toUpperCase() === statusFilter.toUpperCase();
@@ -110,15 +119,27 @@ export default function PlayersManagement() {
           {isLoading ? (
             <div className="py-10 text-center text-slate-500">Loading players...</div>
           ) : (
-            <PlayerTable
-              players={filteredPlayers}
-              selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
-              onSelectPlayer={setSelectedPlayer}
-              onDeletePlayer={handleDeletePlayer}
-              onAssignClass={handleAssignPlayer}
-              onGenerateInvoice={handleGenerateInvoice}
-              onAddCoachNote={setCoachNotePlayer}
-            />
+            <>
+              <PlayerTable
+                players={filteredPlayers}
+                selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
+                onSelectPlayer={setSelectedPlayer}
+                onDeletePlayer={handleDeletePlayer}
+                onAssignClass={handleAssignPlayer}
+                onGenerateInvoice={handleGenerateInvoice}
+                onAddCoachNote={setCoachNotePlayer}
+              />
+
+              {totalPages > 1 && (
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  totalItems={totalPlayers}
+                  limit={10}
+                  onPageChange={setPage}
+                />
+              )}
+            </>
           )}
         </div>
 

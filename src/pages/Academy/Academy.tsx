@@ -10,6 +10,7 @@ import { useClassFiltersWithTimeSlots, useAssignClassesToPlayer } from "../../ho
 import { useUnallocatedPlayers } from "../../hooks/useUnallocatedPlayers";
 import { useAllocatedPlayers } from "../../hooks/useAllocatedPlayers";
 import AddClassModal from "../../components/classes/AddClassModal";
+import PlayersListModal from "../../components/academy/PlayersListModal";
 import TermManagement from "../../components/management/TermManagement";
 import { Modal } from "../../components/ui/modal";
 
@@ -118,18 +119,51 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
     return "BOTH"; // unselected -> show all data
   })();
 
-  const { data: unallocatedPlayers } = useUnallocatedPlayers(
+  const [unallocatedLimit, setUnallocatedLimit] = useState(5);
+  const [allocatedLimit, setAllocatedLimit] = useState(5);
+
+  const [isUnallocatedModalOpen, setIsUnallocatedModalOpen] = useState(false);
+  const [isAllocatedModalOpen, setIsAllocatedModalOpen] = useState(false);
+
+  useEffect(() => {
+    setUnallocatedLimit(5);
+    setAllocatedLimit(5);
+  }, [sidebarCategory, sidebarProgram, sidebarSearch, effectivePlayerType]);
+
+  const { data: unallocatedData, isFetching: isUnallocatedFetching } = useUnallocatedPlayers(
     sidebarCategory,
     sidebarProgram,
     sidebarSearch,
+    1,
+    unallocatedLimit,
     effectivePlayerType === "BOTH" || effectivePlayerType === "UNALLOCATED"
   );
 
-  const { data: allocatedPlayers } = useAllocatedPlayers(
+  const { data: allocatedData, isFetching: isAllocatedFetching } = useAllocatedPlayers(
     sidebarCategory,
     sidebarProgram,
     sidebarSearch,
+    1,
+    allocatedLimit,
     effectivePlayerType === "BOTH" || effectivePlayerType === "ALLOCATED"
+  );
+
+  const { data: allUnallocatedData } = useUnallocatedPlayers(
+    sidebarCategory,
+    sidebarProgram,
+    sidebarSearch,
+    1,
+    1000,
+    isUnallocatedModalOpen
+  );
+
+  const { data: allAllocatedData } = useAllocatedPlayers(
+    sidebarCategory,
+    sidebarProgram,
+    sidebarSearch,
+    1,
+    1000,
+    isAllocatedModalOpen
   );
 
   return (
@@ -209,7 +243,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
           if (isCoach) return null;
 
           return (
-            <div className="w-full xl:w-[350px] shrink-0 flex flex-col gap-4">
+            <div className="w-full xl:w-[350px] shrink-0 xl:sticky xl:top-[88px] xl:max-h-[calc(100vh-110px)] xl:overflow-y-auto pr-1.5 custom-scrollbar flex flex-col gap-4">
               <SidebarPlayersFilter
                 category={sidebarCategory}
                 program={sidebarProgram}
@@ -220,14 +254,24 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
               />
               {(effectivePlayerType === "BOTH" || effectivePlayerType === "UNALLOCATED") && (
                 <UnallocatedPlayersCard
-                  players={unallocatedPlayers || []}
+                  players={unallocatedData?.players || []}
+                  totalCount={unallocatedData?.pagination?.total || 0}
+                  hasMore={unallocatedData ? unallocatedData.players.length < (unallocatedData.pagination?.total ?? 0) : false}
+                  onLoadMore={() => setUnallocatedLimit(prev => prev + 5)}
+                  isLoadingMore={isUnallocatedFetching && unallocatedData.players.length > 0}
                   onAssignPlayer={(player) => setPendingAssignPlayer(player)}
+                  onViewAll={() => setIsUnallocatedModalOpen(true)}
                 />
               )}
               {(effectivePlayerType === "BOTH" || effectivePlayerType === "ALLOCATED") && (
                 <AllocatedPlayersCard
-                  players={allocatedPlayers || []}
+                  players={allocatedData?.players || []}
+                  totalCount={allocatedData?.pagination?.total || 0}
+                  hasMore={allocatedData ? allocatedData.players.length < (allocatedData.pagination?.total ?? 0) : false}
+                  onLoadMore={() => setAllocatedLimit(prev => prev + 5)}
+                  isLoadingMore={isAllocatedFetching && allocatedData.players.length > 0}
                   onAssignPlayer={(player) => setPendingAssignPlayer(player)}
+                  onViewAll={() => setIsAllocatedModalOpen(true)}
                 />
               )}
               {/* <WaitlistCard items={mockWaitlist} /> */}
@@ -376,6 +420,28 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
           </div>
         </div>
       </Modal>
+
+      <PlayersListModal
+        isOpen={isUnallocatedModalOpen}
+        onClose={() => setIsUnallocatedModalOpen(false)}
+        title="Unallocated Players"
+        players={allUnallocatedData?.players || []}
+        onAssignPlayer={(player) => {
+          setPendingAssignPlayer(player);
+          setIsUnallocatedModalOpen(false);
+        }}
+      />
+
+      <PlayersListModal
+        isOpen={isAllocatedModalOpen}
+        onClose={() => setIsAllocatedModalOpen(false)}
+        title="Allocated Players"
+        players={allAllocatedData?.players || []}
+        onAssignPlayer={(player) => {
+          setPendingAssignPlayer(player);
+          setIsAllocatedModalOpen(false);
+        }}
+      />
     </>
   );
 }

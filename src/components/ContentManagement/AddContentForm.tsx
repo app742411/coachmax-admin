@@ -258,11 +258,10 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
                       </span>
                     </div>
                   ) : (
-                    <div className="relative border border-gray-100 dark:border-gray-800 rounded-none overflow-hidden group aspect-[16/6] min-h-[145px]">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="absolute inset-0 w-full h-full object-cover"
+                    <div className="relative border border-gray-100 dark:border-gray-800 rounded-none overflow-hidden group aspect-[16/9] min-h-[145px]">
+                      <div 
+                        className="absolute inset-0 w-full h-full bg-cover bg-center" 
+                        style={{ backgroundImage: `url(${imagePreview})` }}
                       />
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                         <button

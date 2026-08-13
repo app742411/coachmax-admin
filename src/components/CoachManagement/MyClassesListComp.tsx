@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { getCoachClasses } from "../../api/coaches";
+import apiClient from "../../api/apiClient";
 import Badge from "../ui/badge/Badge";
 import { MoreVertical } from "lucide-react";
 import ViewClassPlayersModal from "../classes/ViewClassPlayersModal";
+import Select from "../form/Select";
+import Pagination from "../common/Pagination";
 
 interface ClassDetail {
   classId: string;
@@ -17,16 +19,11 @@ interface ClassDetail {
   trainingType: string;
   capacity: number;
   totalPlayers: number;
-  term?: {
-    name: string;
-    year: number;
-  };
-  program?: {
-    name: string;
-  };
-  category?: {
-    name: string;
-  };
+  status?: string;
+  broadcastChatRoomId?: string;
+  term?: { _id?: string; name: string; year: number };
+  program?: { _id?: string; name: string };
+  category?: { _id?: string; name: string };
 }
 
 export default function MyClassesListComp() {
@@ -36,42 +33,251 @@ export default function MyClassesListComp() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalClasses, setTotalClasses] = useState(0);
+
+  // Filter state
+  const [categories, setCategories] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [terms, setTerms] = useState<any[]>([]);
+
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedTerm, setSelectedTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedProgram, setSelectedProgram] = useState("");
+  const [selectedDay, setSelectedDay] = useState("");
+
+  // ── Fetch classes (with backend filters) ──────────────────────
+  const fetchClasses = async () => {
+    try {
+      setLoading(true);
+      const params: any = { page, limit };
+      if (searchQuery) params.search = searchQuery;
+      if (selectedCategory) params.categoryId = selectedCategory;
+      if (selectedProgram) params.programId = selectedProgram;
+      if (selectedTerm) params.termId = selectedTerm;
+      if (selectedDay) params.dayOfWeek = selectedDay;
+
+      const response = await apiClient.get("/api/coach/classes", { params });
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        setClasses(response.data.data);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalClasses(response.data.total || response.data.data.length);
+      } else if (Array.isArray(response.data)) {
+        setClasses(response.data);
+        setTotalPages(1);
+        setTotalClasses(response.data.length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch classes:", error);
+      toast.error("Failed to load classes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchClasses = async () => {
+    fetchClasses();
+  }, [page, limit, searchQuery, selectedCategory, selectedProgram, selectedTerm, selectedDay]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedCategory, selectedProgram, selectedTerm, selectedDay]);
+
+  // ── Fetch categories ──────────────────────────────────────────
+  useEffect(() => {
+    const fetchCategories = async () => {
       try {
-        const response = await getCoachClasses();
-        if (response && Array.isArray(response.data)) {
-          setClasses(response.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch classes:", error);
-        toast.error("Failed to load classes");
-      } finally {
-        setLoading(false);
+        const res = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
+        if (res.data && Array.isArray(res.data)) setCategories(res.data);
+      } catch (err) {
+        console.error("Failed to load categories:", err);
       }
     };
-    fetchClasses();
+    fetchCategories();
   }, []);
 
+  // ── Fetch terms when year changes ─────────────────────────────
   useEffect(() => {
-    const handleClickOutside = () => setOpenDropdownId(null);
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    const fetchTerms = async () => {
+      try {
+        const params: any = { isEvent: "all" };
+        if (selectedYear) params.year = selectedYear;
+        const res = await apiClient.get("/api/admin/getAllTerms", { params });
+        if (res.data?.data) {
+          setTerms(res.data.data);
+          // Auto-select first active term
+          const activeTerm = res.data.data.find((t: any) => t.status === "ACTIVE");
+          if (activeTerm && !selectedTerm) setSelectedTerm(activeTerm._id);
+        }
+      } catch (err) {
+        console.error("Failed to load terms:", err);
+      }
+    };
+    fetchTerms();
+    setSelectedTerm("");
+  }, [selectedYear]);
+
+  // ── Fetch programs when category changes ──────────────────────
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      if (selectedCategory) {
+        try {
+          const res = await apiClient.get(`/api/user/getProgramsByCategory/${selectedCategory}`);
+          if (res.data && Array.isArray(res.data)) setPrograms(res.data);
+        } catch (err) {
+          console.error("Failed to fetch programs:", err);
+        }
+      } else {
+        setPrograms([]);
+        setSelectedProgram("");
+      }
+    };
+    fetchPrograms();
+  }, [selectedCategory]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = () => setOpenDropdownId(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
   }, []);
 
-  const filteredClasses = classes.filter((c) =>
-    c.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.program?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const DAYS = ["All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   return (
     <div className="space-y-4">
-      {/* Search Filter Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-none shadow-theme-xs">
-        <div className="relative flex-1 max-w-md">
+
+      {/* ── Page Header ──────────────────────────────────────────── */}
+      <div className="flex flex-col gap-4 mb-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">My Classes</h1>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mt-1">
+            <span>Home</span><span>&gt;</span>
+            <span className="text-[#0047FF]">My Classes</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+          {/* Year Selector */}
+          <div className="w-36 shrink-0">
+            <Select
+              value={selectedYear}
+              onChange={(val) => setSelectedYear(val)}
+              options={[
+                { label: "All Years", value: "" },
+                ...(() => {
+                  const currentYear = new Date().getFullYear();
+                  const years: { label: string; value: string }[] = [];
+                  for (let y = currentYear + 1; y >= currentYear - 3; y--) {
+                    years.push({ label: `${y}`, value: `${y}` });
+                  }
+                  return years;
+                })()
+              ]}
+              placeholder="All Years"
+              triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 dark:border-slate-800 dark:text-white transition-all cursor-pointer"
+            />
+          </div>
+
+          {/* Term Selector */}
+          <div className="w-52 shrink-0">
+            <Select
+              value={selectedTerm}
+              onChange={(val) => setSelectedTerm(val)}
+              options={[
+                { label: "All Terms", value: "" },
+                ...terms.map((t) => ({ label: `${t.name} (${t.year})`, value: t._id }))
+              ]}
+              placeholder="All Terms"
+              triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 dark:border-slate-800 dark:text-white transition-all cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Category Tabs ─────────────────────────────────────────── */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto custom-scrollbar gap-2">
+        <button
+          onClick={() => { setSelectedCategory(""); setSelectedProgram(""); }}
+          className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-[3px] shrink-0 ${
+            selectedCategory === ""
+              ? "border-[#0047FF] text-[#0047FF]"
+              : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          }`}
+        >
+          All Classes
+        </button>
+        {categories.map((c) => (
+          <button
+            key={c._id}
+            onClick={() => { setSelectedCategory(c._id); setSelectedProgram(""); }}
+            className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-[3px] shrink-0 ${
+              selectedCategory === c._id
+                ? "border-[#0047FF] text-[#0047FF]"
+                : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            }`}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Program (Sub-category) Tabs ───────────────────────────── */}
+      {selectedCategory && programs.length > 0 && (
+        <div className="flex border-b border-slate-100 dark:border-slate-800/60 overflow-x-auto custom-scrollbar gap-2 -mt-4 bg-slate-50/50 dark:bg-slate-900/10 px-2 py-0.5">
+          <button
+            onClick={() => setSelectedProgram("")}
+            className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 shrink-0 ${
+              selectedProgram === ""
+                ? "border-[#0047FF] text-[#0047FF]"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            All Programs
+          </button>
+          {programs.map((p) => (
+            <button
+              key={p._id}
+              onClick={() => setSelectedProgram(p._id)}
+              className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 shrink-0 ${
+                selectedProgram === p._id
+                  ? "border-[#0047FF] text-[#0047FF]"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Day Tabs ──────────────────────────────────────────────── */}
+      <div className="flex border-b border-slate-100 dark:border-slate-800 overflow-x-auto no-scrollbar gap-1">
+        {DAYS.map((day) => (
+          <button
+            key={day}
+            onClick={() => setSelectedDay(day === "All Days" ? "" : day)}
+            className={`py-3 px-6 transition-all border-b-[3px] shrink-0 text-xs font-semibold tracking-wider cursor-pointer ${
+              (selectedDay === "" && day === "All Days") || selectedDay === day
+                ? "bg-[#031549] text-white font-bold border-[#0047FF]"
+                : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40 border-transparent"
+            }`}
+          >
+            {day}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Search ──────────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-none shadow-theme-xs">
+        <div className="relative max-w-md">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </span>
@@ -80,20 +286,20 @@ export default function MyClassesListComp() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search classes by name, location, or program..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none text-xs font-semibold focus:outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] shadow-sm"
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none text-xs font-semibold focus:outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF]"
           />
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
-        <div className="overflow-visible no-scrollbar">
+      {/* ── Table ────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+        <div className="max-w-full overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs [&_th]:border [&_th]:border-slate-700/50 [&_td]:border [&_td]:border-slate-200 dark:[&_td]:border-slate-700">
             <thead>
               <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                 <th className="py-3 px-4 w-[40px]">#</th>
-                <th className="py-3 px-3 min-w-[150px]">Name</th>
-                <th className="py-3 px-3 min-w-[140px]">Program / Term</th>
+                <th className="py-3 px-3 min-w-[180px]">Name</th>
+                <th className="py-3 px-3 min-w-[150px]">Program / Term</th>
                 <th className="py-3 px-3 min-w-[120px]">Schedule</th>
                 <th className="py-3 px-3 min-w-[120px]">Location</th>
                 <th className="py-3 px-3 min-w-[80px]">Status</th>
@@ -110,37 +316,60 @@ export default function MyClassesListComp() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredClasses.length === 0 ? (
+              ) : classes.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-slate-500 font-semibold italic">
-                    No classes assigned to you.
+                    No classes found.
                   </td>
                 </tr>
               ) : (
-                filteredClasses.map((cls, idx) => (
+                classes.map((cls, idx) => (
                   <tr
                     key={cls.classId}
                     className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all cursor-default"
                   >
-                    <td className="py-4 px-4 font-semibold text-slate-500">{idx + 1}</td>
+                    <td className="py-4 px-4 font-semibold text-slate-500">
+                      {(page - 1) * limit + idx + 1}
+                    </td>
                     <td className="py-4 px-3">
                       <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">{cls.className}</div>
-                      <div className="text-xs text-slate-500 font-normal mt-0.5">Capacity: {cls.totalPlayers} / {cls.capacity}</div>
+                      <div className="mt-1.5 w-full max-w-[160px]">
+                        <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold mb-1">
+                          <span>Capacity</span>
+                          <span>{cls.totalPlayers} / {cls.capacity}</span>
+                        </div>
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              (cls.totalPlayers / (cls.capacity || 1)) >= 1
+                                ? "bg-rose-500"
+                                : (cls.totalPlayers / (cls.capacity || 1)) >= 0.8
+                                  ? "bg-amber-500"
+                                  : "bg-[#0047FF]"
+                            }`}
+                            style={{ width: `${Math.min(100, (cls.totalPlayers / (cls.capacity || 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
                     </td>
                     <td className="py-4 px-3">
                       <div className="text-slate-700 dark:text-slate-300 font-bold">{cls.program?.name || "N/A"}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{cls.term?.name || "N/A"} ({cls.term?.year || ""})</div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {cls.term?.name || "N/A"} {cls.term?.year ? `(${cls.term.year})` : ""}
+                      </div>
                     </td>
                     <td className="py-4 px-3">
-                      <div className="text-slate-700 dark:text-slate-300 font-bold capitalize">{cls.dayOfWeek?.toLowerCase()}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{cls.startTime} - {cls.endTime}</div>
+                      <div className="text-slate-700 dark:text-slate-300 font-bold capitalize">
+                        {cls.dayOfWeek?.toLowerCase() || "—"}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">{cls.startTime} – {cls.endTime}</div>
                     </td>
                     <td className="py-4 px-3 font-semibold text-slate-600 dark:text-slate-400">
-                      {cls.location || cls.venue || "N/A"}
+                      {cls.venue || cls.location || "N/A"}
                     </td>
                     <td className="py-4 px-3">
-                      <Badge color="success">
-                        ACTIVE
+                      <Badge color={cls.status === "INACTIVE" ? "warning" : "success"}>
+                        {cls.status || "ACTIVE"}
                       </Badge>
                     </td>
                     <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
@@ -156,7 +385,7 @@ export default function MyClassesListComp() {
                       </button>
 
                       {openDropdownId === cls.classId && (
-                        <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden">
                           <button
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                             onClick={(e) => {
@@ -177,6 +406,17 @@ export default function MyClassesListComp() {
           </table>
         </div>
       </div>
+
+      {/* ── Pagination ────────────────────────────────────────────── */}
+      {!loading && totalPages > 1 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalClasses}
+          limit={limit}
+          onPageChange={setPage}
+        />
+      )}
 
       <ViewClassPlayersModal
         isOpen={!!selectedClassId}

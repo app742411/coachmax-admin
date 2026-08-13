@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getUnallocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
 
@@ -42,18 +42,40 @@ export const useUnallocatedPlayers = (
   category?: string,
   program?: string,
   search?: string,
+  page: number = 1,
+  limit: number = 5,
   enabled: boolean = true
 ) => {
   return useQuery({
-    queryKey: ["unallocatedPlayers", category, program, search],
+    queryKey: ["unallocatedPlayers", category, program, search, page, limit],
     queryFn: async () => {
-      const response = await getUnallocatedPlayers(category, program, search);
-      if (response && response.data) {
-        return response.data.map(mapUnallocatedToCard);
+      const response = await getUnallocatedPlayers(category, program, search, page, limit);
+      if (response) {
+        const players = (response.data || []).map(mapUnallocatedToCard);
+        const total = response.pagination?.total ?? response.total ?? players.length;
+        const totalPages = response.pagination?.totalPages ?? Math.ceil(total / limit);
+        const hasMore = response.pagination?.hasMore ?? (page < totalPages);
+        return {
+          players,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasMore
+          }
+        };
       }
-      return [];
+      return {
+        players: [],
+        pagination: { page: 1, limit: 5, total: 0, totalPages: 0, hasMore: false }
+      };
     },
     enabled,
-    initialData: [],
+    placeholderData: keepPreviousData,
+    initialData: {
+      players: [],
+      pagination: { page: 1, limit: 5, total: 0, totalPages: 0, hasMore: false }
+    },
   });
 };

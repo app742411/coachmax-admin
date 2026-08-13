@@ -29,7 +29,7 @@ export default function SidebarPlayersFilter({
         if (catRes.data && Array.isArray(catRes.data)) {
           setCategories(catRes.data);
         }
-        
+
         // Fetch Programs (independent of category selection)
         const progRes = await apiClient.get("/api/user/getProgramsByCategory/69e0716f5c46873ed2327d0b");
         if (progRes.data && Array.isArray(progRes.data)) {
@@ -43,11 +43,11 @@ export default function SidebarPlayersFilter({
   }, []);
 
   return (
-    <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-4 rounded-none shadow-theme-xs mb-5 flex flex-col gap-3">
+    <div className="bg-white border border-slate-200 dark:border-slate-700 dark:bg-slate-900 p-4 rounded-none shadow-sm mb-5 flex flex-col gap-3">
       <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
         Filter Players
       </h3>
-      
+
       <div className="grid grid-cols-2 gap-2">
         <select
           value={category}
@@ -59,7 +59,7 @@ export default function SidebarPlayersFilter({
             <option key={c._id} value={c._id}>{c.name}</option>
           ))}
         </select>
-        
+
         <select
           value={program}
           onChange={(e) => onProgramChange(e.target.value)}

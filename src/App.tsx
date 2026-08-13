@@ -20,6 +20,7 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import PlayersManagement from "./pages/PlayersManagement/PlayersManagement";
 import RegistrationRequests from "./pages/PlayersManagement/RegistrationRequests";
+import PlayerProfilePage from "./pages/PlayersManagement/PlayerProfilePage";
 import Academy from "./pages/Academy/Academy";
 import ProgramsManagement from "./pages/Programs/ProgramsManagement";
 import ClassesList from "./pages/Classes/ClassesList";
@@ -39,6 +40,7 @@ import AddEvent from "./pages/Events/AddEvent";
 import EventList from "./pages/Events/EventList";
 import ContentListPage from "./pages/Content/ContentListPage";
 import AddContentPage from "./pages/Content/AddContentPage";
+import NewsDetails from "./pages/Content/NewsDetails";
 import GalleryGrid from "./pages/Gallery/GalleryGrid";
 import AddGalleryPage from "./pages/Gallery/AddGalleryPage";
 import SponsorManagementPage from "./pages/Sponsors/SponsorManagementPage";
@@ -107,6 +109,7 @@ export default function App() {
             <Route index path="/" element={<RoleBasedDashboard />} />
             <Route path="/new-registration-request" element={<RegistrationRequests />} />
             <Route path="/players" element={<PlayersManagement />} />
+            <Route path="/player/:playerId" element={<PlayerProfilePage />} />
             <Route path="/programs" element={<ProgramsManagement />} />
             <Route path="/classes" element={<ClassesList />} />
             <Route path="/clone-term" element={<CloneTermPage />} />
@@ -131,6 +134,7 @@ export default function App() {
             <Route path="/edit-event/:id" element={<EditEvent />} />
             <Route path="/event-details/:id" element={<EventDetails />} />
             <Route path="/news" element={<ContentListPage type="news" />} />
+            <Route path="/news/:id" element={<NewsDetails />} />
             <Route path="/add-content" element={<AddContentPage />} />
             <Route path="/gallery" element={<GalleryGrid />} />
             <Route path="/add-gallery" element={<AddGalleryPage />} />

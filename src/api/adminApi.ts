@@ -36,6 +36,7 @@ export const ENDPOINTS = {
   LEAGUES: "/api/admin/leagues",
   GET_NOTIFICATIONS: "/api/admin/notifications",
   READ_ALL_NOTIFICATIONS: "/api/admin/notifications/read-all",
+  GET_DASHBOARD: "/api/admin/dashboard",
 };
 
 // ================= PROGRAMS =================
@@ -187,6 +188,11 @@ export const getAllNews = async (): Promise<any> => {
   return res.data;
 };
 
+export const getNewsById = async (id: string): Promise<any> => {
+  const res = await apiClient.get(`/api/user/news/${id}`);
+  return res.data;
+};
+
 export const getNewsCategories = async (): Promise<any> => {
   const res = await apiClient.get('/api/admin/news/categories');
   return res.data;
@@ -331,9 +337,11 @@ export const deleteTemporaryPlayer = async (tempPlayerId: string): Promise<any> 
 export const getUnallocatedPlayers = async (
   category?: string,
   program?: string,
-  search?: string
+  search?: string,
+  page: number = 1,
+  limit: number = 5
 ): Promise<any> => {
-  const params: any = { allocationStatus: "UNALLOCATED" };
+  const params: any = { allocationStatus: "UNALLOCATED", page, limit };
   if (category) params.category = category;
   if (program) params.program = program;
   if (search) params.search = search;
@@ -378,9 +386,11 @@ export const transferClass = async (
 export const getAllocatedPlayers = async (
   category?: string,
   program?: string,
-  search?: string
+  search?: string,
+  page: number = 1,
+  limit: number = 5
 ): Promise<any> => {
-  const params: any = { allocationStatus: "ALLOCATED" };
+  const params: any = { allocationStatus: "ALLOCATED", page, limit };
   if (category) params.category = category;
   if (program) params.program = program;
   if (search) params.search = search;
@@ -397,5 +407,10 @@ export const getNotifications = async (): Promise<any> => {
 
 export const markAllNotificationsRead = async (): Promise<any> => {
   const response = await apiClient.patch(ENDPOINTS.READ_ALL_NOTIFICATIONS);
+  return response.data;
+};
+
+export const getAdminDashboard = async (): Promise<any> => {
+  const response = await apiClient.get(ENDPOINTS.GET_DASHBOARD);
   return response.data;
 };

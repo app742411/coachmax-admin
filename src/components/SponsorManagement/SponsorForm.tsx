@@ -160,7 +160,11 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSuccess, editingSponsor, on
 
      <div className="col-span-2">
       <Label>Banner Image {editingSponsor && "(Leave empty to keep current)"}</Label>
-      <DropzoneComponent key={resetKey} onUpload={handleFileChange} />
+      <DropzoneComponent 
+       key={resetKey} 
+       onUpload={handleFileChange} 
+       previewUrl={editingSponsor?.image ? `${import.meta.env.VITE_API_BASE_URL}/${editingSponsor.image}` : undefined}
+      />
      </div>
     </div>
 
