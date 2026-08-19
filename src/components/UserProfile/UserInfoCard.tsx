@@ -87,7 +87,10 @@ export default function UserInfoCard() {
   const displayFirstName = nameParts[0] || "";
   const displayLastName = nameParts.slice(1).join(" ") || "";
   const displayEmail = user?.email || "admin@coachmax.com";
-  const currentAvatar = user?.profileImage || "/images/logo/cm-logo2.png";
+  let currentAvatar = user?.profileImage || "/images/logo/cm-logo2.png";
+  if (currentAvatar && currentAvatar !== "/images/logo/cm-logo2.png" && !currentAvatar.startsWith('http')) {
+    currentAvatar = `${import.meta.env.VITE_API_BASE_URL || ""}/${currentAvatar.replace(/^\/+/, "")}`;
+  }
 
   if (isLoading) {
     return (

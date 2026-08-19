@@ -19,11 +19,20 @@ export default function ChangePasswordCard() {
     defaultValues: {
       oldPassword: "",
       newPassword: "",
+      confirmPassword: "",
     },
   });
 
   const onSubmit = (data: any) => {
-    changePasswordMutation.mutate(data, {
+    if (data.newPassword !== data.confirmPassword) {
+      toast.error("New password and confirm password do not match");
+      return;
+    }
+    const payload = {
+      oldPassword: data.oldPassword,
+      newPassword: data.newPassword,
+    };
+    changePasswordMutation.mutate(payload, {
       onSuccess: () => {
         toast.success("Password changed successfully!");
         setIsEditing(false);
@@ -82,6 +91,16 @@ export default function ChangePasswordCard() {
           />
           {errors.newPassword && (
             <p className="text-sm text-rose-500 mt-1">{errors.newPassword.message?.toString()}</p>
+          )}
+        </div>
+        <div>
+          <Label>Confirm Password</Label>
+          <Input
+            type="password"
+            {...register("confirmPassword", { required: "Confirm password is required" })}
+          />
+          {errors.confirmPassword && (
+            <p className="text-sm text-rose-500 mt-1">{errors.confirmPassword.message?.toString()}</p>
           )}
         </div>
         

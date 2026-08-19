@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import apiClient from "../../api/apiClient";
+import { getTermsUrl } from "../../api/adminApi";
 import TimePicker from "../form/time-picker";
 import {
   X,
@@ -14,6 +15,26 @@ import {
   Tag,
   ChevronDown
 } from "lucide-react";
+
+const convertTo24Hour = (timeStr: string): string => {
+  if (!timeStr) return "";
+  const ampmRegex = /([0-9]{1,2}):([0-9]{2})\s*(AM|PM)/i;
+  const match = timeStr.match(ampmRegex);
+  if (!match) return timeStr;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampm = match[3].toUpperCase();
+
+  if (ampm === "PM" && hours < 12) {
+    hours += 12;
+  } else if (ampm === "AM" && hours === 12) {
+    hours = 0;
+  }
+
+  const hoursStr = hours.toString().padStart(2, "0");
+  return `${hoursStr}:${minutes}`;
+};
 
 interface AddClassModalProps {
   isOpen: boolean;
@@ -61,7 +82,7 @@ export default function AddClassModal({
       const fetchDropdowns = async () => {
         try {
           const [termsRes, catRes, coachRes] = await Promise.all([
-            apiClient.get("/api/admin/getAllTerms", { params: { isEvent: "all" } }),
+            apiClient.get(getTermsUrl(), { params: { isEvent: "all" } }),
             apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } }),
             apiClient.get("/api/admin/getAllCoaches")
           ]);
@@ -157,10 +178,15 @@ export default function AddClassModal({
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const payload = {
+        ...formData,
+        startTime: convertTo24Hour(formData.startTime),
+        endTime: convertTo24Hour(formData.endTime),
+      };
       if (classToEdit) {
-        await apiClient.put(`/api/admin/updateClass/${classToEdit._id}`, formData);
+        await apiClient.put(`/api/admin/updateClass/${classToEdit._id}`, payload);
       } else {
-        await apiClient.post("/api/admin/createClass", formData);
+        await apiClient.post("/api/admin/createClass", payload);
       }
       onClose();
       setFormData({

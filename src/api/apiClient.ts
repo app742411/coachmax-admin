@@ -24,15 +24,33 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Interceptor for global error handling (e.g. token expiration)
+// Helper: extract the best error message (backend first, then fallback)
+export const getErrorMessage = (error: any, fallback = "Something went wrong"): string => {
+  return (
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    fallback
+  );
+};
+
+// Interceptor for global error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (!error.response || error.message === 'Network Error') {
-      toast.error("Network error");
-    } else if (error.response && error.response.status === 401) {
-      // Handle unauthorized (e.g., redirect to login or clear storage)
+    if (!error.response || error.message === "Network Error") {
+      toast.error("Network error. Please check your connection.");
+      (error as any)._handled = true;
+    } else if (error.response.status === 401 || error.response.status === 403) {
+      // Handle unauthorized/forbidden — clear token/user and redirect to login
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/signin";
+    } else {
+      // Show backend message if available, else a generic error
+      const message = getErrorMessage(error);
+      toast.error(message);
+      (error as any)._handled = true;
     }
     return Promise.reject(error);
   }

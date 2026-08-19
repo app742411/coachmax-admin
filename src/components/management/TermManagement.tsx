@@ -31,14 +31,41 @@ const TermManagement: React.FC = () => {
         isEvent: false,
     });
 
+    const parseToLocalDate = (dateStr: string): Date | null => {
+        if (!dateStr) return null;
+        
+        // If it has 'T' or 'Z', parse as full ISO date-time and use local timezone
+        if (dateStr.includes("T") || dateStr.includes("Z")) {
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) return d;
+        }
+        
+        // If it's in YYYY-MM-DD format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            const [year, month, day] = dateStr.split("-").map(Number);
+            return new Date(year, month - 1, day);
+        }
+        
+        // If it's in DD/MM/YYYY format
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+            const [day, month, year] = dateStr.split("/").map(Number);
+            return new Date(year, month - 1, day);
+        }
+        
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) return d;
+        
+        return null;
+    };
+
     const formatDate = (dateStr: string) => {
         if (!dateStr) return "N/A";
-        const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-        if (dateOnly.includes("-")) {
-            const [year, month, day] = dateOnly.split("-");
-            return `${day}/${month}/${year}`;
-        }
-        return dateOnly;
+        const date = parseToLocalDate(dateStr);
+        if (!date) return dateStr;
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
     };
 
     // ── Year filter ────────────────────────────────────────────────
@@ -112,20 +139,17 @@ const TermManagement: React.FC = () => {
     // Helper to force conversion if the input is YYYY-MM-DD
     const formatToDDMMYYYY = (dateStr: string) => {
         if (!dateStr) return "";
-        const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-        if (dateOnly.includes("-")) {
-            const [year, month, day] = dateOnly.split("-");
-            return `${day}/${month}/${year}`;
-        }
-        return dateOnly;
+        return formatDate(dateStr);
     };
 
     const getDaysBetween = (start: string, end: string) => {
         if (!start || !end) return null;
-        const s = new Date(start);
-        const e = new Date(end);
-        if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
-        return Math.ceil(Math.abs(e.getTime() - s.getTime()) / (1000 * 3600 * 24));
+        const s = parseToLocalDate(start);
+        const e = parseToLocalDate(end);
+        if (!s || !e) return null;
+        const sLocal = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+        const eLocal = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+        return Math.round(Math.abs(eLocal.getTime() - sLocal.getTime()) / (1000 * 3600 * 24));
     };
 
     const handleOpenAdd = () => {
@@ -144,7 +168,12 @@ const TermManagement: React.FC = () => {
     const handleOpenEdit = (term: any) => {
         const cleanDate = (dateStr: string) => {
             if (!dateStr) return "";
-            return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+            const date = parseToLocalDate(dateStr);
+            if (!date) return "";
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            const d = String(date.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
         };
         setFormData({
             name: term.name || "",

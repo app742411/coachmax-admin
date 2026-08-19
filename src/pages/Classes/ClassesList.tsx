@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import apiClient from "../../api/apiClient";
+import { getTermsUrl } from "../../api/adminApi";
 import ClassFilters from "../../components/classes/ClassFilters";
 import ClassTable from "../../components/classes/ClassTable";
 import ViewClassPlayersModal from "../../components/classes/ViewClassPlayersModal";
 import AddClassModal from "../../components/classes/AddClassModal";
 import Select from "../../components/form/Select";
 import Pagination from "../../components/common/Pagination";
+import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
+import toast from "react-hot-toast";
 
 interface ClassItem {
   _id: string;
@@ -50,6 +53,8 @@ export default function ClassesList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classToEdit, setClassToEdit] = useState<ClassItem | null>(null);
   const [viewPlayersClassId, setViewPlayersClassId] = useState<string | null>(null);
+  const [deleteClassId, setDeleteClassId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchClasses = async () => {
     try {
@@ -71,6 +76,22 @@ export default function ClassesList() {
       console.error("Failed to fetch classes:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const confirmDeleteClass = async () => {
+    if (!deleteClassId) return;
+    try {
+      setIsDeleting(true);
+      await apiClient.delete(`/api/admin/deleteClass/${deleteClassId}`);
+      toast.success("Class deleted successfully");
+      setDeleteClassId(null);
+      fetchClasses();
+    } catch (error) {
+      console.error("Failed to delete class:", error);
+      toast.error("Failed to delete class");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -100,7 +121,7 @@ export default function ClassesList() {
         if (selectedYear) {
           params.year = selectedYear;
         }
-        const termsRes = await apiClient.get("/api/admin/getAllTerms", { params });
+        const termsRes = await apiClient.get(getTermsUrl(), { params });
         if (termsRes.data?.data) {
           setTerms(termsRes.data.data);
         }
@@ -282,6 +303,7 @@ export default function ClassesList() {
               setIsModalOpen(true);
             }}
             onViewPlayers={(cls) => setViewPlayersClassId(cls._id)}
+            onDeleteClass={(cls) => setDeleteClassId(cls._id)}
           />
           {!isLoading && totalPages > 1 && (
             <Pagination
@@ -314,6 +336,15 @@ export default function ClassesList() {
         isOpen={!!viewPlayersClassId}
         onClose={() => setViewPlayersClassId(null)}
         classId={viewPlayersClassId}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteClassId}
+        onClose={() => setDeleteClassId(null)}
+        onConfirm={confirmDeleteClass}
+        loading={isDeleting}
+        title="Delete Class"
+        message="Are you sure you want to delete this class? This action cannot be undone."
       />
     </>
   );

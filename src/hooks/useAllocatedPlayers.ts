@@ -35,6 +35,13 @@ export const useAllocatedPlayers = (
   limit: number = 5,
   enabled: boolean = true
 ) => {
+  // Coaches do not have access to the admin players/search endpoint
+  let isCoach = false;
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr) isCoach = JSON.parse(userStr)?.role === "COACH";
+  } catch { }
+
   return useQuery({
     queryKey: ["allocatedPlayers", category, program, search, page, limit],
     queryFn: async () => {
@@ -60,7 +67,7 @@ export const useAllocatedPlayers = (
         pagination: { page: 1, limit: 5, total: 0, totalPages: 0, hasMore: false }
       };
     },
-    enabled,
+    enabled: enabled && !isCoach,
     placeholderData: keepPreviousData,
     initialData: {
       players: [],

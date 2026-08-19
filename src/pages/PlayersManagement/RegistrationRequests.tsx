@@ -114,6 +114,7 @@ export default function RegistrationRequests() {
               onSelectPlayer={setSelectedPlayer}
               onDeletePlayer={handleDeletePlayer}
               onAssignClass={handleAssignPlayer}
+              showStatusColumn={true}
             />
           )}
         </div>

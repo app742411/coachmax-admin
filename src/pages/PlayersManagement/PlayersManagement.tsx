@@ -10,6 +10,18 @@ import GenerateInvoiceModal from "../../components/InvoiceManagement/GenerateInv
 import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
 import { usePlayers, useDeletePlayer } from "../../hooks/usePlayers";
 import Pagination from "../../components/common/Pagination";
+import { UserPlus } from "lucide-react";
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 export default function PlayersManagement() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -20,9 +32,10 @@ export default function PlayersManagement() {
   
   // Page state for 10-player backend pagination
   const [page, setPage] = useState(1);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Fetch exactly 10 players per page from the backend
-  const { data: playersResponse, isLoading } = usePlayers(page, 10);
+  const { data: playersResponse, isLoading } = usePlayers(page, 10, debouncedSearchQuery, programFilter, statusFilter);
   const players = playersResponse?.users || [];
   const totalPages = playersResponse?.totalPages || 1;
   const totalPlayers = playersResponse?.total || 0;
@@ -52,27 +65,6 @@ export default function PlayersManagement() {
   const handleGenerateInvoice = (player: Player) => {
     setPlayerForInvoice(player);
   };
-
-  // Filtering Logic
-  const filteredPlayers = players.filter((p) => {
-    const email = p.parentId?.email || "";
-    const phone = p.parentId?.phone || "";
-    const programStr = p.program?.name || "";
-    
-    const matchesSearch =
-      p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      phone.includes(searchQuery);
-
-    const matchesProgram =
-      programFilter === "All" || programStr.toUpperCase().includes(programFilter.toUpperCase());
-    
-    const playerStatus = p.status || "PENDING"; 
-    const matchesStatus =
-      statusFilter === "All" || playerStatus.toUpperCase() === statusFilter.toUpperCase();
-
-    return matchesSearch && matchesProgram && matchesStatus;
-  });
 
   return (
     <>
@@ -118,10 +110,22 @@ export default function PlayersManagement() {
 
           {isLoading ? (
             <div className="py-10 text-center text-slate-500">Loading players...</div>
+          ) : !isLoading && players.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="bg-gray-50 rounded-full p-4 mb-4">
+                <UserPlus className="w-10 h-10 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">No players found</h3>
+              <p className="text-sm text-gray-500 text-center max-w-sm mb-6">
+                {searchQuery || programFilter !== "All" || statusFilter !== "All"
+                  ? "We couldn't find any players matching your current filters. Try adjusting your search criteria."
+                  : "Get started by inviting players to your academy. They'll receive an email to complete their profile."}
+              </p>
+            </div>
           ) : (
             <>
               <PlayerTable
-                players={filteredPlayers}
+                players={players}
                 selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
                 onSelectPlayer={setSelectedPlayer}
                 onDeletePlayer={handleDeletePlayer}

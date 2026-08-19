@@ -136,13 +136,13 @@ const AppSidebar: React.FC = () => {
           icon: <CalendarIcon />,
           subItems: programsSubItems,
         },
-        {
-          name: "Events",
-          icon: <CalendarIcon />,
-          subItems: [
-            { name: "My Events", path: "/competitions" },
-          ],
-        },
+        // {
+        //   name: "Events",
+        //   icon: <CalendarIcon />,
+        //   subItems: [
+        //     { name: "Event List", path: "/events" },
+        //   ],
+        // },
         {
           name: "Communication",
           icon: <ChatIcon />,
@@ -165,7 +165,7 @@ const AppSidebar: React.FC = () => {
         {
           name: "My Profile",
           icon: <UserIcon />,
-          path: "/profile-settings",
+          path: "/profile",
         },
       ],
     },

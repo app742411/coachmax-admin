@@ -5,9 +5,9 @@ import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWith
 import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
 
-export const usePlayers = (page = 1, limit = 10) => {
+export const usePlayers = (page = 1, limit = 10, search?: string, program?: string, status?: string) => {
   return useQuery<PlayersResponse, Error>({
-    queryKey: ["players", page, limit],
+    queryKey: ["players", page, limit, search, program, status],
     queryFn: () => {
       const userStr = localStorage.getItem("user");
       let isCoach = false;
@@ -23,9 +23,9 @@ export const usePlayers = (page = 1, limit = 10) => {
       }
 
       if (isCoach) {
-        return getCoachUniquePlayers(page, limit);
+        return getCoachUniquePlayers(page, limit, search, program, status);
       }
-      return getPlayers(page, limit);
+      return getPlayers(page, limit, search, program, status);
     },
   });
 };

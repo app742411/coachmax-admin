@@ -101,8 +101,13 @@ export const getCoachPlayerProfile = async (playerId: string): Promise<any> => {
   return response.data;
 };
 
-export const getCoachUniquePlayers = async (page = 1, limit = 10): Promise<any> => {
-  const response = await apiClient.get(`/api/coach/unique-players?page=${page}&limit=${limit}`);
+export const getCoachUniquePlayers = async (page = 1, limit = 10, search?: string, program?: string, status?: string): Promise<any> => {
+  const params: any = { page, limit };
+  if (search) params.search = search;
+  if (program && program !== "All") params.program = program;
+  if (status && status !== "All") params.status = status;
+  
+  const response = await apiClient.get("/api/coach/unique-players", { params });
   return response.data;
 };
 

@@ -11,6 +11,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { smartErrorToast } from "../../utils/toast";
 import { updateNews } from "../../api/adminApi";
 import HtmlEditor from "../form/HtmlEditor";
 
@@ -122,7 +123,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
       onClose();
     } catch (error) {
       console.error("Error updating news:", error);
-      toast.error("Failed to update news.");
+      smartErrorToast(error, "Failed to update news.");
     } finally {
       setLoading(false);
     }

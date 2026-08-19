@@ -16,6 +16,7 @@ interface PlayerTableProps {
   onAssignClass?: (player: Player) => void;
   onGenerateInvoice?: (player: Player) => void;
   onAddCoachNote?: (player: Player) => void;
+  showStatusColumn?: boolean;
 }
 
 export default function PlayerTable({
@@ -28,6 +29,7 @@ export default function PlayerTable({
   onAssignClass: _onAssignClass,
   onGenerateInvoice,
   onAddCoachNote,
+  showStatusColumn = false,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
@@ -115,6 +117,7 @@ export default function PlayerTable({
             <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
               <th className="py-2.5 px-2 w-[30px] text-center">#</th>
               <th className="py-2.5 px-2 min-w-[65px] text-center">Payment Status</th>
+              {showStatusColumn && <th className="py-2.5 px-2 min-w-[65px] text-center">Status</th>}
               <th className="py-2.5 px-2 min-w-[120px]">Player</th>
               <th className="py-2.5 px-2 min-w-[75px]">DOB</th>
               <th className="py-2.5 px-2 min-w-[100px] text-center">Medical Conditions</th>
@@ -131,44 +134,69 @@ export default function PlayerTable({
           </thead>
           <tbody>
             {players.map((player, idx) => {
-              const status = player.paymentStatus || player.status || "PENDING";
+              const isRequest = !!(player as any).requestId || !!(player as any).requestType;
+              const paymentStatus = player.paymentStatus || "PENDING";
+              const playerStatus = isRequest ? (player.status || "PENDING") : ((player as any).playerStatus || player.status || "PENDING");
               const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
               const avatar = player.profileImage ? `${baseUrl}/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
               return (
                 <tr
                   key={player._id}
                   onClick={() => onSelectPlayer(player)}
-                  className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${
-                    selectedPlayerId === player._id ? "bg-slate-50 dark:bg-slate-800/40" : ""
-                  }`}
+                  className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${selectedPlayerId === player._id ? "bg-slate-50 dark:bg-slate-800/40" : ""
+                    }`}
                 >
                   <td className="py-3 px-2 font-semibold text-slate-500 text-center">{idx + 1}</td>
                   <td className="py-3 px-2 text-center">
                     <span
-                      className={`inline-flex items-center gap-1 font-bold ${
-                        status === "PAID" || status === "APPROVED" 
-                          ? "text-emerald-600" 
-                          : status === "OTHERS" 
-                          ? "text-blue-600" 
-                          : status === "UNPAID" || status === "REJECTED" || status === "TRIAL" 
-                          ? "text-rose-600" 
-                          : "text-amber-500"
-                      }`}
+                      className={`inline-flex items-center gap-1 font-bold ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
+                          ? "text-emerald-600"
+                          : paymentStatus === "OTHERS"
+                            ? "text-blue-600"
+                            : paymentStatus === "UNPAID" || paymentStatus === "REJECTED" || paymentStatus === "TRIAL" || paymentStatus === "INACTIVE" || paymentStatus === "BLOCKED"
+                              ? "text-rose-600"
+                              : "text-amber-500"
+                        }`}
                     >
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          status === "PAID" || status === "APPROVED" 
-                            ? "bg-emerald-600" 
-                            : status === "OTHERS" 
-                            ? "bg-blue-600" 
-                            : status === "UNPAID" || status === "REJECTED" || status === "TRIAL" 
-                            ? "bg-rose-600" 
-                            : "bg-amber-500"
-                        }`}
+                        className={`w-1.5 h-1.5 rounded-full ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
+                            ? "bg-emerald-600"
+                            : paymentStatus === "OTHERS"
+                              ? "bg-blue-600"
+                              : paymentStatus === "UNPAID" || paymentStatus === "REJECTED" || paymentStatus === "TRIAL" || paymentStatus === "INACTIVE" || paymentStatus === "BLOCKED"
+                                ? "bg-rose-600"
+                                : "bg-amber-500"
+                          }`}
                       />
-                      {status}
+                      {paymentStatus}
                     </span>
                   </td>
+                  {showStatusColumn && (
+                    <td className="py-3 px-2 text-center">
+                      <span
+                        className={`inline-flex items-center gap-1 font-bold ${playerStatus === "PAID" || playerStatus === "APPROVED" || playerStatus === "ACTIVE"
+                            ? "text-emerald-600"
+                            : playerStatus === "OTHERS"
+                              ? "text-blue-600"
+                              : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
+                                ? "text-rose-600"
+                                : "text-amber-500"
+                          }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${playerStatus === "PAID" || playerStatus === "APPROVED" || playerStatus === "ACTIVE"
+                              ? "bg-emerald-600"
+                              : playerStatus === "OTHERS"
+                                ? "bg-blue-600"
+                                : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
+                                  ? "bg-rose-600"
+                                  : "bg-amber-500"
+                            }`}
+                        />
+                        {playerStatus}
+                      </span>
+                    </td>
+                  )}
                   <td className="py-3 px-2">
                     <div className="flex items-center gap-2">
                       <img
@@ -176,8 +204,8 @@ export default function PlayerTable({
                         alt={player.fullName}
                         className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-100"
                       />
-                      <span 
-                        className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[110px] block" 
+                      <span
+                        className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[110px] block"
                         title={player.fullName}
                       >
                         {player.fullName}
@@ -219,11 +247,10 @@ export default function PlayerTable({
                       {[...Array(5)].map((_, i) => (
                         <svg
                           key={i}
-                          className={`w-3 h-3 ${
-                            (player.rating || 0) > i
+                          className={`w-3 h-3 ${(player.rating || 0) > i
                               ? "text-amber-400 fill-amber-400"
                               : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
-                          }`}
+                            }`}
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
                         >
@@ -233,8 +260,8 @@ export default function PlayerTable({
                     </div>
                   </td>
                   <td className="py-3 px-2 text-center font-bold text-brand-500">
-                    <span 
-                      className="truncate max-w-[95px] block mx-auto text-center" 
+                    <span
+                      className="truncate max-w-[95px] block mx-auto text-center"
                       title={player.category?.name || "N/A"}
                     >
                       {player.category?.name || "N/A"}
@@ -266,8 +293,8 @@ export default function PlayerTable({
                         </div>
                       </div>
                     ) : (
-                      <span 
-                        className="truncate max-w-[100px] block mx-auto" 
+                      <span
+                        className="truncate max-w-[100px] block mx-auto"
                         title={player.program?.name || "-"}
                       >
                         {player.program?.name || "-"}
@@ -278,8 +305,8 @@ export default function PlayerTable({
                     {(player.preferredFoot || player.prefferedFoot) === "LEFT" ? "L" : (player.preferredFoot || player.prefferedFoot) === "RIGHT" ? "R" : "-"}
                   </td>
                   <td className="py-3 px-2 font-semibold text-slate-705 dark:text-slate-300">
-                    <span 
-                      className="truncate max-w-[95px] block" 
+                    <span
+                      className="truncate max-w-[95px] block"
                       title={player.parentId?.fullName || "N/A"}
                     >
                       {player.parentId?.fullName || "N/A"}
@@ -305,11 +332,10 @@ export default function PlayerTable({
                   <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       id={`trigger-${player._id}`}
-                      className={`text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs inline-flex items-center justify-center ${
-                        openDropdownId === player._id
+                      className={`text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs inline-flex items-center justify-center ${openDropdownId === player._id
                           ? 'border-[#0047FF] bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF]'
                           : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                      }`}
+                        }`}
                       title="More Options"
                       onClick={(e) => toggleDropdown(e, player._id)}
                     >
@@ -328,12 +354,12 @@ export default function PlayerTable({
       {/* Floating Action Menu dropdown */}
       {openDropdownId && menuPosition && (
         <>
-          <div 
-            className="fixed inset-0 z-40" 
+          <div
+            className="fixed inset-0 z-40"
             onClick={() => {
               setOpenDropdownId(null);
               setMenuPosition(null);
-            }} 
+            }}
           />
           <div
             style={{
@@ -346,10 +372,10 @@ export default function PlayerTable({
             {players.find(p => p._id === openDropdownId) && (() => {
               const player = players.find(p => p._id === openDropdownId)!;
               const activeStatus = (player as any).playerStatus || player.status;
-              
+
               return (
                 <>
-                  {activeStatus === "PENDING_APPROVAL" && onApprovePlayer && (
+                  {(activeStatus === "PENDING_APPROVAL" || activeStatus === "PENDING") && onApprovePlayer && (
                     <button
                       className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                       onClick={(e) => {
@@ -361,7 +387,7 @@ export default function PlayerTable({
                       Approve Player
                     </button>
                   )}
-                  {activeStatus === "PENDING_APPROVAL" && onRejectPlayer && (
+                  {(activeStatus === "PENDING_APPROVAL" || activeStatus === "PENDING") && onRejectPlayer && (
                     <button
                       className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                       onClick={(e) => {

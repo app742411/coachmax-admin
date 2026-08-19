@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import AcademyHeader from "../../components/academy/AcademyHeader";
 import DayTabs from "../../components/academy/DayTabs";
@@ -21,7 +22,13 @@ interface AcademyProps {
 }
 
 export default function Academy({ programType = "Academy" }: AcademyProps) {
-  const [activeDay, setActiveDay] = useState(() => ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()]);
+  const location = useLocation();
+  const state = location.state as any;
+
+  const [activeDay, setActiveDay] = useState(() => {
+    if (state?.day) return state.day.charAt(0).toUpperCase() + state.day.slice(1).toLowerCase();
+    return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()];
+  });
   const [categoryId, setCategoryId] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [programId, setProgramId] = useState("");
@@ -37,8 +44,16 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   const { data: filtersData } = useClassFiltersWithTimeSlots(categoryId, programId, activeDay.toUpperCase(), termId);
   const timeSlots = filtersData?.timeSlots || [];
 
+  const hasInitializedFromState = useRef(false);
+
   useEffect(() => {
     if (timeSlots && timeSlots.length > 0) {
+      if (state?.classId && !hasInitializedFromState.current) {
+        setExpandedClassId(state.classId);
+        hasInitializedFromState.current = true;
+        return;
+      }
+
       const now = new Date();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
 

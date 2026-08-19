@@ -58,6 +58,22 @@ function toKey(y: number, m: number, d: number) {
 
 function parseLocalDate(dateStr: string, isEnd = false): Date {
   if (!dateStr) return new Date();
+  
+  // If it's an ISO string or contains timezone indicators, parse it and get local components
+  if (dateStr.includes("T") || dateStr.includes("Z")) {
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const day = date.getDate();
+      if (isEnd) {
+        return new Date(year, month, day, 23, 59, 59, 999);
+      }
+      return new Date(year, month, day, 0, 0, 0, 0);
+    }
+  }
+  
+  // Fallback parsing (e.g. if we get "YYYY-MM-DD" or similar)
   const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
   const parts = dateOnly.split('-');
   if (parts.length === 3) {
@@ -69,6 +85,7 @@ function parseLocalDate(dateStr: string, isEnd = false): Date {
     }
     return new Date(year, month, day, 0, 0, 0, 0);
   }
+  
   const date = new Date(dateStr);
   if (isEnd) {
     date.setHours(23, 59, 59, 999);

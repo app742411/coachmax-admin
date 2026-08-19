@@ -61,12 +61,12 @@ export const updateProfile = async (
     if (data.name) formData.append("name", data.name);
     if (data.email) formData.append("email", data.email);
     formData.append("profileImage", imageFile);
-    const response = await apiClient.patch<UserProfileResponse>("/auth/profile", formData, {
+    const response = await apiClient.put<UserProfileResponse>("api/auth/updateMyProfile", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
   }
-  const response = await apiClient.patch<UserProfileResponse>("/auth/profile", data);
+  const response = await apiClient.put<UserProfileResponse>("/api/auth/updateMyProfile", data);
   return response.data;
 };
 

@@ -5,6 +5,7 @@ import { usePlayerProfile, useCoachNotes } from "../../hooks/usePlayers";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import EditPlayerStatsModal from "./EditPlayerStatsModal";
 import { ShieldAlert } from "lucide-react";
+import RatingEditor from "./RatingEditor";
 
 const getBadgeStyles = (noteType: string) => {
   switch (noteType) {
@@ -128,15 +129,10 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                   {player.prefferedFoot && ` • Preferred Foot: ${player.prefferedFoot}`}
                 </span>
 
-                {player.rating !== undefined && player.rating !== null && (
-                  <div className="flex items-center gap-1 mt-1 text-[10px] font-semibold text-slate-400">
-                    <span>Rating:</span>
-                    <span className="text-amber-500 font-bold tracking-wide">
-                      {"★".repeat(player.rating)}
-                      {"☆".repeat(5 - player.rating)}
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 mt-1 text-[10px] font-semibold text-slate-400">
+                  <span>Rating:</span>
+                  <RatingEditor playerId={player._id} initialRating={player.rating || 0} />
+                </div>
               </div>
             </div>
             

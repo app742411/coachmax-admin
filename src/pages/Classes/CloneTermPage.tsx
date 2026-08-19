@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 
 import apiClient from "../../api/apiClient";
+import { getTermsUrl } from "../../api/adminApi";
 import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
@@ -58,7 +59,7 @@ export default function CloneTermPage() {
     const fetchTerms = async () => {
       try {
         const isEventParam = activeTab === "terms" ? "false" : "true";
-        const response = await apiClient.get("/api/admin/getAllTerms", { params: { isEvent: isEventParam } });
+        const response = await apiClient.get(getTermsUrl(), { params: { isEvent: isEventParam } });
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
           setTerms(response.data.data);
           // Reset previous term selections when switching tabs

@@ -6,7 +6,10 @@ export default function UserMetaCard() {
   const user = profileData?.data;
   const displayName = user?.name || "Super Admin";
   const displayRole = user?.role || "Admin";
-  const avatarSrc = user?.profileImage || "/images/logo/cm-logo2.png";
+  let avatarSrc = user?.profileImage || "/images/logo/cm-logo2.png";
+  if (avatarSrc && avatarSrc !== "/images/logo/cm-logo2.png" && !avatarSrc.startsWith('http')) {
+    avatarSrc = `${import.meta.env.VITE_API_BASE_URL || ""}/${avatarSrc.replace(/^\/+/, "")}`;
+  }
 
   return (
     <div className="p-5 border border-gray-200 rounded-none dark:border-gray-800 lg:p-6">

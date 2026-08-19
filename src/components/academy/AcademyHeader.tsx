@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import apiClient from "../../api/apiClient";
+import { getTermsUrl } from "../../api/adminApi";
 import Select from "../form/Select";
 
 interface AcademyHeaderProps {
@@ -118,7 +119,7 @@ export default function AcademyHeader({
   useEffect(() => {
     const fetchAllTerms = async () => {
       try {
-        const termsRes = await apiClient.get("/api/admin/getAllTerms", { params: { isEvent: "all" } });
+        const termsRes = await apiClient.get(getTermsUrl(), { params: { isEvent: "all" } });
         if (termsRes.data && termsRes.data.data && Array.isArray(termsRes.data.data)) {
           const allTerms = termsRes.data.data;
           const years = Array.from(new Set(allTerms.map((t: any) => t.year.toString()))).sort() as string[];
@@ -154,8 +155,8 @@ export default function AcademyHeader({
     if (!selectedYear) return;
     const fetchTermsForYear = async () => {
       try {
-        const termsRes = await apiClient.get("/api/admin/getAllTerms", { 
-          params: { isEvent: "all", year: selectedYear } 
+        const termsRes = await apiClient.get(getTermsUrl(), {
+          params: { isEvent: "all", year: selectedYear }
         });
         if (termsRes.data && termsRes.data.data && Array.isArray(termsRes.data.data)) {
           setTerms(termsRes.data.data);
@@ -207,10 +208,10 @@ export default function AcademyHeader({
     }
   }, [categories, terms, selectedCategory]);
 
-  const uniqueYears = availableYears.length > 0 
-    ? availableYears 
+  const uniqueYears = availableYears.length > 0
+    ? availableYears
     : Array.from(new Set(terms.map((t) => t.year.toString())));
-  
+
   // Filter terms by selectedCategory's isEvent flag (year filter is already handled by API)
   const filteredTerms = terms.filter(t => {
     const activeCat = categories.find((c: any) => c._id === selectedCategory);

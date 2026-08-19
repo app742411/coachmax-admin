@@ -7,6 +7,7 @@ import { useAppDispatch } from "../../store";
 import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
 import toast from "react-hot-toast";
+import RatingEditor from "../../components/players/RatingEditor";
 import { 
   ArrowLeft,
   ShieldAlert, 
@@ -208,15 +209,10 @@ export default function PlayerProfilePage() {
               </div>
             </div>
             
-            {player.rating !== undefined && player.rating !== null && (
-              <div className="flex items-center justify-center md:justify-start gap-1.5 mt-2">
-                <span className="text-slate-400 text-xs font-semibold">Rating:</span>
-                <span className="text-amber-500 font-bold text-xs tracking-wide">
-                  {"★".repeat(player.rating)}
-                  {"☆".repeat(5 - player.rating)}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
+              <span className="text-slate-400 text-xs font-semibold">Rating:</span>
+              <RatingEditor playerId={player._id} initialRating={player.rating || 0} />
+            </div>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 mt-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
               {player.jerseyNumber && <span>Jersey #{player.jerseyNumber}</span>}
@@ -427,21 +423,32 @@ export default function PlayerProfilePage() {
               </h3>
               {player.assignedClasses && player.assignedClasses.length > 0 ? (
                 <div className="divide-y divide-slate-50 dark:divide-slate-800/40">
-                  {player.assignedClasses.map((cls: any, idx: number) => (
-                    <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{cls.name || cls.className || "Class"}</span>
-                        {(cls.dayOfWeek || cls.startTime || cls.location) && (
-                          <span className="text-slate-400 block text-[10px] mt-0.5">
-                            {[cls.dayOfWeek, cls.startTime, cls.location].filter(Boolean).join(" at ")}
-                          </span>
-                        )}
+                  {player.assignedClasses.map((cls: any, idx: number) => {
+                    let day = cls.dayOfWeek;
+                    if (!day && cls.name) {
+                      const match = cls.name.match(/^([a-zA-Z]+)/);
+                      if (match) day = match[1];
+                    }
+                    return (
+                      <div 
+                        key={idx} 
+                        onClick={() => navigate('/program/academy', { state: { classId: cls._id, day } })}
+                        className="py-2.5 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-500">{cls.name || cls.className || "Class"}</span>
+                          {(cls.dayOfWeek || cls.startTime || cls.location) && (
+                            <span className="text-slate-400 block text-[10px] mt-0.5">
+                              {[cls.dayOfWeek, cls.startTime, cls.location].filter(Boolean).join(" at ")}
+                            </span>
+                          )}
+                        </div>
+                        <span className="px-2.5 py-0.5 bg-slate-50 border border-slate-200 text-slate-600 font-bold text-[10px] uppercase rounded-none dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
+                          ACTIVE
+                        </span>
                       </div>
-                      <span className="px-2.5 py-0.5 bg-slate-50 border border-slate-200 text-slate-600 font-bold text-[10px] uppercase rounded-none dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
-                        ACTIVE
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-xs text-slate-450 italic">No active classes assigned to this player.</p>

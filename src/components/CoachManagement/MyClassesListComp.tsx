@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import apiClient from "../../api/apiClient";
+import { getTermsUrl } from "../../api/adminApi";
 import Badge from "../ui/badge/Badge";
 import { MoreVertical } from "lucide-react";
 import ViewClassPlayersModal from "../classes/ViewClassPlayersModal";
@@ -107,7 +108,7 @@ export default function MyClassesListComp() {
       try {
         const params: any = { isEvent: "all" };
         if (selectedYear) params.year = selectedYear;
-        const res = await apiClient.get("/api/admin/getAllTerms", { params });
+        const res = await apiClient.get(getTermsUrl(), { params });
         if (res.data?.data) {
           setTerms(res.data.data);
           // Auto-select first active term

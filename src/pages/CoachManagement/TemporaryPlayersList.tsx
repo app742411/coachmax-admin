@@ -126,6 +126,7 @@ export default function TemporaryPlayersList() {
               onSelectPlayer={setSelectedPlayer}
               onAddCoachNote={setCoachNotePlayer}
               onDeletePlayer={isAdmin ? handleDeletePlayer : undefined}
+              showStatusColumn={true}
             />
           )}
         </div>

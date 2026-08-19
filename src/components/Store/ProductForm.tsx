@@ -520,6 +520,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
           <FormCard>
             <SectionHeader icon={ImageIcon} title="Product Visuals" />
             <div className="space-y-4">
+              <div className="bg-brand-50 dark:bg-brand-900/20 p-3 border border-brand-100 dark:border-brand-800 text-xs">
+                <p className="font-bold text-brand-800 dark:text-brand-300 mb-1">
+                  Recommended for CoachMax / Sports Products
+                </p>
+                <div className="flex items-center gap-3 text-brand-700 dark:text-brand-400 font-medium">
+                  <span>✅ 1:1 (Square)</span>
+                  <span>1200 × 1200 px</span>
+                </div>
+              </div>
               <MultiImageDropzone
                 maxFiles={5}
                 initialImages={existingImages}

@@ -31,9 +31,10 @@ interface ClassTableProps {
   isLoading: boolean;
   onEditClass?: (cls: ClassItem) => void;
   onViewPlayers?: (cls: ClassItem) => void;
+  onDeleteClass?: (cls: ClassItem) => void;
 }
 
-export default function ClassTable({ classes, isLoading, onEditClass, onViewPlayers }: ClassTableProps) {
+export default function ClassTable({ classes, isLoading, onEditClass, onViewPlayers, onDeleteClass }: ClassTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -208,6 +209,16 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                           }}
                         >
                           View Players
+                        </button>
+                        <button
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors border-t border-slate-100 dark:border-slate-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onDeleteClass) onDeleteClass(cls);
+                            setOpenDropdownId(null);
+                          }}
+                        >
+                          Delete Class
                         </button>
                       </div>
                     )}

@@ -1,10 +1,13 @@
 import apiClient from "./apiClient";
 import { PlayersResponse } from "../types/player";
 
-export const getPlayers = async (page = 1, limit = 10): Promise<PlayersResponse> => {
-  const response = await apiClient.get<PlayersResponse>("/api/admin/getUsers", {
-    params: { page, limit },
-  });
+export const getPlayers = async (page = 1, limit = 10, search?: string, program?: string, status?: string): Promise<PlayersResponse> => {
+  const params: any = { page, limit };
+  if (search) params.search = search;
+  if (program && program !== "All") params.program = program;
+  if (status && status !== "All") params.status = status;
+
+  const response = await apiClient.get<PlayersResponse>("/api/admin/getUsers", { params });
   return response.data;
 };
 
@@ -42,3 +45,8 @@ export const updatePlayerStatistics = async (playerId: string, data: any): Promi
   const response = await apiClient.put(`/api/admin/player-statistics/${playerId}`, data);
   return response.data;
 };
+
+export const updatePlayerRating = async (id: string, rating: number): Promise<void> => {
+  await apiClient.put(`/api/admin/updateRating/${id}`, { rating });
+};
+

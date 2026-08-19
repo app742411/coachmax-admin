@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 import { useAppDispatch } from "../../store";
 import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
+import { getTermsUrl } from "../../api/adminApi";
 import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer, useRemoveClassFromPlayer, useClassesForAssign, useTransferClass } from "../../hooks/usePlayers";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
@@ -161,7 +162,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
     if (transferPlayer || assignPlayer) {
       const fetchTerms = async () => {
         try {
-          const res = await apiClient.get("/api/admin/getAllTerms", { params: { isEvent: "all" } });
+          const res = await apiClient.get(getTermsUrl(), { params: { isEvent: "all" } });
           if (res.data && Array.isArray(res.data.data)) {
             setAllTerms(res.data.data);
           }

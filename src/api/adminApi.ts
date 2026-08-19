@@ -10,7 +10,9 @@ export const ENDPOINTS = {
   CREATE_COACH: "/api/admin/createCoach",
   UPDATE_COACH: "/api/admin/updateCoach",
   DELETE_COACH: "/api/admin/deleteCoach",
+  TOGGLE_COACH_ACTIVE: "/api/admin/toggleCoachActive",
   GET_COACH_BY_ID: "/api/admin/getCoachById",
+  CHANGE_COACH_PASSWORD: "/api/admin/changeCoachPassword",
   UPDATE_ADMIN_NOTE: "/api/admin/updateAdminNote",
   EXPORT_CLASS_CSV: "/api/admin/exportClassCSV",
   GET_ALL_CLASSES_FOR_ASSIGN: "/api/admin/getAllClassesForAssign",
@@ -24,7 +26,7 @@ export const ENDPOINTS = {
   UPDATE_CATEGORY: "/api/admin/updateCategory",
   DELETE_CATEGORY: "/api/admin/deleteCategory",
   GET_REGISTRATION_REQUESTS: "/api/admin/registration-requests?status=PENDING",
-  GET_ALL_TERMS: "/api/admin/getAllTerms",
+  GET_ALL_TERMS: "/api/admin/getAllTerms", // fallback; use getTermsUrl() for role-based routing
   CREATE_TERM: "/api/admin/createTerm",
   UPDATE_TERM: "/api/admin/updateTerm",
   DELETE_TERM: "/api/admin/deleteTerm",
@@ -88,8 +90,18 @@ export const deleteCoach = async (id: string): Promise<any> => {
   return res.data;
 };
 
+export const toggleCoachActive = async (id: string, isActive: boolean): Promise<any> => {
+  const res = await apiClient.put(`${ENDPOINTS.TOGGLE_COACH_ACTIVE}/${id}`, { isActive });
+  return res.data;
+};
+
 export const getCoachById = async (id: string): Promise<any> => {
   const res = await apiClient.get(`${ENDPOINTS.GET_COACH_BY_ID}/${id}`);
+  return res.data;
+};
+
+export const changeCoachPassword = async (id: string, data: any): Promise<any> => {
+  const res = await apiClient.put(`${ENDPOINTS.CHANGE_COACH_PASSWORD}/${id}`, data);
   return res.data;
 };
 
@@ -117,11 +129,23 @@ export const deleteCategory = async (id: string): Promise<any> => {
 
 // ================= TERMS =================
 
+/** Returns the correct getAllTerms endpoint based on the logged-in user's role. */
+export const getTermsUrl = (): string => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user?.role === "COACH") return "/api/user/getAllTerms";
+    }
+  } catch { }
+  return "/api/admin/getAllTerms";
+};
+
 export const getAllTerms = async (year?: number, isEvent?: "all" | "true" | "false"): Promise<any> => {
   const params: Record<string, any> = {};
   if (year) params.year = year;
   if (isEvent !== undefined) params.isEvent = isEvent;
-  const res = await apiClient.get(ENDPOINTS.GET_ALL_TERMS, { params });
+  const res = await apiClient.get(getTermsUrl(), { params });
   return res.data;
 };
 
@@ -184,7 +208,14 @@ export const getClassPlayers = async (classId: string): Promise<any> => {
 // ================= NEWS =================
 
 export const getAllNews = async (): Promise<any> => {
-  const res = await apiClient.get('/api/user/news');
+  let isAdmin = false;
+  try {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(user?.role);
+  } catch { }
+  const endpoint = isAdmin ? "/api/admin/news" : "/api/user/news";
+  const res = await apiClient.get(endpoint);
   return res.data;
 };
 
