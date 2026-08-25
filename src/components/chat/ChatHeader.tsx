@@ -5,6 +5,7 @@ interface ChatHeaderProps {
   subtitle: string;
   roleText?: string;
   isOnline?: boolean;
+  onBack?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -12,12 +13,24 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   subtitle,
   roleText,
   isOnline,
+  onBack,
 }) => {
   const initials = title.charAt(0).toUpperCase() || "?";
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
-      <div className="flex items-center gap-3.5">
+    <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+      <div className="flex items-center gap-2.5 sm:gap-3.5">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+            title="Back to conversations"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
         <div className="relative">
           <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-base tracking-wide shadow-inner">
             {initials}

@@ -1,4 +1,4 @@
-import { chatApi } from "./chatApi";
+import { chatApi, SendClassBroadcastPayload } from "./chatApi";
 
 export const broadcastApi = {
   getBroadcastRooms: async () => {
@@ -17,7 +17,14 @@ export const broadcastApi = {
     return await chatApi.getRoomMessages(roomId);
   },
 
-  publishAnnouncement: async (roomId: string, text: string) => {
-    return await chatApi.sendMessage(roomId, text);
+  sendClassBroadcast: async (payload: SendClassBroadcastPayload, classIdInUrl?: string) => {
+    return await chatApi.sendClassBroadcast(payload, classIdInUrl);
+  },
+
+  publishAnnouncement: async (payload: SendClassBroadcastPayload | string, text?: string) => {
+    if (typeof payload === "string") {
+      return await chatApi.sendClassBroadcast({ text: text || "" }, payload);
+    }
+    return await chatApi.sendClassBroadcast(payload);
   },
 };

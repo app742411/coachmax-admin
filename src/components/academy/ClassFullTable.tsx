@@ -6,7 +6,7 @@ import { useNavigate } from "react-router";
 import { useAppDispatch } from "../../store";
 import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
-import { getTermsUrl } from "../../api/adminApi";
+import { useTerms } from "../../hooks/useTerms";
 import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer, useRemoveClassFromPlayer, useClassesForAssign, useTransferClass } from "../../hooks/usePlayers";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
@@ -156,23 +156,11 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const transferClassMutation = useTransferClass();
   const [transferPlayer, setTransferPlayer] = useState<any | null>(null);
   const [assignPlayer, setAssignPlayer] = useState<any | null>(null);
-  const [allTerms, setAllTerms] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (transferPlayer || assignPlayer) {
-      const fetchTerms = async () => {
-        try {
-          const res = await apiClient.get(getTermsUrl(), { params: { isEvent: "all" } });
-          if (res.data && Array.isArray(res.data.data)) {
-            setAllTerms(res.data.data);
-          }
-        } catch (err) {
-          console.error("Failed to fetch terms in ClassFullTable:", err);
-        }
-      };
-      fetchTerms();
-    }
-  }, [transferPlayer, assignPlayer]);
+  const { terms: allTerms } = useTerms(
+    { isEvent: "all" },
+    { enabled: !!(transferPlayer || assignPlayer) }
+  );
 
   const { data: classesForAssignRes, isLoading: loadingClasses } = useClassesForAssign(
     categoryId || "",
@@ -484,11 +472,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
           <table className="w-full text-left border-separate border-spacing-0 text-[11px]">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
-                <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-4 min-w-[40px] w-[40px] border-b border-slate-100 dark:border-slate-800">#</th>
-                <th className="sticky left-[40px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[300px] w-[300px] border-b border-slate-100 dark:border-slate-800">Player</th>
-                <th className="sticky left-[340px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 min-w-[90px] w-[90px] border-b border-slate-100 dark:border-slate-800">DOB</th>
-                <th className="sticky left-[430px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 text-center min-w-[130px] w-[130px] border-b border-slate-100 dark:border-slate-800">Medical Conditions</th>
-                <th className="sticky left-[560px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-3 text-center min-w-[60px] w-[60px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Rating</th>
+                <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">Status</th>
+                <th className="sticky left-[40px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-100 dark:border-slate-800">Player</th>
+                <th className="sticky left-[200px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800">DOB</th>
+                <th className="sticky left-[280px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Med Cond</th>
                 {sessions.map((sessionDate: string, idx: number) => {
                   const formatted = formatDateLabel(sessionDate);
                   return (
@@ -515,76 +502,118 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
               </tr>
             </thead>
             <tbody>
-              {players.length > 0 ? players.map((row: any, idx: number) => (
+              {players.length > 0 ? players.map((row: any) => (
                 <tr key={row.playerId} className={`group border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10 ${openMenuId === row.playerId ? 'relative z-30' : ''}`}>
-                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 font-semibold text-slate-400 min-w-[40px] w-[40px] border-b border-slate-50 dark:border-slate-800/40">{idx + 1}</td>
-                  <td className="sticky left-[40px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 min-w-[300px] w-[300px] border-b border-slate-50 dark:border-slate-800/40">
-                    <div className="flex items-center gap-2">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40">
+                    {(() => {
+                      const s = (row.paymentStatus || "UNPAID").toUpperCase();
+                      if (s === "PAID" || s === "APPROVED" || s === "ACTIVE") {
+                        return (
+                          <div className="flex justify-center text-emerald-600" title="Paid">
+                            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        );
+                      }
+                      if (s === "TRIAL") {
+                        return (
+                          <div className="flex justify-center text-amber-500" title="Trial">
+                            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        );
+                      }
+                      if (s === "UNPAID" || s === "REJECTED" || s === "INACTIVE" || s === "BLOCKED") {
+                        return (
+                          <div className="flex justify-center text-rose-600" title="Unpaid">
+                            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex justify-center text-blue-500" title={row.paymentStatus || "Other"}>
+                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-3.5-9a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8A.75.75 0 017.25 9zm0 2.5a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75zm0 2.5a.75.75 0 01.75-.75h3.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td className="sticky left-[40px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-50 dark:border-slate-800/40">
+                    <div className="flex items-center gap-2 min-w-0 max-w-full">
                       {row.profileImage ? (
                         <img
                           src={row.profileImage.startsWith('http') ? row.profileImage : `${import.meta.env.VITE_API_BASE_URL}/${row.profileImage}`}
                           alt={row.name}
-                          className="w-6 h-6 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
+                          className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
                           onError={(e) => {
                             e.currentTarget.onerror = null;
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${row.name}`;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name)}`;
                           }}
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
-                          <span className="text-[10px] font-bold">{row.name.charAt(0)}</span>
+                        <div className="w-7 h-7 rounded-full bg-[#0A1930] text-white flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-bold">{row.name?.charAt(0)?.toUpperCase()}</span>
                         </div>
                       )}
-                      <button
-                        onClick={() => setSelectedPlayer({
-                          _id: row.playerId,
-                          fullName: row.name,
-                          dob: row.dob,
-                          jerseyNumber: row.jerseyNumber || "-",
-                          preferredFoot: row.preferredFoot || "N/A",
-                          status: row.paymentStatus || "PENDING",
-                          program: schedule?.program,
-                          category: schedule?.category,
-                          profileImage: row.profileImage,
-                          rating: row.rating
-                        })}
-                        className="font-bold text-slate-700 dark:text-slate-200 hover:text-[#0047FF] dark:hover:text-[#336eff] text-left hover:underline transition-all"
-                      >
-                        {row.name}
-                      </button>
-                      <span className={`px-2 py-0.5 text-[8px] font-black uppercase rounded-none shrink-0 border ${row.paymentStatus === "PAID" || row.paymentStatus === "APPROVED"
-                        ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
-                        : row.paymentStatus === "REJECTED" || row.paymentStatus === "TRIAL"
-                          ? "bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800/30"
-                          : row.paymentStatus === "OTHERS"
-                            ? "bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/30"
-                            : "bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/30"
-                        }`}>
-                        {row.paymentStatus || "UNPAID"}
-                      </span>
+                      <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+                        <button
+                          onClick={() => setSelectedPlayer({
+                            ...row,
+                            _id: row.playerId || row._id || row.id,
+                            playerId: row.playerId || row._id || row.id,
+                            fullName: row.name,
+                            dob: row.dob,
+                            jerseyNumber: row.jerseyNumber || "-",
+                            preferredFoot: row.preferredFoot || "N/A",
+                            prefferedFoot: row.preferredFoot || "N/A",
+                            status: row.paymentStatus || row.status || "PENDING",
+                            paymentStatus: row.paymentStatus,
+                            playerStatus: row.playerStatus || row.status || "ACTIVE",
+                            isMedicalCondition: row.isMedicalCondition,
+                            medicalConditionDetails: row.medicalConditionDetails,
+                            medicalConditions: row.medicalConditions,
+                            program: schedule?.program,
+                            category: schedule?.category,
+                            profileImage: row.profileImage,
+                            rating: row.rating
+                          })}
+                          title={row.name}
+                          className="font-bold text-slate-800 dark:text-slate-200 hover:text-[#0047FF] dark:hover:text-[#336eff] text-left hover:underline transition-all text-xs truncate leading-tight block w-full"
+                        >
+                          {row.name}
+                        </button>
+                        {/* Rating stars directly below player name */}
+                        <div className="flex items-center gap-0.5 text-amber-400 mt-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <svg
+                              key={i}
+                              className={`w-2.5 h-2.5 ${
+                                (row.rating || 0) > i
+                                  ? "text-amber-400 fill-amber-400"
+                                  : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
+                              }`}
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </td>
-                  <td className="sticky left-[340px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 font-semibold text-slate-500 min-w-[90px] w-[90px] border-b border-slate-50 dark:border-slate-800/40">{new Date(row.dob).toLocaleDateString()}</td>
-                  <td className="sticky left-[430px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 text-center min-w-[130px] w-[130px] border-b border-slate-50 dark:border-slate-800/40">
+                  <td className="sticky left-[200px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 font-semibold text-slate-500 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 text-xs">{new Date(row.dob).toLocaleDateString()}</td>
+                  <td className="sticky left-[280px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
                     {row.isMedicalCondition ? (
-                      <span className="text-rose-600 font-bold text-xs truncate block max-w-full" title={row.medicalConditionDetails}>
-                        {row.medicalConditionDetails || "Yes"}
+                      <span className="text-rose-600 font-bold text-xs truncate block max-w-full" title={row.medicalConditionDetails || "Yes"}>
+                        Yes
                       </span>
                     ) : (
-                      <span className="text-slate-500 font-semibold">- No</span>
-                    )}
-                  </td>
-                  <td className="sticky left-[560px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-3 text-center min-w-[60px] w-[60px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
-                    {row.rating !== undefined ? (
-                      <div className="flex items-center justify-center gap-0.5 text-amber-500">
-                        {Array.from({ length: Math.max(1, Math.min(5, row.rating)) }).map((_, i) => (
-                          <svg key={i} className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 font-semibold">-</span>
+                      <span className="text-slate-500 font-semibold text-xs">No</span>
                     )}
                   </td>
                   {sessions.map((sessionDate: string) => {
@@ -675,7 +704,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                               <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
                                 Update Status
                               </div>
-                              {["TRIAL", "UNPAID", "PAID", "OVER_DUE", "OTHERS"]
+                              {["TRIAL", "UNPAID", "PAID", "OTHERS"]
                                 .filter(status => status !== row.paymentStatus)
                                 .map((status) => {
                                   let activeClasses = "";
@@ -687,7 +716,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                                   } else if (status === "UNPAID") {
                                     activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20";
                                     dotColor = "bg-amber-500";
-                                  } else if (status === "OVER_DUE" || status === "TRIAL") {
+                                  } else if (status === "TRIAL") {
                                     activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20";
                                     dotColor = "bg-rose-500";
                                   } else if (status === "OTHERS") {
@@ -858,12 +887,11 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
           <div className="mb-6">
             <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2.5 uppercase tracking-widest">Select Assignment Status</label>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               {[
                 { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
                 { value: "UNPAID", label: "Unpaid", desc: "Requires Payment", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
                 { value: "PAID", label: "Paid (Allocate)", desc: "Payment Completed", activeClass: "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", inactiveClass: "border-slate-200 hover:border-emerald-300/50 hover:bg-emerald-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "OVER_DUE", label: "Overdue", desc: "Payment Overdue", activeClass: "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400", inactiveClass: "border-slate-200 hover:border-red-300/50 hover:bg-red-500/[0.02] text-slate-500 dark:border-slate-800" },
                 { value: "OTHERS", label: "Others", desc: "Other Status", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400", inactiveClass: "border-slate-200 hover:border-blue-300/50 hover:bg-blue-500/[0.02] text-slate-500 dark:border-slate-800" }
               ].map((status) => (
                 <button

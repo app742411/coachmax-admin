@@ -37,7 +37,7 @@ const LayoutContent: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen xl:flex overflow-x-hidden">
+    <div className="min-h-screen flex flex-col w-full min-w-0 overflow-x-hidden">
       <div>
         <AppSidebar />
         <Backdrop />

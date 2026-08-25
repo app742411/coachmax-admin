@@ -7,7 +7,7 @@ export default function NotFound() {
     <>
       <PageMeta
         title="React.js 404 Dashboard | CoachMax - React.js Admin Dashboard Template"
-        description="This is React.js 404 Dashboard page for CoachMax - React.js Tailwind CSS Admin Dashboard Template"
+        description="This is React.js 404 Dashboard page for CoachMax - Coachmax Admin Dashboard Template"
       />
       <div className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden z-1">
         <GridShape />

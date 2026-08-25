@@ -12,6 +12,11 @@ export interface BankDetailsData {
   qrCodeImage?: File | null;
 }
 
+export interface TermEarningsQueryParams {
+  classId?: string;
+  status?: string;
+}
+
 export const getBankDetails = async () => {
   const response = await apiClient.get("/api/admin/bank-details");
   return response.data;
@@ -36,6 +41,25 @@ export const updateBankDetails = async (data: BankDetailsData) => {
     headers: {
       "Content-Type": "multipart/form-data"
     }
+  });
+  return response.data;
+};
+
+/**
+ * Fetch Term Earnings Report
+ * GET /api/admin/term/:termId/earnings?classId=...&status=...
+ */
+export const getTermEarnings = async (termId: string, params?: TermEarningsQueryParams) => {
+  const cleanParams: Record<string, string> = {};
+  if (params?.classId && params.classId !== "ALL") {
+    cleanParams.classId = params.classId;
+  }
+  if (params?.status && params.status !== "ALL") {
+    cleanParams.status = params.status;
+  }
+
+  const response = await apiClient.get(`/api/admin/term/${termId}/earnings`, {
+    params: cleanParams,
   });
   return response.data;
 };

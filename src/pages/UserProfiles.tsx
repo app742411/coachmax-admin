@@ -9,7 +9,7 @@ export default function UserProfiles() {
     <>
       <PageMeta
         title="React.js Profile Dashboard | CoachMax - Next.js Admin Dashboard Template"
-        description="This is React.js Profile Dashboard page for CoachMax - React.js Tailwind CSS Admin Dashboard Template"
+        description="This is React.js Profile Dashboard page for CoachMax - Coachmax Admin Dashboard Template"
       />
       <PageBreadcrumb pageTitle="Profile" />
       <div className="rounded-none border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">

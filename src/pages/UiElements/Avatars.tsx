@@ -8,7 +8,7 @@ export default function Avatars() {
     <>
       <PageMeta
         title="React.js Avatars Dashboard | CoachMax - React.js Admin Dashboard Template"
-        description="This is React.js Avatars Dashboard page for CoachMax - React.js Tailwind CSS Admin Dashboard Template"
+        description="This is React.js Avatars Dashboard page for CoachMax - Coachmax Admin Dashboard Template"
       />
       <PageBreadcrumb pageTitle="Avatars" />
       <div className="space-y-5 sm:space-y-6">

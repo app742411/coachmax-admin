@@ -50,9 +50,11 @@ import BankDetails from "./pages/Finance/BankDetails";
 import InvoiceList from "./pages/Finance/InvoiceList";
 import InvoiceDetails from "./pages/Finance/InvoiceDetails";
 import Transactions from "./pages/Finance/Transactions";
+import TermEarningsPage from "./pages/Finance/TermEarningsPage";
 import NotificationsPage from "./pages/Notifications/NotificationsPage";
 import CommunicationPage from "./pages/Communication";
 import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
+import TeamDetailsPage from "./pages/Teams/TeamDetailsPage";
 import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
 import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
 import AuditLogsPage from "./pages/AuditLogs/AuditLogsPage";
@@ -128,6 +130,7 @@ export default function App() {
             <Route path="/add-temporary-players" element={<AddTempPlayers />} />
             <Route path="/leagues" element={<LeaguesManagementPage />} />
             <Route path="/teams" element={<TeamsManagementPage />} />
+            <Route path="/teams/:teamId" element={<TeamDetailsPage />} />
             <Route path="/fixtures" element={<FixturesManagementPage />} />
             <Route path="/events" element={<EventList />} />
             <Route path="/add-event" element={<AddEvent />} />
@@ -147,6 +150,8 @@ export default function App() {
             <Route path="/invoices" element={<InvoiceList />} />
             <Route path="/invoices/:id" element={<InvoiceDetails />} />
             <Route path="/transactions" element={<Transactions />} />
+            <Route path="/term-earnings" element={<TermEarningsPage />} />
+            <Route path="/finance-report" element={<TermEarningsPage />} />
 
             {/* Audit */}
             <Route path="/audit-logs" element={<AuditLogsPage />} />

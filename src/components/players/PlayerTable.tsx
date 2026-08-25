@@ -17,6 +17,7 @@ interface PlayerTableProps {
   onGenerateInvoice?: (player: Player) => void;
   onAddCoachNote?: (player: Player) => void;
   showStatusColumn?: boolean;
+  showPaymentStatus?: boolean;
 }
 
 export default function PlayerTable({
@@ -30,6 +31,7 @@ export default function PlayerTable({
   onGenerateInvoice,
   onAddCoachNote,
   showStatusColumn = false,
+  showPaymentStatus = false,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
@@ -115,12 +117,11 @@ export default function PlayerTable({
         <table className="min-w-[1100px] w-full text-left border-collapse text-[11px] [&_th]:border [&_th]:border-slate-700/50 [&_td]:border [&_td]:border-slate-200 dark:[&_td]:border-slate-700 [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
           <thead>
             <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
-              <th className="py-2.5 px-2 w-[30px] text-center">#</th>
-              <th className="py-2.5 px-2 min-w-[65px] text-center">Payment Status</th>
+              {showPaymentStatus && <th className="py-2.5 px-2 min-w-[65px] text-center">Payment Status</th>}
               {showStatusColumn && <th className="py-2.5 px-2 min-w-[65px] text-center">Status</th>}
               <th className="py-2.5 px-2 min-w-[120px]">Player</th>
               <th className="py-2.5 px-2 min-w-[75px]">DOB</th>
-              <th className="py-2.5 px-2 min-w-[100px] text-center">Medical Conditions</th>
+              <th className="py-2.5 px-2 min-w-[80px] text-center">Med Cond</th>
               <th className="py-2.5 px-2 min-w-[50px] text-center">Jersey #</th>
               <th className="py-2.5 px-2 min-w-[70px] text-center">Skill</th>
               <th className="py-2.5 px-2 min-w-[80px] text-center">Category</th>
@@ -133,7 +134,7 @@ export default function PlayerTable({
             </tr>
           </thead>
           <tbody>
-            {players.map((player, idx) => {
+            {players.map((player) => {
               const isRequest = !!(player as any).requestId || !!(player as any).requestType;
               const paymentStatus = player.paymentStatus || "PENDING";
               const playerStatus = isRequest ? (player.status || "PENDING") : ((player as any).playerStatus || player.status || "PENDING");
@@ -146,51 +147,52 @@ export default function PlayerTable({
                   className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${selectedPlayerId === player._id ? "bg-slate-50 dark:bg-slate-800/40" : ""
                     }`}
                 >
-                  <td className="py-3 px-2 font-semibold text-slate-500 text-center">{idx + 1}</td>
-                  <td className="py-3 px-2 text-center">
-                    <span
-                      className={`inline-flex items-center gap-1 font-bold ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
+                  {showPaymentStatus && (
+                    <td className="py-3 px-2 text-center">
+                      <span
+                        className={`inline-flex items-center gap-1 font-bold ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
                           ? "text-emerald-600"
                           : paymentStatus === "OTHERS"
                             ? "text-blue-600"
                             : paymentStatus === "UNPAID" || paymentStatus === "REJECTED" || paymentStatus === "TRIAL" || paymentStatus === "INACTIVE" || paymentStatus === "BLOCKED"
                               ? "text-rose-600"
                               : "text-amber-500"
-                        }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
+                          }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
                             ? "bg-emerald-600"
                             : paymentStatus === "OTHERS"
                               ? "bg-blue-600"
                               : paymentStatus === "UNPAID" || paymentStatus === "REJECTED" || paymentStatus === "TRIAL" || paymentStatus === "INACTIVE" || paymentStatus === "BLOCKED"
                                 ? "bg-rose-600"
                                 : "bg-amber-500"
-                          }`}
-                      />
-                      {paymentStatus}
-                    </span>
-                  </td>
+                            }`}
+                        />
+                        {paymentStatus}
+                      </span>
+                    </td>
+                  )}
                   {showStatusColumn && (
                     <td className="py-3 px-2 text-center">
                       <span
                         className={`inline-flex items-center gap-1 font-bold ${playerStatus === "PAID" || playerStatus === "APPROVED" || playerStatus === "ACTIVE"
-                            ? "text-emerald-600"
-                            : playerStatus === "OTHERS"
-                              ? "text-blue-600"
-                              : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
-                                ? "text-rose-600"
-                                : "text-amber-500"
+                          ? "text-emerald-600"
+                          : playerStatus === "OTHERS"
+                            ? "text-blue-600"
+                            : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
+                              ? "text-rose-600"
+                              : "text-amber-500"
                           }`}
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${playerStatus === "PAID" || playerStatus === "APPROVED" || playerStatus === "ACTIVE"
-                              ? "bg-emerald-600"
-                              : playerStatus === "OTHERS"
-                                ? "bg-blue-600"
-                                : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
-                                  ? "bg-rose-600"
-                                  : "bg-amber-500"
+                            ? "bg-emerald-600"
+                            : playerStatus === "OTHERS"
+                              ? "bg-blue-600"
+                              : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
+                                ? "bg-rose-600"
+                                : "bg-amber-500"
                             }`}
                         />
                         {playerStatus}
@@ -226,8 +228,8 @@ export default function PlayerTable({
                   </td>
                   <td className="py-3 px-2 text-center" title={player.medicalConditionDetails || player.medicalConditions}>
                     {player.isMedicalCondition ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-rose-105 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-bold shadow-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[90px] block mx-auto">
-                        {player.medicalConditionDetails || "Yes"}
+                      <span className="text-rose-600 font-bold text-xs">
+                        Yes
                       </span>
                     ) : (
                       <span className="font-semibold text-slate-500">No</span>
@@ -248,8 +250,8 @@ export default function PlayerTable({
                         <svg
                           key={i}
                           className={`w-3 h-3 ${(player.rating || 0) > i
-                              ? "text-amber-400 fill-amber-400"
-                              : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
                             }`}
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
@@ -333,8 +335,8 @@ export default function PlayerTable({
                     <button
                       id={`trigger-${player._id}`}
                       className={`text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs inline-flex items-center justify-center ${openDropdownId === player._id
-                          ? 'border-[#0047FF] bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF]'
-                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                        ? 'border-[#0047FF] bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF]'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
                         }`}
                       title="More Options"
                       onClick={(e) => toggleDropdown(e, player._id)}

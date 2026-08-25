@@ -51,9 +51,17 @@ export default function Transactions() {
     );
   };
 
-  const transactions = data?.data || [];
-  const total = data?.pagination?.total || 0;
-  const totalPages = data?.pagination?.pages || 1;
+  const transactions: any[] = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data?.data?.transactions)
+    ? data.data.transactions
+    : Array.isArray(data?.transactions)
+    ? data.transactions
+    : Array.isArray(data)
+    ? data
+    : [];
+  const total = data?.pagination?.total || data?.data?.pagination?.total || transactions.length;
+  const totalPages = data?.pagination?.pages || data?.data?.pagination?.pages || 1;
 
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
@@ -142,9 +150,9 @@ export default function Transactions() {
         </form>
       </Modal>
 
-        <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
-          <div className="overflow-visible no-scrollbar">
-            <table className="w-full text-left border-collapse text-xs">
+        <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+          <div className="max-w-full overflow-x-auto custom-scrollbar">
+            <table className="min-w-[950px] w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                   <th className="py-3 px-4 w-[150px]">Transaction & Invoice</th>
@@ -182,7 +190,9 @@ export default function Transactions() {
                         }`}
                     >
                       <td className="py-4 px-4">
-                        <div className="font-semibold text-slate-500">{txn.transactionId || txn._id.substring(txn._id.length - 8)}</div>
+                        <div className="font-semibold text-slate-500">
+                          {txn.transactionId || (txn._id ? txn._id.substring(Math.max(0, txn._id.length - 8)) : "N/A")}
+                        </div>
                         {txn.invoice?.invoiceNumber && (
                           <Link
                             to={`/invoices/${txn.invoice._id}`}

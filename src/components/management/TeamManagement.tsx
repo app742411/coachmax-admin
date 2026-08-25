@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
@@ -9,6 +10,7 @@ import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "./AssignPlayerToTeamModal";
 
 const TeamManagement: React.FC = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +34,8 @@ const TeamManagement: React.FC = () => {
     coach: "",
     assistantCoach: "",
     ageGroup: "",
+    captain: "",
+    viceCaptain: "",
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -100,7 +104,7 @@ const TeamManagement: React.FC = () => {
   // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
-    setFormData({ teamName: "", coach: "", assistantCoach: "", ageGroup: "" });
+    setFormData({ teamName: "", coach: "", assistantCoach: "", ageGroup: "", captain: "", viceCaptain: "" });
     setSelectedFile(null);
     setPreviewImage(null);
     setIsEditing(false);
@@ -114,6 +118,8 @@ const TeamManagement: React.FC = () => {
       coach: team.coach?._id || team.coach || "",
       assistantCoach: team.assistantCoach?._id || team.assistantCoach || "",
       ageGroup: team.ageGroup || "",
+      captain: team.captain?._id || team.captain || "",
+      viceCaptain: team.viceCaptain?._id || team.viceCaptain || "",
     });
     setSelectedFile(null);
     setPreviewImage(team.teamLogo ? getImageUrl(team.teamLogo) : (team.logo ? getImageUrl(team.logo) : null));
@@ -147,6 +153,12 @@ const TeamManagement: React.FC = () => {
       payload.append("assistantCoach", formData.assistantCoach);
     }
     payload.append("ageGroup", formData.ageGroup);
+    if (formData.captain) {
+      payload.append("captain", formData.captain);
+    }
+    if (formData.viceCaptain) {
+      payload.append("viceCaptain", formData.viceCaptain);
+    }
     
     if (selectedFile) {
       payload.append("teamLogo", selectedFile);
@@ -214,20 +226,26 @@ const TeamManagement: React.FC = () => {
                 <tr><td colSpan={5} className="text-center py-20 text-gray-500 font-medium italic">No teams found.</td></tr>
               ) : (
                 filteredTeams.map((team: any) => (
-                  <tr key={team._id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
+                  <tr
+                    key={team._id}
+                    onClick={() => navigate(`/teams/${team._id}`)}
+                    className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all cursor-pointer group"
+                  >
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-none bg-brand-50 overflow-hidden flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm shrink-0">
                           {team.teamLogo ? (
                             <img src={getImageUrl(team.teamLogo) as string} alt={team.teamName} className="w-full h-full object-cover" />
-                        ) : team.logo ? (
+                          ) : team.logo ? (
                             <img src={getImageUrl(team.logo) as string} alt={team.teamName} className="w-full h-full object-cover" />
-                        ) : (
+                          ) : (
                             <Shield size={18} />
-                        )}
+                          )}
                         </div>
                         <div className="flex flex-col">
-                           <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{team.teamName}</span>
+                          <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight group-hover:text-[#0047FF] transition-colors flex items-center gap-1.5">
+                            {team.teamName}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -257,9 +275,17 @@ const TeamManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <span className="px-2 py-1 bg-brand-50 text-brand-600 text-xs font-bold rounded-none border border-brand-100">
-                          {team.players?.length || 0}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/teams/${team._id}`);
+                        }}
+                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#0047FF] dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60 text-xs font-bold rounded-none border border-blue-200 transition-colors shadow-xs"
+                        title="Click to view team details"
+                      >
+                        {team.players?.length || 0} Players
+                      </button>
                     </td>
                     <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
                       <button 
@@ -276,9 +302,20 @@ const TeamManagement: React.FC = () => {
                       </button>
 
                       {openDropdownId === team._id && (
-                        <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute right-8 top-10 w-40 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                           <button
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/teams/${team._id}`);
+                              setOpenDropdownId(null);
+                            }}
+                          >
+                            <span>Team Details</span>
+                            <span>→</span>
+                          </button>
+                          <button
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenEdit(team);
@@ -295,7 +332,7 @@ const TeamManagement: React.FC = () => {
                               setOpenDropdownId(null);
                             }}
                           >
-                            Assign Player
+                            Assign Players
                           </button>
                           <button 
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
@@ -383,6 +420,58 @@ const TeamManagement: React.FC = () => {
                 required
               />
             </div>
+
+            {isEditing && selectedTeamId && (() => {
+              const currentEditingTeam = teams.find((t: any) => t._id === selectedTeamId);
+              const teamPlayers = currentEditingTeam?.players || [];
+              if (teamPlayers.length === 0) return null;
+
+              return (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">
+                      Team Captain (Optional)
+                    </label>
+                    <select
+                      value={formData.captain}
+                      onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
+                      className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">-- None --</option>
+                      {teamPlayers.map((p: any) => {
+                        const pName = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || p.email;
+                        return (
+                          <option key={p._id || p} value={p._id || p}>
+                            {pName} {p.jerseyNumber ? `(#${p.jerseyNumber})` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">
+                      Vice Captain (Optional)
+                    </label>
+                    <select
+                      value={formData.viceCaptain}
+                      onChange={(e) => setFormData({ ...formData, viceCaptain: e.target.value })}
+                      className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">-- None --</option>
+                      {teamPlayers.map((p: any) => {
+                        const pName = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || p.email;
+                        return (
+                          <option key={p._id || p} value={p._id || p}>
+                            {pName} {p.jerseyNumber ? `(#${p.jerseyNumber})` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="md:col-span-5">
@@ -434,7 +523,7 @@ const TeamManagement: React.FC = () => {
           }
         }}
         title="Delete Team"
-        message="Are you sure you want to delete this team? This action cannot be undone."
+        message="Are you sure you want to permanently delete this team? This action cannot be undone."
       />
 
       <AssignPlayerToTeamModal 

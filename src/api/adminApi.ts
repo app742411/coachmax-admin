@@ -276,6 +276,11 @@ export const updateTeam = async (id: string, data: any): Promise<any> => {
   return res.data;
 };
 
+export const getTeamById = async (id: string): Promise<any> => {
+  const res = await apiClient.get(`/api/admin/teams/${id}`);
+  return res.data;
+};
+
 export const deleteTeam = async (id: string): Promise<any> => {
   const res = await apiClient.delete(`/api/admin/teams/${id}`);
   return res.data;
@@ -286,10 +291,29 @@ export const getAvailablePlayers = async (): Promise<any> => {
   return res.data;
 };
 
-export const assignPlayerToTeam = async (teamId: string, playerId: string): Promise<any> => {
-  const res = await apiClient.post(`/api/admin/teams/${teamId}/assign`, { playerId });
+export const assignPlayerToTeam = async (teamId: string, playerIds: string | string[]): Promise<any> => {
+  const ids = Array.isArray(playerIds) ? playerIds : [playerIds];
+  const payload = {
+    playerIds: ids,
+    players: ids,
+    playerId: ids.length === 1 ? ids[0] : ids,
+  };
+  const res = await apiClient.post(`/api/admin/teams/${teamId}/assign`, payload);
   return res.data;
 };
+
+export const unassignPlayersFromTeam = async (teamId: string, playerIds: string | string[]): Promise<any> => {
+  const ids = Array.isArray(playerIds) ? playerIds : [playerIds];
+  const payload = {
+    playerIds: ids,
+    players: ids,
+    playerId: ids.length === 1 ? ids[0] : ids,
+  };
+  const res = await apiClient.post(`/api/admin/teams/${teamId}/unassign`, payload);
+  return res.data;
+};
+
+export const removePlayersFromTeam = unassignPlayersFromTeam;
 
 
 // ================= FIXTURES =================

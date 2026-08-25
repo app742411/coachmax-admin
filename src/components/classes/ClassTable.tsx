@@ -18,9 +18,9 @@ interface ClassItem {
   endTime: string;
   location: string;
   capacity: number;
-  term?: { name: string; year: number };
-  program?: { name: string };
-  category?: { name: string };
+  term?: { _id?: string; name: string; year: number } | any;
+  program?: { _id?: string; name: string } | any;
+  category?: { _id?: string; name: string } | any;
   coach?: { name: string };
   players?: any[];
   broadcastChatRoomId?: string;
@@ -78,6 +78,23 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
     }
   };
 
+  const handleNavigateToProgram = (cls: ClassItem) => {
+    const categoryName = cls.category?.name || "Academy";
+    const categorySlug = categoryName.toLowerCase().replace(/\s+/g, '-');
+    navigate(`/program/${categorySlug}`, {
+      state: {
+        categoryId: cls.category?._id || cls.category,
+        categoryName: categoryName,
+        programId: cls.program?._id || cls.program,
+        programName: cls.program?.name,
+        termId: cls.term?._id || cls.term,
+        year: cls.term?.year?.toString(),
+        day: cls.dayOfWeek,
+        classId: cls._id,
+      }
+    });
+  };
+
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdownId(null);
     document.addEventListener("click", handleClickOutside);
@@ -118,11 +135,12 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
               classes.map((cls, idx) => (
                 <tr
                   key={cls._id}
-                  className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all cursor-default"
+                  onClick={() => handleNavigateToProgram(cls)}
+                  className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-all cursor-pointer group"
                 >
                   <td className="py-4 px-4 font-semibold text-slate-500">{idx + 1}</td>
                   <td className="py-4 px-3">
-                    <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">{cls.name}</div>
+                    <div className="font-bold text-slate-800 dark:text-slate-200 text-sm group-hover:text-[#0047FF] transition-colors">{cls.name}</div>
                     <div className="mt-1.5 w-full max-w-[140px]">
                       <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold mb-1">
                         <span>Capacity</span>
@@ -143,7 +161,7 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                     </div>
                   </td>
                   <td className="py-4 px-3">
-                    <div className="text-slate-700 dark:text-slate-300 font-bold">{cls.program?.name || "N/A"}</div>
+                    <div className="text-slate-700 dark:text-slate-300 font-bold group-hover:text-[#0047FF] transition-colors">{cls.program?.name || "N/A"}</div>
                     <div className="text-xs text-slate-500 mt-0.5">{cls.term?.name || "N/A"} ({cls.term?.year || ""})</div>
                   </td>
                   <td className="py-4 px-3">

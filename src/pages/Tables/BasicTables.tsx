@@ -8,7 +8,7 @@ export default function BasicTables() {
     <>
       <PageMeta
         title="React.js Basic Tables Dashboard | CoachMax - Next.js Admin Dashboard Template"
-        description="This is React.js Basic Tables Dashboard page for CoachMax - React.js Tailwind CSS Admin Dashboard Template"
+        description="This is React.js Basic Tables Dashboard page for CoachMax - Coachmax Admin Dashboard Template"
       />
       <PageBreadcrumb pageTitle="Basic Tables" />
       <div className="space-y-6">

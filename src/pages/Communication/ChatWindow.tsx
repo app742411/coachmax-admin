@@ -7,6 +7,7 @@ import {
   addPendingMessage,
   removePendingMessage,
   markPendingMessageFailed,
+  setActiveRoomId,
 } from "../../store/slices/chatSlice";
 import { chatApi, isCoachOrAdmin } from "../../services/chatApi";
 import { socketService } from "../../services/socketService";
@@ -257,6 +258,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId }) => {
         subtitle={partnerSubtitle}
         roleText={partnerRole}
         isOnline={room?.isPartnerOnline}
+        onBack={() => dispatch(setActiveRoomId(""))}
       />
 
       {/* Messages log */}

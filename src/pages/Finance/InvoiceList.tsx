@@ -30,9 +30,17 @@ export default function InvoiceList() {
   const { data, isLoading, isError } = useInvoices(search, paymentStatus, page, limit);
   const updateInvoiceMutation = useUpdateInvoice();
 
-  const invoices = data?.data || [];
-  const total = data?.pagination?.total || 0;
-  const totalPages = data?.pagination?.pages || 1;
+  const invoices: any[] = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data?.data?.invoices)
+    ? data.data.invoices
+    : Array.isArray(data?.invoices)
+    ? data.invoices
+    : Array.isArray(data)
+    ? data
+    : [];
+  const total = data?.pagination?.total || data?.data?.pagination?.total || invoices.length;
+  const totalPages = data?.pagination?.pages || data?.data?.pagination?.pages || 1;
 
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
@@ -78,9 +86,9 @@ export default function InvoiceList() {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
-          <div className="overflow-visible no-scrollbar">
-            <table className="w-full text-left border-collapse text-xs">
+        <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+          <div className="max-w-full overflow-x-auto custom-scrollbar">
+            <table className="min-w-[700px] w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                   <th className="py-3 px-4">Invoice #</th>
@@ -115,7 +123,7 @@ export default function InvoiceList() {
                         className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all"
                       >
                         <td className="py-4 px-4 font-semibold text-[#0047FF]">
-                          {inv.invoiceNumber || inv._id.substring(inv._id.length - 8)}
+                          {inv.invoiceNumber || (inv._id ? inv._id.substring(Math.max(0, inv._id.length - 8)) : "N/A")}
                         </td>
                         <td className="py-4 px-3">
                           <div className="font-bold text-slate-800 dark:text-slate-200">{inv.parent?.fullName || "N/A"}</div>

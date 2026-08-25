@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
 import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
 import {
-  getAllCategories,
   createCategory,
   updateCategory,
   deleteCategory,
-  getProgramsByCategory,
   createProgram,
   updateProgram,
   deleteProgram,
@@ -19,11 +17,8 @@ import { Tag, Layers } from "../../icons/lucide-icons";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import TermManagement from "../../components/management/TermManagement";
 
-const getDataArray = (res: any) => {
-  if (Array.isArray(res)) return res;
-  if (res && Array.isArray(res.data)) return res.data;
-  return [];
-};
+import { useCategories } from "../../hooks/useCategories";
+import { useProgramsByCategory } from "../../hooks/usePrograms";
 
 const CoachingManagementPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -47,11 +42,7 @@ const CoachingManagementPage: React.FC = () => {
   const [progForm, setProgForm] = useState({ name: "", category: "" });
 
   // ── Queries ────────────────────────────────────────────────────
-  const { data: categoriesData, isLoading: catLoading } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getAllCategories,
-  });
-  const categories = getDataArray(categoriesData);
+  const { categories, isLoading: catLoading } = useCategories();
 
   // Auto-select first category on load
   useEffect(() => {
@@ -61,12 +52,7 @@ const CoachingManagementPage: React.FC = () => {
     }
   }, [categories, selectedCategoryId]);
 
-  const { data: programsData, isLoading: progLoading } = useQuery({
-    queryKey: ["programs", "byCategory", selectedCategoryId],
-    queryFn: () => getProgramsByCategory(selectedCategoryId),
-    enabled: !!selectedCategoryId,
-  });
-  const programs = getDataArray(programsData);
+  const { programs, isLoading: progLoading } = useProgramsByCategory(selectedCategoryId);
 
   // ── Category Mutations ─────────────────────────────────────────
   const createCatMutation = useMutation({

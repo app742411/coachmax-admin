@@ -3,7 +3,9 @@ import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import apiClient from "../../api/apiClient";
 import { addTemporaryPlayer, TemporaryPlayerPayload } from "../../api/coaches";
-import { getAllCategories, getProgramsByCategory, getAllTerms } from "../../api/adminApi";
+import { useCategories } from "../../hooks/useCategories";
+import { useCurrentTerm, useCurrentDate } from "../../hooks/useCurrentTerm";
+import { useProgramsByCategory } from "../../hooks/usePrograms";
 import Button from "../ui/button/Button";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
@@ -25,14 +27,7 @@ export default function AddTempPlayerscomp() {
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [loadingPrograms, setLoadingPrograms] = useState(false);
-
-  const [allTerms, setAllTerms] = useState<any[]>([]);
-  const [years, setYears] = useState<string[]>([]);
-  const [loadingTerms, setLoadingTerms] = useState(true);
+  const currentDate = useCurrentDate();
 
   const {
     register,
@@ -71,12 +66,12 @@ export default function AddTempPlayerscomp() {
       medicalConditions: "",
       allergies: "",
       classId: "",
-      sessionDate: new Date().toISOString().split("T")[0],
+      sessionDate: currentDate,
       selectedCategory: "",
       selectedProgram: "",
       selectedYear: "",
       preferredTerm: "",
-      gender: "",
+      gender: "Male",
       prefferedFoot: "",
       preferredClasses: [],
     },
@@ -88,9 +83,21 @@ export default function AddTempPlayerscomp() {
   const watchYear = watch("selectedYear");
   const watchPreferredClasses = watch("preferredClasses") || [];
 
+  const { categories, isLoading: loadingCategories } = useCategories({ isEvent: "all" });
+  const { allTerms, availableYears: years, currentTerm, isLoading: loadingTerms } = useCurrentTerm();
+  const { programs, isLoading: loadingPrograms } = useProgramsByCategory(watchCategory);
+
   useEffect(() => {
     register("preferredClasses", { required: "Please select at least one class" });
   }, [register]);
+
+  // Set default preferred term and year if not selected
+  useEffect(() => {
+    if (currentTerm) {
+      if (!watchTerm) setValue("preferredTerm", currentTerm._id);
+      if (!watchYear && currentTerm.year) setValue("selectedYear", currentTerm.year.toString());
+    }
+  }, [currentTerm, watchTerm, watchYear, setValue]);
 
   useEffect(() => {
     const fetchFilteredClasses = async () => {
@@ -127,63 +134,8 @@ export default function AddTempPlayerscomp() {
     fetchFilteredClasses();
   }, [watchCategory, watchProgram, watchTerm, setValue]);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await getAllCategories();
-        if (response) {
-          const cats = Array.isArray(response) ? response : (Array.isArray(response.data) ? response.data : []);
-          setCategories(cats);
-        }
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
-        toast.error("Failed to load categories list");
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        const response = await getAllTerms(undefined, "all");
-        const termsList = response && response.data ? response.data : (Array.isArray(response) ? response : []);
-        setAllTerms(termsList);
-        
-        const uniqueYears = Array.from(
-          new Set(termsList.map((t: any) => t.year?.toString()).filter(Boolean))
-        ).sort() as string[];
-        setYears(uniqueYears);
-      } catch (error) {
-        console.error("Failed to fetch terms:", error);
-        toast.error("Failed to load terms list");
-      } finally {
-        setLoadingTerms(false);
-      }
-    };
-    fetchTerms();
-  }, []);
-
-  const handleCategoryChange = async (categoryId: string) => {
+  const handleCategoryChange = (_categoryId?: string) => {
     setValue("selectedProgram", "");
-    setPrograms([]);
-    if (!categoryId) return;
-
-    setLoadingPrograms(true);
-    try {
-      const response = await getProgramsByCategory(categoryId);
-      if (response) {
-        const progs = Array.isArray(response) ? response : (Array.isArray(response.data) ? response.data : []);
-        setPrograms(progs);
-      }
-    } catch (error) {
-      console.error("Failed to fetch programs:", error);
-      toast.error("Failed to load programs list");
-    } finally {
-      setLoadingPrograms(false);
-    }
   };
 
   const handleYearChange = () => {
@@ -210,7 +162,6 @@ export default function AddTempPlayerscomp() {
       prefferedFoot: "",
       preferredClasses: [],
     });
-    setPrograms([]);
   };
 
   const onSubmit = async (data: any) => {

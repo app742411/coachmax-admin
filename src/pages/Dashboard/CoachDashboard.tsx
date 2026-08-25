@@ -61,14 +61,14 @@ const CoachDashboard: React.FC = () => {
   const user = data?.coach || { coachId: "", name: "Coach", email: "", mobile: "", profileImage: null, role: "COACH" };
   const stats = data?.stats;
   return (
-    <div className="max-w-[1600px] mx-auto p-6 bg-[#F4F7FE] min-h-screen font-sans">
+    <div className="max-w-[1600px] mx-auto p-4 sm:p-6 bg-[#F4F7FE] min-h-screen font-sans">
       <PageMeta title="Coach Dashboard | CoachMax" description="Coach analytics and class management" />
 
       {/* Top Section: Profile & Stats */}
       <div className="bg-white border border-gray-200 rounded-none mb-6 flex flex-col lg:flex-row shadow-sm">
         
         {/* Profile Card (Left) */}
-        <div className="lg:w-[30%] p-8 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col items-center lg:items-start text-center lg:text-left">
+        <div className="lg:w-[30%] p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col items-center lg:items-start text-center lg:text-left">
           <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden mb-4 border-2 border-gray-100 flex-shrink-0 mx-auto lg:mx-0">
             {user.profileImage ? (
               <img src={`/${user.profileImage}`} alt={user.name} className="w-full h-full object-cover" />
@@ -87,8 +87,8 @@ const CoachDashboard: React.FC = () => {
         </div>
 
         {/* Stats Grid (Right) */}
-        <div className="lg:w-[70%] p-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
+        <div className="lg:w-[70%] p-6 sm:p-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-6 sm:gap-y-8 gap-x-4">
             
             {/* Stat Item 1 */}
             <div className="flex gap-4">

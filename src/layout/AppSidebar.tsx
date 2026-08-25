@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Link, useLocation } from "react-router";
 import { ChevronDownIcon, HorizontaLDots } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import apiClient from "../api/apiClient";
 import { Trophy, Shield, Calendar, ClipboardList, Copy } from "lucide-react";
+import { useCategories } from "../hooks/useCategories";
+
 type NavItem = {
   name: string;
   icon: React.ReactNode;
@@ -17,6 +18,13 @@ type MenuSection = {
   items: NavItem[];
 };
 
+const DEFAULT_PROGRAM_SUBITEMS = [
+  { name: "Academy", path: "/program/academy" },
+  { name: "Schools", path: "/program/schools" },
+  { name: "Holiday Camps", path: "/program/holiday-camps" },
+  { name: "1on1 Sessions", path: "/program/1on1-sessions" },
+];
+
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
@@ -28,43 +36,27 @@ const AppSidebar: React.FC = () => {
 
   const userStr = localStorage.getItem("user");
   let userRole = "";
-  try {
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      userRole = user.role;
-    }
-  } catch (e) {
-    console.error("Error parsing user data", e);
+  if (userStr) {
+    try {
+      userRole = JSON.parse(userStr)?.role || "";
+    } catch { }
   }
 
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLUListElement | null>>({});
 
-  const [programsSubItems, setProgramsSubItems] = useState<{ name: string; path: string; isEvent?: boolean }[]>([
-    { name: "Academy", path: "/program/academy" },
-    { name: "Schools", path: "/program/schools" },
-    { name: "Holiday Camps", path: "/program/holiday-camps" },
-    { name: "1on1 Sessions", path: "/program/1on1-sessions" },
-  ]);
+  const { categories } = useCategories({ isEvent: "all" });
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await apiClient.get('/api/user/getCategories', { params: { isEvent: "all" } });
-        if (response.data && Array.isArray(response.data)) {
-          const formattedCategories = response.data.map((cat: any) => ({
-            name: cat.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
-            path: `/program/${cat.name.toLowerCase().replace(/\s+/g, '-')}`,
-            isEvent: !!cat.isEvent,
-          }));
-          setProgramsSubItems(formattedCategories);
-        }
-      } catch (error) {
-        console.error("Failed to fetch programs categories:", error);
-      }
-    };
-    fetchCategories();
-  }, []);
+  const programsSubItems = useMemo(() => {
+    if (categories && categories.length > 0) {
+      return categories.map((cat: any) => ({
+        name: cat.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        path: `/program/${cat.name.toLowerCase().replace(/\s+/g, '-')}`,
+        isEvent: !!cat.isEvent,
+      }));
+    }
+    return DEFAULT_PROGRAM_SUBITEMS;
+  }, [categories]);
 
   const isActive = useCallback(
     (path: string) => location.pathname === path,
@@ -243,7 +235,8 @@ const AppSidebar: React.FC = () => {
             // { name: "Overview", path: "/finance" },
             { name: "Bank Details", path: "/bank-details" },
             { name: "Invoices", path: "/invoices" },
-            { name: "Transactions", path: "/transactions" }
+            { name: "Transactions", path: "/transactions" },
+            { name: "Term Earnings", path: "/term-earnings" }
           ]
         },
 
@@ -309,36 +302,43 @@ const AppSidebar: React.FC = () => {
   const menuSections = ["SUPER_ADMIN", "ADMIN"].includes(userRole) ? adminMenuSections : coachMenuSections;
 
   useEffect(() => {
-    let submenuMatched = false;
+    let matchedSectionKey: string | null = null;
+    let matchedIndex: number | null = null;
+
     menuSections.forEach((section) => {
       section.items.forEach((nav, index) => {
         if (nav.subItems) {
           nav.subItems.forEach((subItem) => {
-            if (isActive(subItem.path)) {
-              setOpenSubmenu({
-                sectionKey: section.key,
-                index,
-              });
-              submenuMatched = true;
+            if (location.pathname === subItem.path) {
+              matchedSectionKey = section.key;
+              matchedIndex = index;
             }
           });
         }
       });
     });
 
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
-    }
-  }, [location, isActive]);
+    setOpenSubmenu((prev) => {
+      if (matchedSectionKey !== null && matchedIndex !== null) {
+        if (prev && prev.sectionKey === matchedSectionKey && prev.index === matchedIndex) {
+          return prev;
+        }
+        return { sectionKey: matchedSectionKey, index: matchedIndex };
+      }
+      return null;
+    });
+  }, [location.pathname]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
       const key = `${openSubmenu.sectionKey}-${openSubmenu.index}`;
-      if (subMenuRefs.current[key]) {
-        setSubMenuHeight((prevHeights) => ({
-          ...prevHeights,
-          [key]: subMenuRefs.current[key]?.scrollHeight || 0,
-        }));
+      const el = subMenuRefs.current[key];
+      if (el) {
+        const height = el.scrollHeight || 0;
+        setSubMenuHeight((prev) => {
+          if (prev[key] === height) return prev;
+          return { ...prev, [key]: height };
+        });
       }
     }
   }, [openSubmenu, programsSubItems]);

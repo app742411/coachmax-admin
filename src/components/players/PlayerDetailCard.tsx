@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Player } from "../../types/player";
-import { usePlayerProfile, useCoachNotes } from "../../hooks/usePlayers";
+import { useAdminPlayerDetails, usePlayerProfile, useCoachNotes } from "../../hooks/usePlayers";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import EditPlayerStatsModal from "./EditPlayerStatsModal";
 import { ShieldAlert } from "lucide-react";
@@ -35,17 +35,31 @@ interface PlayerDetailCardProps {
 }
 
 export default function PlayerDetailCard({ player: initialPlayer, onClose, isRegistrationRequest }: PlayerDetailCardProps) {
-  // Query full profile details
-  const { data: profileRes } = usePlayerProfile(initialPlayer._id);
-  const playerEnvelope = profileRes?.data;
+  const playerId = initialPlayer?._id || (initialPlayer as any)?.playerId || (initialPlayer as any)?.id;
+  // Query full admin profile details (same source as PlayerProfilePage)
+  const { data: adminDetailsRes } = useAdminPlayerDetails(playerId);
+  const { data: profileRes } = usePlayerProfile(playerId);
+  const playerEnvelope = adminDetailsRes?.data || profileRes?.data;
   
   // Map clean player and parent data based on the backend response JSON envelope
-  const player = playerEnvelope?.player || initialPlayer;
-  const parent = playerEnvelope?.parent || player?.parentId;
+  const fetchedPlayer = playerEnvelope?.player || playerEnvelope;
+  const player: any = {
+    ...initialPlayer,
+    ...(fetchedPlayer || {}),
+    _id: playerId,
+    fullName: fetchedPlayer?.fullName || initialPlayer?.fullName || (initialPlayer as any)?.name,
+    isMedicalCondition: fetchedPlayer?.isMedicalCondition ?? initialPlayer?.isMedicalCondition ?? (initialPlayer as any)?.isMedicalCondition,
+    medicalConditionDetails: fetchedPlayer?.medicalConditionDetails || initialPlayer?.medicalConditionDetails || (initialPlayer as any)?.medicalConditionDetails || (initialPlayer as any)?.medicalConditions,
+    medicalConditions: fetchedPlayer?.medicalConditions || initialPlayer?.medicalConditions || (initialPlayer as any)?.medicalConditions,
+    gender: fetchedPlayer?.gender || initialPlayer?.gender || (initialPlayer as any)?.gender,
+    programs: fetchedPlayer?.programs || initialPlayer?.programs || (initialPlayer as any)?.programs || (fetchedPlayer?.program ? [fetchedPlayer.program] : (initialPlayer?.program ? [initialPlayer.program] : [])),
+    category: fetchedPlayer?.category || initialPlayer?.category || (initialPlayer as any)?.category,
+  };
+  const parent = playerEnvelope?.parent || player?.parentId || (initialPlayer as any)?.parent;
   const overallAttendance = playerEnvelope?.overallAttendance;
   const statistics = player.statistics || {};
 
-  const { data: notesRes } = useCoachNotes(initialPlayer._id);
+  const { data: notesRes } = useCoachNotes(playerId);
   const notes = notesRes?.data || [];
   const [editingNote, setEditingNote] = useState<any | null>(null);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);

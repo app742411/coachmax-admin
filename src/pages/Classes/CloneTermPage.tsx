@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 
 import apiClient from "../../api/apiClient";
-import { getTermsUrl } from "../../api/adminApi";
+import { useTerms } from "../../hooks/useTerms";
 import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
@@ -25,6 +25,7 @@ interface ClassPreview {
   playerCount: number;
   alreadyExists: boolean;
   players: Player[];
+  allSelected: boolean;
 }
 
 interface Term {
@@ -55,26 +56,19 @@ export default function CloneTermPage() {
   const [selectedClasses, setSelectedClasses] = useState<Record<string, boolean>>({});
   const [selectedPlayers, setSelectedPlayers] = useState<Record<string, Record<string, boolean>>>({});
 
+  const isEventParam = activeTab === "terms" ? "false" : "true";
+  const { terms: fetchedTerms } = useTerms({ isEvent: isEventParam });
+
   useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        const isEventParam = activeTab === "terms" ? "false" : "true";
-        const response = await apiClient.get(getTermsUrl(), { params: { isEvent: isEventParam } });
-        if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          setTerms(response.data.data);
-          // Reset previous term selections when switching tabs
-          setSourceTermId("");
-          setTargetTermId("");
-          setSourceYear("");
-          setTargetYear("");
-        }
-      } catch (error) {
-        console.error("Failed to fetch terms:", error);
-        errorToast("Failed to load terms.");
-      }
-    };
-    fetchTerms();
-  }, [activeTab]);
+    if (fetchedTerms) {
+      setTerms(fetchedTerms as any);
+      // Reset previous term selections when switching tabs
+      setSourceTermId("");
+      setTargetTermId("");
+      setSourceYear("");
+      setTargetYear("");
+    }
+  }, [activeTab, fetchedTerms]);
 
   const [allClasses, setAllClasses] = useState<any[]>([]);
 

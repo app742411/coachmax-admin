@@ -119,7 +119,7 @@ const Calendar: React.FC = () => {
     <>
       <PageMeta
         title="React.js Calendar Dashboard | CoachMax - Next.js Admin Dashboard Template"
-        description="This is React.js Calendar Dashboard page for CoachMax - React.js Tailwind CSS Admin Dashboard Template"
+        description="This is React.js Calendar Dashboard page for CoachMax - Coachmax Admin Dashboard Template"
       />
       <div className="rounded-none border  border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="custom-calendar">

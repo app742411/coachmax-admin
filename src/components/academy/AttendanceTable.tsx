@@ -121,10 +121,10 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
         <table className="w-full text-left border-collapse text-[11px]">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
-              <th className="py-2.5 px-4 w-[40px]">#</th>
+              <th className="py-2.5 px-2 w-[40px] text-center">Status</th>
               <th className="py-2.5 px-3 min-w-[130px]">Player</th>
               <th className="py-2.5 px-3 min-w-[80px]">DOB</th>
-              <th className="py-2.5 px-3 min-w-[120px]">Medical Conditions</th>
+              <th className="py-2.5 px-3 min-w-[90px] text-center">Med Cond</th>
               {dates.map((d) => (
                 <th key={d.num} className="py-2.5 px-1.5 text-center min-w-[50px] font-semibold border-l border-slate-100 dark:border-slate-800/40">
                   <div className="flex flex-col items-center">
@@ -138,19 +138,74 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
             </tr>
           </thead>
           <tbody>
-            {schedule.players.map((row, idx) => (
+            {schedule.players.map((row) => (
               <tr key={row.id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10">
-                <td className="py-2 px-4 font-semibold text-slate-400">{idx + 1}</td>
+                <td className="py-2 px-2 text-center">
+                  {(() => {
+                    const s = ((row as any).paymentStatus || (row as any).status || "UNPAID").toUpperCase();
+                    if (s === "PAID" || s === "APPROVED" || s === "ACTIVE") {
+                      return (
+                        <div className="flex justify-center text-emerald-600" title="Paid">
+                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      );
+                    }
+                    if (s === "TRIAL") {
+                      return (
+                        <div className="flex justify-center text-amber-500" title="Trial">
+                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      );
+                    }
+                    if (s === "UNPAID" || s === "REJECTED" || s === "INACTIVE" || s === "BLOCKED") {
+                      return (
+                        <div className="flex justify-center text-rose-600" title="Unpaid">
+                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="flex justify-center text-blue-500" title={s || "Other"}>
+                        <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-3.5-9a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8A.75.75 0 017.25 9zm0 2.5a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75zm0 2.5a.75.75 0 01.75-.75h3.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td className="py-2 px-3">
-                  <div className="flex items-center gap-2">
-                    <img src={row.avatar} alt={row.playerName} className="w-6 h-6 rounded-full object-cover shrink-0" />
-                    <span className="font-bold text-slate-700 dark:text-slate-200">{row.playerName}</span>
+                  <div className="flex items-center gap-2.5">
+                    <img src={row.avatar} alt={row.playerName} className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs leading-tight">{row.playerName}</span>
+                      <div className="flex items-center gap-0.5 text-amber-400 mt-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <svg
+                            key={i}
+                            className={`w-3 h-3 ${
+                              ((row as any).rating || 0) > i
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
+                            }`}
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </td>
                 <td className="py-2 px-3 font-semibold text-slate-500">{row.dob}</td>
-                <td className="py-2 px-3">
-                  <span className={row.medicalConditions !== "None" ? "text-rose-600 font-bold" : "text-slate-500 font-semibold"}>
-                    {row.medicalConditions}
+                <td className="py-2 px-3 text-center">
+                  <span className={row.medicalConditions && row.medicalConditions !== "None" && row.medicalConditions !== "No" ? "text-rose-600 font-bold text-xs" : "text-slate-500 font-semibold"}>
+                    {row.medicalConditions && row.medicalConditions !== "None" && row.medicalConditions !== "No" ? "Yes" : "No"}
                   </span>
                 </td>
                 {row.attendance.map((att, i) => (

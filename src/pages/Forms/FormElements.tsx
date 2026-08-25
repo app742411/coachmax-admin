@@ -16,7 +16,7 @@ export default function FormElements() {
     <div>
       <PageMeta
         title="React.js Form Elements Dashboard | CoachMax - React.js Admin Dashboard Template"
-        description="This is React.js Form Elements  Dashboard page for CoachMax - React.js Tailwind CSS Admin Dashboard Template"
+        description="This is React.js Form Elements  Dashboard page for CoachMax - Coachmax Admin Dashboard Template"
       />
       <PageBreadcrumb pageTitle="Form Elements" />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

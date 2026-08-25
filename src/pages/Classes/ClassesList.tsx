@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import apiClient from "../../api/apiClient";
-import { getTermsUrl } from "../../api/adminApi";
+import { useCategories } from "../../hooks/useCategories";
+import { useCurrentTerm } from "../../hooks/useCurrentTerm";
+import { useProgramsByCategory } from "../../hooks/usePrograms";
 import ClassFilters from "../../components/classes/ClassFilters";
 import ClassTable from "../../components/classes/ClassTable";
 import ViewClassPlayersModal from "../../components/classes/ViewClassPlayersModal";
@@ -40,15 +42,21 @@ export default function ClassesList() {
   const [totalClasses, setTotalClasses] = useState(0);
 
   // Filter States
-  const [categories, setCategories] = useState<any[]>([]);
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [terms, setTerms] = useState<any[]>([]);
-
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
-  const [selectedTerm, setSelectedTerm] = useState("");
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedDay, setSelectedDay] = useState("");
+
+  const {
+    terms,
+    availableYears,
+    selectedYear,
+    setSelectedYear,
+    selectedTerm,
+    setSelectedTerm,
+  } = useCurrentTerm();
+
+  const { categories } = useCategories({ isEvent: "all" });
+  const { programs } = useProgramsByCategory(selectedCategory);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classToEdit, setClassToEdit] = useState<ClassItem | null>(null);
@@ -59,21 +67,38 @@ export default function ClassesList() {
   const fetchClasses = async () => {
     try {
       setIsLoading(true);
-      const params: any = { page, limit };
-      if (searchQuery) params.search = searchQuery;
-      if (selectedCategory) params.categoryId = selectedCategory;
-      if (selectedProgram) params.programId = selectedProgram;
-      if (selectedTerm) params.termId = selectedTerm;
-      if (selectedDay) params.day = selectedDay;
+      const params: any = {
+        page,
+        limit,
+      };
+
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+      if (selectedCategory && selectedCategory !== "all") {
+        params.categoryId = selectedCategory;
+      }
+      if (selectedProgram && selectedProgram !== "all") {
+        params.programId = selectedProgram;
+      }
+      if (selectedTerm && selectedTerm !== "all") {
+        params.termId = selectedTerm;
+      }
+      if (selectedDay && selectedDay !== "all") {
+        params.dayOfWeek = selectedDay;
+      }
 
       const response = await apiClient.get("/api/admin/getAllClasses", { params });
-      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      if (response.data && response.data.data) {
         setClasses(response.data.data);
-        setTotalPages(response.data.totalPages || 1);
-        setTotalClasses(response.data.totalClasses || response.data.total || response.data.data.length);
+        if (response.data.pagination) {
+          setTotalPages(response.data.pagination.totalPages || 1);
+          setTotalClasses(response.data.pagination.totalClasses || 0);
+        }
       }
-    } catch (error) {
-      console.error("Failed to fetch classes:", error);
+    } catch (err) {
+      console.error("Failed to load classes:", err);
+      toast.error("Failed to load classes");
     } finally {
       setIsLoading(false);
     }
@@ -99,60 +124,12 @@ export default function ClassesList() {
     fetchClasses();
   }, [page, limit, searchQuery, selectedCategory, selectedProgram, selectedTerm, selectedDay]);
 
+  // Reset selected program if category is cleared
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const catRes = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
-        if (catRes.data && Array.isArray(catRes.data)) {
-          setCategories(catRes.data);
-        }
-      } catch (err) {
-        console.error("Failed to load categories:", err);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  // Fetch terms when year changes
-  useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        const params: any = { isEvent: "all" };
-        if (selectedYear) {
-          params.year = selectedYear;
-        }
-        const termsRes = await apiClient.get(getTermsUrl(), { params });
-        if (termsRes.data?.data) {
-          setTerms(termsRes.data.data);
-        }
-      } catch (err) {
-        console.error("Failed to load terms:", err);
-      }
-    };
-    fetchTerms();
-    setSelectedTerm("");
-  }, [selectedYear]);
-
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      if (selectedCategory) {
-        try {
-          const res = await apiClient.get(`/api/user/getProgramsByCategory/${selectedCategory}`);
-          if (res.data && Array.isArray(res.data)) {
-            setPrograms(res.data);
-          }
-        } catch (err) {
-          console.error("Failed to fetch programs by category:", err);
-        }
-      } else {
-        setPrograms([]);
-        setSelectedProgram("");
-      }
-    };
-    fetchPrograms();
+    if (!selectedCategory) {
+      setSelectedProgram("");
+    }
   }, [selectedCategory]);
-
-  // Frontend filtering removed as backend now handles it
 
   return (
     <>
@@ -167,22 +144,15 @@ export default function ClassesList() {
             <span className="text-[#0047FF]">Classes Management</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           {/* Year Selector */}
-          <div className="w-36 shrink-0">
+          <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[130px]">
             <Select
               value={selectedYear}
               onChange={(val) => setSelectedYear(val)}
               options={[
                 { label: "All Years", value: "" },
-                ...(() => {
-                  const currentYear = new Date().getFullYear();
-                  const years: { label: string; value: string }[] = [];
-                  for (let y = currentYear + 1; y >= currentYear - 3; y--) {
-                    years.push({ label: `${y}`, value: `${y}` });
-                  }
-                  return years;
-                })()
+                ...availableYears.map((y) => ({ label: y, value: y }))
               ]}
               placeholder="All Years"
               className="w-full select-none"
@@ -191,7 +161,7 @@ export default function ClassesList() {
           </div>
 
           {/* Term Selector */}
-          <div className="w-48 shrink-0">
+          <div className="w-full sm:w-48 flex-1 sm:flex-initial min-w-[150px]">
             <Select
               value={selectedTerm}
               onChange={(val) => setSelectedTerm(val)}
@@ -207,7 +177,7 @@ export default function ClassesList() {
 
           <button
             onClick={() => { setClassToEdit(null); setIsModalOpen(true); }}
-            className="inline-flex items-center justify-center rounded-none bg-[#0047FF] px-5 py-2.5 h-[42px] text-center text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700 transition-colors shadow-theme-xs shrink-0"
+            className="inline-flex items-center justify-center rounded-none bg-[#0047FF] px-5 py-2.5 h-[42px] text-center text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700 transition-colors shadow-theme-xs w-full sm:w-auto shrink-0"
           >
             + Add Class
           </button>
@@ -322,6 +292,11 @@ export default function ClassesList() {
       <AddClassModal
         isOpen={isModalOpen}
         classToEdit={classToEdit}
+        prefilledCategoryId={selectedCategory}
+        prefilledProgramId={selectedProgram}
+        prefilledTermId={selectedTerm}
+        prefilledYear={selectedYear}
+        prefilledDayOfWeek={selectedDay}
         onClose={() => {
           setIsModalOpen(false);
           setClassToEdit(null);

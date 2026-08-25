@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router";
-import apiClient from "../../api/apiClient";
-import { getTermsUrl } from "../../api/adminApi";
+import { useNavigate, useLocation } from "react-router";
+import { useCategories } from "../../hooks/useCategories";
+import { useTerms } from "../../hooks/useTerms";
+import { useProgramsByCategory } from "../../hooks/usePrograms";
+import { findCurrentTerm } from "../../hooks/useCurrentTerm";
 import Select from "../form/Select";
 
 interface AcademyHeaderProps {
@@ -36,8 +38,9 @@ export default function AcademyHeader({
   onShowUnallocatedChange,
 }: AcademyHeaderProps) {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<any[]>([]);
-  const [programs, setPrograms] = useState<{ _id: string; name: string }[]>([]);
+  const location = useLocation();
+  const state = location.state as any;
+
   const [terms, setTerms] = useState<any[]>([]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -49,6 +52,11 @@ export default function AcademyHeader({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  const { categories } = useCategories({ isEvent: "all" });
+  const { programs } = useProgramsByCategory(selectedCategory);
+  const { terms: allTerms } = useTerms({ isEvent: "all" });
+  const { terms: yearTerms } = useTerms({ year: selectedYear, isEvent: "all" }, { enabled: !!selectedYear });
+
   const getDropdownLabel = () => {
     if (showAllocated && showUnallocated) return "Show All Players";
     if (showAllocated) return "Allocated Players";
@@ -57,116 +65,84 @@ export default function AcademyHeader({
   };
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
-  // 1. Fetch categories
+  // 1. Sync category when categories load or programType changes
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const catRes = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
-        if (catRes.data && Array.isArray(catRes.data)) {
-          setCategories(catRes.data);
-          // Find the category matching the programType (e.g. "Academy" -> "ACADEMY")
-          const matched = catRes.data.find(c => c.name.toLowerCase() === programType.toLowerCase());
-          if (matched) {
-            setSelectedCategory(matched._id);
-            onCategoryChange?.(matched._id, matched.name);
-          } else if (catRes.data.length > 0) {
-            setSelectedCategory(catRes.data[0]._id);
-            onCategoryChange?.(catRes.data[0]._id, catRes.data[0].name);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
+    if (categories && categories.length > 0) {
+      let matched = state?.categoryId ? categories.find((c: any) => c._id === state.categoryId) : null;
+      if (!matched) {
+        matched = categories.find((c: any) => c.name.toLowerCase() === programType.toLowerCase());
       }
-    };
-    fetchCategories();
-  }, [programType]);
+      if (!matched && categories.length > 0) {
+        matched = categories[0];
+      }
+      if (matched) {
+        setSelectedCategory(matched._id);
+        onCategoryChange?.(matched._id, matched.name);
+      }
+    }
+  }, [categories, programType]);
 
-  // 2. Fetch programs when category changes
+  // 2. Sync program when selectedCategory or programs list changes
   useEffect(() => {
-    if (!selectedCategory) return;
-    const fetchPrograms = async () => {
-      try {
-        const programsRes = await apiClient.get(`/api/user/getProgramsByCategory/${selectedCategory}`);
-        if (programsRes.data && Array.isArray(programsRes.data)) {
-          setPrograms(programsRes.data);
-          if (programsRes.data.length > 0) {
-            setSelectedProgram(programsRes.data[0]._id);
-            onProgramChange?.(programsRes.data[0]._id, programsRes.data[0].name);
-          } else {
-            setSelectedProgram("");
-            onProgramChange?.("", "");
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch programs by category:", error);
+    if (!selectedCategory) {
+      setSelectedProgram("");
+      onProgramChange?.("", "");
+      return;
+    }
+    if (programs && programs.length > 0) {
+      let matchedProg = state?.programId ? programs.find((p: any) => p._id === state.programId) : null;
+      if (!matchedProg && programs.length > 0) {
+        matchedProg = programs[0];
       }
-    };
-    fetchPrograms();
-  }, [selectedCategory]);
+      if (matchedProg) {
+        setSelectedProgram(matchedProg._id);
+        onProgramChange?.(matchedProg._id, matchedProg.name);
+      } else {
+        setSelectedProgram("");
+        onProgramChange?.("", "");
+      }
+    } else {
+      setSelectedProgram("");
+      onProgramChange?.("", "");
+    }
+  }, [selectedCategory, programs]);
 
-  // 3. Fetch all terms on mount to get available years and select initial term
+  // 3. Set available years and initial term from all terms
   useEffect(() => {
-    const fetchAllTerms = async () => {
-      try {
-        const termsRes = await apiClient.get(getTermsUrl(), { params: { isEvent: "all" } });
-        if (termsRes.data && termsRes.data.data && Array.isArray(termsRes.data.data)) {
-          const allTerms = termsRes.data.data;
-          const years = Array.from(new Set(allTerms.map((t: any) => t.year.toString()))).sort() as string[];
-          setAvailableYears(years);
+    if (allTerms && allTerms.length > 0) {
+      const years = Array.from(new Set(allTerms.map((t: any) => t.year?.toString()).filter(Boolean))).sort() as string[];
+      setAvailableYears(years);
 
-          const now = new Date();
-          let currentTerm = allTerms.find((t: any) => {
-            if (!t.startDate || !t.endDate) return false;
-            const start = new Date(t.startDate);
-            const end = new Date(t.endDate);
-            return now >= start && now <= end;
-          });
-
-          if (!currentTerm && allTerms.length > 0) {
-            currentTerm = allTerms[0];
-          }
-
-          if (currentTerm) {
-            setSelectedYear(currentTerm.year.toString());
-            setSelectedTerm(currentTerm._id);
-            onTermChange?.(currentTerm._id);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch all terms on mount:", error);
+      let currentTerm = state?.termId ? allTerms.find((t: any) => t._id === state.termId) : null;
+      if (!currentTerm) {
+        currentTerm = findCurrentTerm(allTerms);
       }
-    };
-    fetchAllTerms();
-  }, []);
 
-  // Fetch terms dynamically when selectedYear changes
+      if (currentTerm && !selectedTerm) {
+        setSelectedYear(currentTerm.year?.toString() || "");
+        setSelectedTerm(currentTerm._id);
+        onTermChange?.(currentTerm._id);
+      }
+    }
+  }, [allTerms]);
+
+  // Sync terms for year
   useEffect(() => {
-    if (!selectedYear) return;
-    const fetchTermsForYear = async () => {
-      try {
-        const termsRes = await apiClient.get(getTermsUrl(), {
-          params: { isEvent: "all", year: selectedYear }
-        });
-        if (termsRes.data && termsRes.data.data && Array.isArray(termsRes.data.data)) {
-          setTerms(termsRes.data.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch terms for year:", error);
-      }
-    };
-    fetchTermsForYear();
-  }, [selectedYear]);
+    if (yearTerms) {
+      setTerms(yearTerms);
+    }
+  }, [yearTerms]);
 
   // 4. Update initial term selection when categories or terms are loaded
   useEffect(() => {
@@ -183,22 +159,11 @@ export default function AcademyHeader({
       }
     }
 
-    const now = new Date();
-    let matchedTerm = terms.find((t: any) => {
-      if (!!t.isEvent !== activeIsEvent) return false;
-      if (!t.startDate || !t.endDate) return false;
-      const start = new Date(t.startDate);
-      const end = new Date(t.endDate);
-      return now >= start && now <= end;
-    });
-
-    if (!matchedTerm) {
-      matchedTerm = terms.find((t: any) => !!t.isEvent === activeIsEvent);
-    }
+    const matchedTerm = findCurrentTerm(terms, { isEvent: activeIsEvent });
 
     if (matchedTerm) {
-      if (matchedTerm.year.toString() !== selectedYear) {
-        setSelectedYear(matchedTerm.year.toString());
+      if (matchedTerm.year?.toString() !== selectedYear) {
+        setSelectedYear(matchedTerm.year?.toString() || "");
       }
       setSelectedTerm(matchedTerm._id);
       onTermChange?.(matchedTerm._id);

@@ -123,23 +123,27 @@ export const ChatList: React.FC = () => {
   return (
     <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-none overflow-hidden h-full shadow-lg relative">
       {/* Sidebar */}
-      <ChatSidebar
-        rooms={rooms}
-        activeRoomId={activeRoomId}
-        onSelectRoom={(id) => dispatch(setActiveRoomId(id))}
-        searchTerm={searchTerm}
-        onSearchChange={(val) => dispatch(setSearchTerm(val))}
-        contacts={contacts}
-        onStartChat={handleStartChat}
-        onRefreshContacts={loadQuickContacts}
-        onStartChatModalOpen={() => setIsModalOpen(true)}
-      />
+      <div className={`h-full ${activeRoomId ? "hidden md:flex" : "flex w-full md:w-[340px]"}`}>
+        <ChatSidebar
+          rooms={rooms}
+          activeRoomId={activeRoomId}
+          onSelectRoom={(id) => dispatch(setActiveRoomId(id))}
+          searchTerm={searchTerm}
+          onSearchChange={(val) => dispatch(setSearchTerm(val))}
+          contacts={contacts}
+          onStartChat={handleStartChat}
+          onRefreshContacts={loadQuickContacts}
+          onStartChatModalOpen={() => setIsModalOpen(true)}
+        />
+      </div>
 
       {/* Active Conversation log */}
       {activeRoomId ? (
-        <ChatWindow roomId={activeRoomId} />
+        <div className="flex-1 flex flex-col h-full min-w-0">
+          <ChatWindow roomId={activeRoomId} />
+        </div>
       ) : (
-        <div className="flex-1 bg-slate-950/60 flex flex-col items-center justify-center text-slate-500 gap-2">
+        <div className="hidden md:flex flex-1 bg-slate-950/60 flex-col items-center justify-center text-slate-500 gap-2">
           <div className="text-4xl">💬</div>
           <h4 className="font-bold text-slate-350">No Conversation Selected</h4>
           <p className="text-xs">Pick a room on the left sidebar to start messaging.</p>

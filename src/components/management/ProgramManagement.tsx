@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
-import { createProgram, updateProgram, deleteProgram, getProgramsByCategory, getAllCategories } from "../../api/adminApi";
+import { useCategories } from "../../hooks/useCategories";
+import {
+  useProgramsByCategory,
+  useCreateProgram,
+  useUpdateProgram,
+  useDeleteProgram,
+} from "../../hooks/usePrograms";
 import { toast } from "react-hot-toast";
 import { Edit, Trash, Filter, Layers } from "lucide-react";
 import Select from "../form/Select";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const ProgramManagement: React.FC = () => {
-  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -22,19 +26,9 @@ const ProgramManagement: React.FC = () => {
     category: "",
   });
 
-  const getDataArray = (res: any) => {
-    if (Array.isArray(res)) return res;
-    if (res && Array.isArray(res.data)) return res.data;
-    return [];
-  };
-
   // ── Queries ─────────────────────────────────────────────────────
 
-  const { data: categoriesData } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getAllCategories,
-  });
-  const categories = getDataArray(categoriesData);
+  const { categories } = useCategories();
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCategoryFilter) {
@@ -42,44 +36,13 @@ const ProgramManagement: React.FC = () => {
     }
   }, [categories, selectedCategoryFilter]);
 
-  const { data: programsData, isLoading: loading } = useQuery({
-    queryKey: ["programs", "byCategory", selectedCategoryFilter],
-    queryFn: () => getProgramsByCategory(selectedCategoryFilter),
-    enabled: !!selectedCategoryFilter,
-  });
-  const programs = getDataArray(programsData);
+  const { programs, isLoading: loading } = useProgramsByCategory(selectedCategoryFilter);
 
   // ── Mutations ───────────────────────────────────────────────────
 
-  const createMutation = useMutation({
-    mutationFn: createProgram,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["programs", "byCategory", selectedCategoryFilter] });
-      toast.success("Program created");
-      setIsModalOpen(false);
-    },
-    onError: () => toast.error("Failed to create program"),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateProgram(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["programs", "byCategory", selectedCategoryFilter] });
-      toast.success("Program updated");
-      setIsModalOpen(false);
-    },
-    onError: () => toast.error("Failed to update program"),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteProgram,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["programs", "byCategory", selectedCategoryFilter] });
-      toast.success("Program deleted");
-      setDeleteModalId(null);
-    },
-    onError: () => toast.error("Failed to delete program"),
-  });
+  const createMutation = useCreateProgram();
+  const updateMutation = useUpdateProgram();
+  const deleteMutation = useDeleteProgram();
 
   // ── Event Handlers ─────────────────────────────────────────────
 
@@ -110,16 +73,37 @@ const ProgramManagement: React.FC = () => {
 
   const confirmDelete = () => {
     if (deleteModalId) {
-      deleteMutation.mutate(deleteModalId);
+      deleteMutation.mutate(deleteModalId, {
+        onSuccess: () => {
+          toast.success("Program deleted");
+          setDeleteModalId(null);
+        },
+        onError: () => toast.error("Failed to delete program"),
+      });
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing && selectedId) {
-      updateMutation.mutate({ id: selectedId, data: formData });
+      updateMutation.mutate(
+        { id: selectedId, data: formData },
+        {
+          onSuccess: () => {
+            toast.success("Program updated");
+            setIsModalOpen(false);
+          },
+          onError: () => toast.error("Failed to update program"),
+        }
+      );
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(formData, {
+        onSuccess: () => {
+          toast.success("Program created");
+          setIsModalOpen(false);
+        },
+        onError: () => toast.error("Failed to create program"),
+      });
     }
   };
 

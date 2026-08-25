@@ -85,66 +85,54 @@ export const BroadcastList: React.FC = () => {
   }, [activeClassId]);
 
   return (
-    <div className="flex flex-col gap-5 w-full">
-      {/* Banner */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none p-6 flex justify-between items-center flex-wrap gap-4 shadow-theme-xs">
-        <div>
-          <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider flex items-center gap-2">
-            <Megaphone size={16} className="text-[#0047FF]" />
-            <span>Class Broadcast Announcements</span>
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-            Official updates and urgent notices for class parents
-          </p>
-        </div>
+    <div className="flex flex-col gap-4 w-full">
+      {/* Announcements Feed Header */}
+      <div className="flex items-center justify-between pl-1 flex-wrap gap-2">
+        <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+          <Megaphone size={14} className="text-[#0047FF]" />
+          <span>Announcements Feed</span>
+        </h4>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Class Room:</label>
-          <select
-            value={activeClassId || ""}
-            onChange={(e) => dispatch(setActiveClassId(e.target.value))}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none px-4 py-2 h-[38px] text-xs font-bold focus:outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] cursor-pointer"
-          >
-            <option value="" className="font-bold text-xs">-- Select Broadcast Room --</option>
-            {rooms.map((room) => (
-              <option key={room.classId} value={room.classId} className="font-bold text-xs">
-                {room.className}
-              </option>
-            ))}
-          </select>
+        {rooms.length > 0 && (
+          <div className="flex items-center gap-2">
+            <select
+              value={activeClassId || ""}
+              onChange={(e) => dispatch(setActiveClassId(e.target.value))}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none px-3 py-1.5 text-xs font-bold focus:outline-none focus:border-[#0047FF] cursor-pointer"
+            >
+              {rooms.map((room) => (
+                <option key={room.classId} value={room.classId}>
+                  {room.className}
+                </option>
+              ))}
+            </select>
 
-          <button
-            onClick={() => activeClassId && loadFeed(activeClassId)}
-            className="px-4 py-2 h-[38px] bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 shadow-theme-xs"
-            title="Refresh feed"
-          >
-            <RotateCw size={12} className={loading ? "animate-spin" : ""} />
-            <span>Refresh</span>
-          </button>
-        </div>
+            <button
+              onClick={() => activeClassId && loadFeed(activeClassId)}
+              className="p-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-none border border-slate-200 dark:border-slate-800 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-theme-xs"
+              title="Refresh feed"
+            >
+              <RotateCw size={13} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Announcements List */}
-      <div className="flex flex-col gap-4">
-        <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
-          Announcements Feed
-        </h4>
-
-        {loading ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-12 text-center rounded-none text-slate-500 dark:text-slate-400 text-xs shadow-theme-xs flex items-center justify-center gap-2">
-            <Loader2 size={16} className="animate-spin text-[#0047FF]" />
-            <span className="font-bold uppercase tracking-wider text-[11px]">Fetching announcements...</span>
-          </div>
-        ) : announcements.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-dashed p-12 text-center rounded-none text-slate-400 dark:text-slate-500 text-xs font-medium italic shadow-theme-xs">
-            No announcements published in this room yet.
-          </div>
-        ) : (
-          announcements.map((ann) => (
-            <BroadcastCard key={ann._id} announcement={ann} />
-          ))
-        )}
-      </div>
+      {loading ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-12 text-center rounded-none text-slate-500 dark:text-slate-400 text-xs shadow-theme-xs flex items-center justify-center gap-2">
+          <Loader2 size={16} className="animate-spin text-[#0047FF]" />
+          <span className="font-bold uppercase tracking-wider text-[11px]">Fetching announcements...</span>
+        </div>
+      ) : announcements.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-dashed p-12 text-center rounded-none text-slate-400 dark:text-slate-500 text-xs font-medium italic shadow-theme-xs">
+          No announcements published in this room yet.
+        </div>
+      ) : (
+        announcements.map((ann) => (
+          <BroadcastCard key={ann._id} announcement={ann} />
+        ))
+      )}
     </div>
   );
 };

@@ -39,15 +39,14 @@ export default function Home() {
   // Donut chart - Payment Status Breakdown
   const paymentBreakdown = players.paymentStatusBreakdown || {};
   const paidCount = paymentBreakdown.PAID || 0;
-  const overdueCount = paymentBreakdown.OVER_DUE || 0;
   const trialCount = paymentBreakdown.TRIAL || 0;
   const unpaidCount = paymentBreakdown.UNPAID || 0;
   const othersCount = paymentBreakdown.OTHERS || 0;
-  const totalStatusCount = paidCount + overdueCount + trialCount + unpaidCount + othersCount;
+  const totalStatusCount = paidCount + trialCount + unpaidCount + othersCount;
 
-  const donutChartSeries = [paidCount, overdueCount, trialCount, unpaidCount];
+  const donutChartSeries = [paidCount, trialCount, unpaidCount, othersCount];
   const donutChartOptions: ApexOptions = {
-    colors: ["#10B981", "#EF4444", "#3B82F6", "#F59E0B"],
+    colors: ["#10B981", "#3B82F6", "#F59E0B", "#8B5CF6"],
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "donut",
@@ -103,9 +102,9 @@ export default function Home() {
 
   const donutLegendItems = [
     { label: "Paid", count: paidCount, percent: getPercent(paidCount), color: "bg-[#10B981]" },
-    { label: "Overdue", count: overdueCount, percent: getPercent(overdueCount), color: "bg-[#EF4444]" },
     { label: "Trial", count: trialCount, percent: getPercent(trialCount), color: "bg-[#3B82F6]" },
     { label: "Unpaid", count: unpaidCount, percent: getPercent(unpaidCount), color: "bg-[#F59E0B]" },
+    { label: "Others", count: othersCount, percent: getPercent(othersCount), color: "bg-[#8B5CF6]" },
   ];
 
   // Line Chart options for Attendance Overview
@@ -419,7 +418,7 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/30 rounded-none shadow-md">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Revenue</span>
               <h4 className="text-lg font-bold text-slate-900 dark:text-white my-0.5">${financials.totalRevenue || 0}</h4>

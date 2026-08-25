@@ -11,6 +11,16 @@ export const isCoachOrAdmin = (): boolean => {
   }
 };
 
+export interface SendClassBroadcastPayload {
+  text: string;
+  classId?: string;
+  term?: string;
+  category?: string;
+  program?: string;
+  day?: string;
+  dayOfWeek?: string;
+}
+
 export const chatApi = {
   getRooms: async () => {
     const url = isCoachOrAdmin() ? "/api/coach/chat/rooms" : "/api/user/chat/rooms";
@@ -82,6 +92,32 @@ export const chatApi = {
     }
     const response = await apiClient.get(`/api/coach/chat/class/${classId}/parents`);
     return response.data;
+  },
+
+  // Send Class Broadcast supporting specific class URL or body filters (term, category, program, day/dayOfWeek)
+  sendClassBroadcast: async (payload: SendClassBroadcastPayload, classIdInUrl?: string) => {
+    const targetClassId = classIdInUrl || payload.classId;
+    if (targetClassId && targetClassId !== "filter") {
+      // 1. Send to a Single Specific Class: POST /api/coach/chat/broadcast/:classId
+      const response = await apiClient.post(`/api/coach/chat/broadcast/${targetClassId}`, {
+        text: payload.text,
+      });
+      return response.data;
+    } else {
+      // 2. Send to Multiple Classes via Filters: POST /api/coach/chat/broadcast/filter
+      const filterBody: any = {
+        text: payload.text,
+      };
+      if (payload.term) filterBody.term = payload.term;
+      if (payload.category) filterBody.category = payload.category;
+      if (payload.program) filterBody.program = payload.program;
+      if (payload.day || payload.dayOfWeek) {
+        filterBody.day = payload.day || payload.dayOfWeek;
+      }
+
+      const response = await apiClient.post(`/api/coach/chat/broadcast/filter`, filterBody);
+      return response.data;
+    }
   },
 
   broadcastToClass: async (classId: string, text: string) => {

@@ -135,8 +135,8 @@ const OrderList = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left min-w-[700px]">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-gray-800/50">
                   <th className="px-6 py-4 text-[10px] font-bold  text-gray-400 ">Order ID</th>

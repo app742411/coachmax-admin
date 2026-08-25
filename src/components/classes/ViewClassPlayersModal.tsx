@@ -25,7 +25,7 @@ export default function ViewClassPlayersModal({
     <>
       <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-none" showCloseButton={false}>
         {/* Header Section matching Create Class UI */}
-        <div className="relative overflow-hidden bg-[#0A1930] px-8 py-5 text-white border-l-[6px] border-[#0047FF]">
+        <div className="relative overflow-hidden bg-[#0A1930] px-4 py-4 sm:px-8 sm:py-5 text-white border-l-[6px] border-[#0047FF]">
           {/* Faint Pitch Schematic Background */}
           <svg className="absolute right-0 top-0 h-full w-auto opacity-10 pointer-events-none text-white/70" viewBox="0 0 120 80" fill="none" stroke="currentColor" strokeWidth="0.8">
             <rect x="2" y="2" width="116" height="76" rx="2" />
@@ -46,14 +46,14 @@ export default function ViewClassPlayersModal({
           </div>
 
           <div className="flex items-start justify-between relative z-10">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full border border-white/20 bg-white/5 text-white">
-                <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/20 bg-white/5 text-white shrink-0">
+                <svg className="w-6 h-6 sm:w-7 sm:h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-xl font-bold tracking-wide text-white">
+                <h3 className="text-lg sm:text-xl font-bold tracking-wide text-white">
                   Class Active Roster
                 </h3>
                 <p className="text-xs text-gray-300 mt-1 font-medium">
@@ -63,7 +63,7 @@ export default function ViewClassPlayersModal({
             </div>
             <button
               onClick={onClose}
-              className="text-white/60 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-colors cursor-pointer"
+              className="text-white/60 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-colors cursor-pointer shrink-0"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -72,25 +72,25 @@ export default function ViewClassPlayersModal({
           </div>
         </div>
 
-        <div className="flex flex-col h-full max-h-[70vh] p-8 overflow-y-auto">
+        <div className="flex flex-col h-full max-h-[70vh] p-4 sm:p-8 overflow-y-auto">
           {/* Top Info Card */}
-          <div className="border border-slate-100 dark:border-slate-800 rounded-none p-5 mb-8 bg-white dark:bg-slate-900 shadow-sm flex items-center flex-wrap gap-y-4">
-            <div className="flex-1 min-w-[150px] px-2 border-r border-slate-100 dark:border-slate-800 last:border-0">
+          <div className="border border-slate-100 dark:border-slate-800 rounded-none p-4 sm:p-5 mb-6 sm:mb-8 bg-white dark:bg-slate-900 shadow-sm flex items-center flex-wrap gap-4">
+            <div className="flex-1 min-w-[130px] px-2 border-r border-slate-100 dark:border-slate-800 last:border-0">
               <span className="text-[10px] font-bold text-slate-400 tracking-[0.1em] uppercase">Session ID</span>
-              <div className="font-bold text-slate-900 dark:text-white text-base mt-1.5">{classData?.name || classData?.className || "summer class"}</div>
+              <div className="font-bold text-slate-900 dark:text-white text-sm sm:text-base mt-1.5">{classData?.name || classData?.className || "summer class"}</div>
             </div>
-            <div className="flex-1 min-w-[150px] px-6 border-r border-slate-100 dark:border-slate-800 last:border-0">
+            <div className="flex-1 min-w-[130px] px-3 sm:px-6 border-r border-slate-100 dark:border-slate-800 last:border-0">
               <span className="text-[10px] font-bold text-slate-400 tracking-[0.1em] uppercase">Schedule</span>
-              <div className="font-bold text-slate-700 dark:text-slate-300 text-sm mt-1.5">{classData?.dayOfWeek || "TUESDAY"}</div>
+              <div className="font-bold text-slate-700 dark:text-slate-300 text-xs sm:text-sm mt-1.5">{classData?.dayOfWeek || "TUESDAY"}</div>
               <div className="text-[11px] font-semibold text-[#0047FF] mt-0.5">{classData?.startTime || "09:00"} - {classData?.endTime || "10:00"}</div>
             </div>
-            <div className="flex-1 min-w-[150px] px-6 border-r border-slate-100 dark:border-slate-800 last:border-0">
+            <div className="flex-1 min-w-[130px] px-3 sm:px-6 border-r border-slate-100 dark:border-slate-800 last:border-0">
               <span className="text-[10px] font-bold text-slate-400 tracking-[0.1em] uppercase">Classification</span>
-              <div className="font-bold text-slate-900 dark:text-white text-sm mt-1.5">{classData?.category?.name || "ACADEMY"}</div>
+              <div className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm mt-1.5">{classData?.category?.name || "ACADEMY"}</div>
             </div>
-            <div className="flex-1 min-w-[150px] px-6">
+            <div className="flex-1 min-w-[130px] px-3 sm:px-6">
               <span className="text-[10px] font-bold text-slate-400 tracking-[0.1em] uppercase">Instruction</span>
-              <div className="font-bold text-slate-900 dark:text-white text-sm mt-1.5">{classData?.coach?.name || classData?.coach?.email || "anand coach"}</div>
+              <div className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm mt-1.5">{classData?.coach?.name || classData?.coach?.email || "anand coach"}</div>
             </div>
           </div>
 
@@ -108,63 +108,118 @@ export default function ViewClassPlayersModal({
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-auto custom-scrollbar border border-slate-50 dark:border-slate-800 rounded-none">
+          <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-none bg-white dark:bg-slate-900">
             {isLoading ? (
-              <div className="p-8 text-center text-slate-500 font-semibold">Loading roster...</div>
+              <div className="p-12 text-center text-slate-500 font-semibold">
+                <div className="inline-block w-8 h-8 border-3 border-[#0047FF] border-t-transparent rounded-full animate-spin mb-3" />
+                <p>Loading roster...</p>
+              </div>
             ) : isError ? (
-              <div className="p-8 text-center text-rose-500 font-semibold">
+              <div className="p-12 text-center text-rose-500 font-semibold">
                 Failed to load players. Please try again.
               </div>
             ) : players.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 font-semibold">
+              <div className="p-12 text-center text-slate-500 font-semibold">
                 No players enrolled in this class.
               </div>
             ) : (
-              <table className="w-full text-left text-sm border-collapse">
-                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm z-10">
+              <table className="w-full text-left text-sm border-collapse min-w-[500px]">
+                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800/90 backdrop-blur-xs z-10">
                   <tr className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.15em]">
-                    <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-center w-[30%]">Participant</th>
-                    <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-center w-[35%]">Contact Access</th>
-                    <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-center w-[35%]">Parent Details</th>
+                    <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-left min-w-[160px] w-[34%]">Participant</th>
+                    <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-center min-w-[150px] w-[33%]">Contact Access</th>
+                    <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 text-center min-w-[150px] w-[33%]">Parent Details</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {players.map((player: any) => (
-                    <tr
-                      key={player._id}
-                      className="border-b border-slate-50 dark:border-slate-800/40 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors group"
-                    >
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => setSelectedPlayer(player)}
-                          className="flex items-center gap-4 pl-4 text-left hover:opacity-80 transition-opacity"
-                        >
-                          <div className="w-10 h-10 shrink-0 bg-[#101828] dark:bg-slate-700 text-white rounded-none flex items-center justify-center text-xs font-bold shadow-sm">
-                            {player.jerseyNumber || "-"}
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {players.map((player: any) => {
+                    const parent = player.parentId && typeof player.parentId === "object"
+                      ? player.parentId
+                      : player.parent && typeof player.parent === "object"
+                      ? player.parent
+                      : null;
+
+                    const parentName = parent?.fullName || parent?.name || (typeof player.parentId === "string" ? "" : "") || player.parentName || "";
+                    const parentEmail = parent?.email || player.parentEmail || "";
+                    const parentPhone = parent?.phone || player.parentPhone || "";
+                    const parentRelationship = parent?.relationship || "";
+
+                    const playerName = player.fullName || `${player.firstName || ""} ${player.lastName || ""}`.trim() || player.name || "Unknown Player";
+                    const playerEmail = player.email || parentEmail || "No Email";
+                    const playerPhone = player.phone || parentPhone || "No Phone";
+                    const playerPhoto = player.profileImage || player.photo || player.avatar || player.image || "";
+
+                    const initials = playerName
+                      .split(" ")
+                      .filter(Boolean)
+                      .map((w: string) => w[0])
+                      .join("")
+                      .toUpperCase()
+                      .substring(0, 2) || (player.jerseyNumber ? `${player.jerseyNumber}` : "-");
+
+                    return (
+                      <tr
+                        key={player._id || player.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer"
+                        onClick={() => setSelectedPlayer(player)}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3.5 text-left">
+                            <div className="w-10 h-10 shrink-0 bg-[#0A1930] dark:bg-slate-700 text-white rounded-none flex items-center justify-center text-xs font-bold shadow-sm overflow-hidden">
+                              {playerPhoto ? (
+                                <img src={playerPhoto} alt={playerName} className="w-full h-full object-cover" />
+                              ) : player.jerseyNumber ? (
+                                <span>#{player.jerseyNumber}</span>
+                              ) : (
+                                <span>{initials}</span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-[#0047FF] dark:group-hover:text-[#336eff] transition-colors">
+                                {playerName}
+                              </div>
+                              {player.gender && (
+                                <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">
+                                  {player.gender} {player.dob ? `• ${new Date().getFullYear() - new Date(player.dob).getFullYear()} yrs` : ""}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="font-bold text-slate-700 dark:text-slate-200 text-[13px] hover:text-[#0047FF] dark:hover:text-[#336eff]">
-                            {player.fullName || `${player.firstName} ${player.lastName}`}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center justify-center gap-0.5">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                              {playerEmail}
+                            </span>
+                            <span className="text-xs font-bold text-[#0047FF] dark:text-[#336eff] tracking-wide">
+                              {playerPhone}
+                            </span>
                           </div>
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center justify-center">
-                          <span className="text-[11px] text-slate-500 italic mb-0.5">{player.email || "No Email"}</span>
-                          <span className="text-[12px] font-bold text-[#00b2ff] dark:text-[#336eff] tracking-wide">{player.phone || "No Phone"}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {player.parent ? (
-                          <div className="flex flex-col items-center justify-center">
-                            <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{player.parent.fullName || player.parent.name}</span>
-                            <span className="text-[11px] text-slate-500 mt-0.5">{player.parent.phone} / {player.parent.email}</span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs italic">N/A</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {parentName ? (
+                            <div className="flex flex-col items-center justify-center gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{parentName}</span>
+                                {parentRelationship && (
+                                  <span className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded uppercase">
+                                    {parentRelationship}
+                                  </span>
+                                )}
+                              </div>
+                              {(parentPhone || parentEmail) && (
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  {[parentPhone, parentEmail].filter(Boolean).join(" • ")}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500 text-xs italic font-medium">N/A</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

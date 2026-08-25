@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import apiClient from "../../api/apiClient";
-import { getTermsUrl } from "../../api/adminApi";
+import { useCategories } from "../../hooks/useCategories";
+import { useCurrentTerm } from "../../hooks/useCurrentTerm";
+import { useProgramsByCategory } from "../../hooks/usePrograms";
 import Badge from "../ui/badge/Badge";
 import { MoreVertical } from "lucide-react";
 import ViewClassPlayersModal from "../classes/ViewClassPlayersModal";
@@ -41,15 +43,21 @@ export default function MyClassesListComp() {
   const [totalClasses, setTotalClasses] = useState(0);
 
   // Filter state
-  const [categories, setCategories] = useState<any[]>([]);
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [terms, setTerms] = useState<any[]>([]);
-
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [selectedTerm, setSelectedTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedDay, setSelectedDay] = useState("");
+
+  const {
+    terms,
+    availableYears,
+    selectedYear,
+    setSelectedYear,
+    selectedTerm,
+    setSelectedTerm,
+  } = useCurrentTerm();
+
+  const { categories } = useCategories({ isEvent: "all" });
+  const { programs } = useProgramsByCategory(selectedCategory);
 
   // ── Fetch classes (with backend filters) ──────────────────────
   const fetchClasses = async () => {
@@ -60,20 +68,18 @@ export default function MyClassesListComp() {
       if (selectedCategory) params.categoryId = selectedCategory;
       if (selectedProgram) params.programId = selectedProgram;
       if (selectedTerm) params.termId = selectedTerm;
-      if (selectedDay) params.dayOfWeek = selectedDay;
+      if (selectedDay) params.day = selectedDay;
 
       const response = await apiClient.get("/api/coach/classes", { params });
-      if (response.data?.data && Array.isArray(response.data.data)) {
+      if (response.data && response.data.data) {
         setClasses(response.data.data);
-        setTotalPages(response.data.totalPages || 1);
-        setTotalClasses(response.data.total || response.data.data.length);
-      } else if (Array.isArray(response.data)) {
-        setClasses(response.data);
-        setTotalPages(1);
-        setTotalClasses(response.data.length);
+        if (response.data.pagination) {
+          setTotalPages(response.data.pagination.totalPages || 1);
+          setTotalClasses(response.data.pagination.totalClasses || 0);
+        }
       }
-    } catch (error) {
-      console.error("Failed to fetch classes:", error);
+    } catch (err) {
+      console.error("Failed to load classes:", err);
       toast.error("Failed to load classes");
     } finally {
       setLoading(false);
@@ -84,61 +90,11 @@ export default function MyClassesListComp() {
     fetchClasses();
   }, [page, limit, searchQuery, selectedCategory, selectedProgram, selectedTerm, selectedDay]);
 
-  // Reset page when filters change
+  // Reset selected program when category is cleared
   useEffect(() => {
-    setPage(1);
-  }, [searchQuery, selectedCategory, selectedProgram, selectedTerm, selectedDay]);
-
-  // ── Fetch categories ──────────────────────────────────────────
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
-        if (res.data && Array.isArray(res.data)) setCategories(res.data);
-      } catch (err) {
-        console.error("Failed to load categories:", err);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  // ── Fetch terms when year changes ─────────────────────────────
-  useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        const params: any = { isEvent: "all" };
-        if (selectedYear) params.year = selectedYear;
-        const res = await apiClient.get(getTermsUrl(), { params });
-        if (res.data?.data) {
-          setTerms(res.data.data);
-          // Auto-select first active term
-          const activeTerm = res.data.data.find((t: any) => t.status === "ACTIVE");
-          if (activeTerm && !selectedTerm) setSelectedTerm(activeTerm._id);
-        }
-      } catch (err) {
-        console.error("Failed to load terms:", err);
-      }
-    };
-    fetchTerms();
-    setSelectedTerm("");
-  }, [selectedYear]);
-
-  // ── Fetch programs when category changes ──────────────────────
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      if (selectedCategory) {
-        try {
-          const res = await apiClient.get(`/api/user/getProgramsByCategory/${selectedCategory}`);
-          if (res.data && Array.isArray(res.data)) setPrograms(res.data);
-        } catch (err) {
-          console.error("Failed to fetch programs:", err);
-        }
-      } else {
-        setPrograms([]);
-        setSelectedProgram("");
-      }
-    };
-    fetchPrograms();
+    if (!selectedCategory) {
+      setSelectedProgram("");
+    }
   }, [selectedCategory]);
 
   // Close dropdown on outside click
@@ -171,14 +127,7 @@ export default function MyClassesListComp() {
               onChange={(val) => setSelectedYear(val)}
               options={[
                 { label: "All Years", value: "" },
-                ...(() => {
-                  const currentYear = new Date().getFullYear();
-                  const years: { label: string; value: string }[] = [];
-                  for (let y = currentYear + 1; y >= currentYear - 3; y--) {
-                    years.push({ label: `${y}`, value: `${y}` });
-                  }
-                  return years;
-                })()
+                ...availableYears.map((y) => ({ label: y, value: y }))
               ]}
               placeholder="All Years"
               triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 dark:border-slate-800 dark:text-white transition-all cursor-pointer"

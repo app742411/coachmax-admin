@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
-import { getAllTerms, createTerm, updateTerm, deleteTerm } from "../../api/adminApi";
+import { useTerms, useCreateTerm, useUpdateTerm, useDeleteTerm } from "../../hooks/useTerms";
 import { toast } from "react-hot-toast";
 import { Calendar } from "../../icons/lucide-icons";
 import { Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
@@ -12,7 +11,6 @@ import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import TermCalendar from "./TermCalendar";
 
 const TermManagement: React.FC = () => {
-    const queryClient = useQueryClient();
     const [showCalendar, setShowCalendar] = useState(true);
     const [showList, setShowList] = useState(false);
     const [eventFilter, setEventFilter] = useState<"all" | "false" | "true">("all");
@@ -75,47 +73,16 @@ const TermManagement: React.FC = () => {
 
     // ── Queries ─────────────────────────────────────────────────────
 
-    const { data: termsData, isLoading: loading } = useQuery({
-        queryKey: ["terms", selectedYear, eventFilter],
-        queryFn: () => getAllTerms(selectedYear, eventFilter),
+    const { terms, isLoading: loading } = useTerms({
+        year: selectedYear,
+        isEvent: eventFilter,
     });
-    const terms = Array.isArray(termsData) ? termsData : (termsData?.data || []);
 
     // ── Mutations ───────────────────────────────────────────────────
 
-    const createMutation = useMutation({
-        mutationFn: createTerm,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["terms"] });
-            toast.success("Term created successfully");
-            setIsModalOpen(false);
-        },
-        onError: () => toast.error("Failed to create term"),
-    });
-
-    const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: any }) => updateTerm(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["terms"] });
-            toast.success("Term updated successfully");
-            setIsModalOpen(false);
-        },
-        onError: () => toast.error("Failed to update term"),
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: deleteTerm,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["terms"] });
-            toast.success("Term deleted");
-            setDeleteModalId(null);
-        },
-        onError: (error: any) => {
-            const message = error?.response?.data?.message || "Failed to delete term";
-            toast.error(message, { duration: 5000 });
-            setDeleteModalId(null);
-        }
-    });
+    const createMutation = useCreateTerm();
+    const updateMutation = useUpdateTerm();
+    const deleteMutation = useDeleteTerm();
 
     // ── Event Handlers ─────────────────────────────────────────────
 
@@ -193,7 +160,17 @@ const TermManagement: React.FC = () => {
 
     const confirmDelete = () => {
         if (deleteModalId) {
-            deleteMutation.mutate(deleteModalId);
+            deleteMutation.mutate(deleteModalId, {
+                onSuccess: () => {
+                    toast.success("Term deleted");
+                    setDeleteModalId(null);
+                },
+                onError: (error: any) => {
+                    const message = error?.response?.data?.message || "Failed to delete term";
+                    toast.error(message, { duration: 5000 });
+                    setDeleteModalId(null);
+                }
+            });
         }
     };
 
@@ -217,9 +194,24 @@ const TermManagement: React.FC = () => {
         };
 
         if (isEditing && selectedId) {
-            updateMutation.mutate({ id: selectedId, data: payload });
+            updateMutation.mutate(
+                { id: selectedId, data: payload },
+                {
+                    onSuccess: () => {
+                        toast.success("Term updated successfully");
+                        setIsModalOpen(false);
+                    },
+                    onError: () => toast.error("Failed to update term"),
+                }
+            );
         } else {
-            createMutation.mutate(payload);
+            createMutation.mutate(payload, {
+                onSuccess: () => {
+                    toast.success("Term created successfully");
+                    setIsModalOpen(false);
+                },
+                onError: () => toast.error("Failed to create term"),
+            });
         }
     };
 
@@ -286,7 +278,7 @@ const TermManagement: React.FC = () => {
                     {loading ? (
                         <div className="text-center text-xs text-gray-400 py-8">Loading calendar...</div>
                     ) : (
-                        <TermCalendar terms={terms} selectedYear={selectedYear} />
+                        <TermCalendar terms={terms as any} selectedYear={selectedYear} />
                     )}
                 </div>
             )}

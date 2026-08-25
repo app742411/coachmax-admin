@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import apiClient from "../../api/apiClient";
+import { useCategories } from "../../hooks/useCategories";
+import { useProgramsByCategory } from "../../hooks/usePrograms";
 
 interface SidebarPlayersFilterProps {
   category: string;
@@ -18,29 +18,8 @@ export default function SidebarPlayersFilter({
   onProgramChange,
   onSearchChange,
 }: SidebarPlayersFilterProps) {
-  const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
-  const [programs, setPrograms] = useState<{ _id: string; name: string }[]>([]);
-
-  useEffect(() => {
-    const fetchFilters = async () => {
-      try {
-        // Fetch Categories
-        const catRes = await apiClient.get("/api/user/getCategories", { params: { isEvent: "all" } });
-        if (catRes.data && Array.isArray(catRes.data)) {
-          setCategories(catRes.data);
-        }
-
-        // Fetch Programs (independent of category selection)
-        const progRes = await apiClient.get("/api/user/getProgramsByCategory/69e0716f5c46873ed2327d0b");
-        if (progRes.data && Array.isArray(progRes.data)) {
-          setPrograms(progRes.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch filters:", error);
-      }
-    };
-    fetchFilters();
-  }, []);
+  const { categories } = useCategories({ isEvent: "all" });
+  const { programs } = useProgramsByCategory("69e0716f5c46873ed2327d0b");
 
   return (
     <div className="bg-white border border-slate-200 dark:border-slate-700 dark:bg-slate-900 p-4 rounded-none shadow-sm mb-5 flex flex-col gap-3">

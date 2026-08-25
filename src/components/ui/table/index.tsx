@@ -35,9 +35,9 @@ interface TableCellProps {
 // Table Component
 const Table: React.FC<TableProps> = ({ children, className = "" }) => {
   return (
-    <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
-      <div className="overflow-visible no-scrollbar">
-        <table className={`w-full text-left border-collapse text-xs ${className}`}>{children}</table>
+    <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+      <div className="max-w-full overflow-x-auto custom-scrollbar">
+        <table className={`w-full text-left border-collapse text-xs min-w-[650px] ${className}`}>{children}</table>
       </div>
     </div>
   );

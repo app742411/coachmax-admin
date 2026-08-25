@@ -1,16 +1,18 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
-import { getAllCategories, createCategory, updateCategory, deleteCategory } from "../../api/adminApi";
+import {
+  useCategories,
+  useCreateCategory,
+  useUpdateCategory,
+  useDeleteCategory,
+} from "../../hooks/useCategories";
 import { toast } from "react-hot-toast";
 import { Edit, Trash, Tag } from "../../icons/lucide-icons";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const CategoryManagement: React.FC = () => {
-  const queryClient = useQueryClient();
-
   // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -19,44 +21,12 @@ const CategoryManagement: React.FC = () => {
   const [formData, setFormData] = useState({ name: "", isEvent: false });
 
   // ── Queries ─────────────────────────────────────────────────────
-
-  const { data: categoriesData, isLoading: loading } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getAllCategories,
-  });
-  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || categoriesData?.categories || []);
+  const { categories, isLoading: loading } = useCategories();
 
   // ── Mutations ───────────────────────────────────────────────────
-
-  const createMutation = useMutation({
-    mutationFn: createCategory,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Category created");
-      setIsModalOpen(false);
-    },
-    onError: () => toast.error("Failed to create category"),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateCategory(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Category updated");
-      setIsModalOpen(false);
-    },
-    onError: () => toast.error("Failed to update category"),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteCategory,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Category deleted");
-      setDeleteModalId(null);
-    },
-    onError: () => toast.error("Failed to delete category"),
-  });
+  const createMutation = useCreateCategory();
+  const updateMutation = useUpdateCategory();
+  const deleteMutation = useDeleteCategory();
 
   // ── Event Handlers ─────────────────────────────────────────────
 
@@ -80,7 +50,13 @@ const CategoryManagement: React.FC = () => {
 
   const confirmDelete = () => {
     if (deleteModalId) {
-      deleteMutation.mutate(deleteModalId);
+      deleteMutation.mutate(deleteModalId, {
+        onSuccess: () => {
+          toast.success("Category deleted");
+          setDeleteModalId(null);
+        },
+        onError: () => toast.error("Failed to delete category"),
+      });
     }
   };
 
@@ -96,9 +72,24 @@ const CategoryManagement: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing && selectedId) {
-      updateMutation.mutate({ id: selectedId, data: formData });
+      updateMutation.mutate(
+        { id: selectedId, data: formData },
+        {
+          onSuccess: () => {
+            toast.success("Category updated");
+            setIsModalOpen(false);
+          },
+          onError: () => toast.error("Failed to update category"),
+        }
+      );
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(formData, {
+        onSuccess: () => {
+          toast.success("Category created");
+          setIsModalOpen(false);
+        },
+        onError: () => toast.error("Failed to create category"),
+      });
     }
   };
 

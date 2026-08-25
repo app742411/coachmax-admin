@@ -268,9 +268,9 @@ export default function AuditLogsPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full text-left border-collapse text-xs">
+        <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+          <div className="max-w-full overflow-x-auto custom-scrollbar">
+            <table className="min-w-[1100px] w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                   <th className="py-3 px-4 w-[50px]">#</th>
