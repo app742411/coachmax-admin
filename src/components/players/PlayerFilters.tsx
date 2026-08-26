@@ -25,7 +25,7 @@ export default function PlayerFilters({
   statusFilter,
   setStatusFilter,
   medicalFilter = "All",
-  setMedicalFilter = () => {},
+  setMedicalFilter = () => { },
 }: PlayerFiltersProps) {
   const exportCSVMutation = useExportUsersCSV();
 

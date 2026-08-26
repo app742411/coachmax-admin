@@ -32,9 +32,10 @@ interface ClassTableProps {
   onEditClass?: (cls: ClassItem) => void;
   onViewPlayers?: (cls: ClassItem) => void;
   onDeleteClass?: (cls: ClassItem) => void;
+  onBroadcastClass?: (cls: ClassItem) => void;
 }
 
-export default function ClassTable({ classes, isLoading, onEditClass, onViewPlayers, onDeleteClass }: ClassTableProps) {
+export default function ClassTable({ classes, isLoading, onEditClass, onViewPlayers, onDeleteClass, onBroadcastClass }: ClassTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -227,6 +228,16 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                           }}
                         >
                           View Players
+                        </button>
+                        <button
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors border-t border-slate-100 dark:border-slate-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onBroadcastClass) onBroadcastClass(cls);
+                            setOpenDropdownId(null);
+                          }}
+                        >
+                          Send Broadcast
                         </button>
                         <button
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors border-t border-slate-100 dark:border-slate-700"

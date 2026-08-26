@@ -15,26 +15,35 @@ import {
   GraduationCap,
   CalendarDays,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useCategories } from "../../hooks/useCategories";
 import { useTerms } from "../../hooks/useTerms";
 import { useProgramsByCategory } from "../../hooks/usePrograms";
-
 import apiClient from "../../api/apiClient";
 
-interface BroadcastComposerProps {
-  onSuccess: () => void;
+export interface BroadcastComposerProps {
+  onSuccess?: () => void;
+  onClose?: () => void;
+  isModal?: boolean;
+  initialTargetMode?: "SPECIFIC" | "FILTER";
+  prefilledClassId?: string;
+  prefilledCategoryId?: string;
+  prefilledProgramId?: string;
+  prefilledTermId?: string;
+  prefilledYear?: string;
+  prefilledDayOfWeek?: string;
 }
 
 const DAYS_OF_WEEK = [
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-  "SUNDAY",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
 ];
 
 const QUICK_TEMPLATES = [
@@ -64,44 +73,72 @@ const extractArray = (res: any): any[] => {
   return [];
 };
 
-export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess }) => {
+const getEntityId = (entity: any): string => {
+  if (!entity) return "";
+  if (typeof entity === "string") return entity;
+  return entity._id || entity.id || entity.classId || entity.categoryId || entity.programId || entity.termId || "";
+};
+
+export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({
+  onSuccess,
+  onClose,
+  isModal = false,
+  initialTargetMode,
+  prefilledClassId = "",
+  prefilledCategoryId = "",
+  prefilledProgramId = "",
+  prefilledTermId = "",
+  prefilledYear = "",
+  prefilledDayOfWeek = "",
+}) => {
   const dispatch = useAppDispatch();
   const activeClassId = useAppSelector((state) => state.broadcast.activeClassId);
   const publishing = useAppSelector((state) => state.broadcast.publishing);
 
-  // Target Mode: 'SPECIFIC' or 'FILTER'
-  const [targetMode, setTargetMode] = useState<"SPECIFIC" | "FILTER">("SPECIFIC");
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  // Target Mode: 'SPECIFIC' or 'FILTER' (Default to 'FILTER' unless specific class is prefilled)
+  const [targetMode, setTargetMode] = useState<"SPECIFIC" | "FILTER">(
+    initialTargetMode || (prefilledClassId ? "SPECIFIC" : "FILTER")
+  );
+  const [selectedClassId, setSelectedClassId] = useState<string>(prefilledClassId);
 
   // Filters (for filtering classes in specific mode OR broadcasting in bulk)
-  const [selectedTerm, setSelectedTerm] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedProgram, setSelectedProgram] = useState<string>("");
-  const [selectedDay, setSelectedDay] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>(prefilledYear);
+  const [selectedTerm, setSelectedTerm] = useState<string>(prefilledTermId);
+  const [selectedCategory, setSelectedCategory] = useState<string>(prefilledCategoryId);
+  const [selectedProgram, setSelectedProgram] = useState<string>(prefilledProgramId);
+  const [selectedDay, setSelectedDay] = useState<string>(prefilledDayOfWeek);
 
   // Text message
   const [text, setText] = useState<string>("");
 
-  // Options data
+  // Raw classes list from backend
   const [classesList, setClassesList] = useState<any[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState<boolean>(true);
 
+  // Dynamic dropdown hooks
   const { categories: categoriesList } = useCategories({ isEvent: "all" });
-  const { terms: termsList } = useTerms({ isEvent: "all" });
+  const { terms: allTermsList } = useTerms({ isEvent: "all" });
   const { programs: programsList } = useProgramsByCategory(selectedCategory);
+
+  // Filtered terms by year if year is selected
+  const availableTerms = useMemo(() => {
+    if (!selectedYear) return allTermsList;
+    return allTermsList.filter((t) => t.year?.toString() === selectedYear.toString());
+  }, [allTermsList, selectedYear]);
 
   // Load initial dropdown classes data
   useEffect(() => {
     const fetchClassesData = async () => {
+      setIsLoadingClasses(true);
       const userStr = localStorage.getItem("user");
       let isCoach = false;
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
           isCoach = user?.role === "COACH";
-        } catch { }
+        } catch {}
       }
 
-      // Classes
       try {
         let classesData: any[] = [];
         if (isCoach) {
@@ -114,7 +151,7 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
           }
         } else {
           try {
-            const res = await apiClient.get("/api/admin/getAllClasses", { params: { limit: 200 } });
+            const res = await apiClient.get("/api/admin/getAllClasses", { params: { limit: 500 } });
             classesData = extractArray(res.data);
           } catch {
             const res = await apiClient.get("/api/coach/getClasses");
@@ -122,16 +159,32 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
           }
         }
         setClassesList(classesData);
-        if (classesData.length > 0 && !selectedClassId) {
-          setSelectedClassId(classesData[0]._id || classesData[0].classId || classesData[0].id || "");
-        }
       } catch (err) {
-        console.error("Failed to load classes:", err);
+        console.error("Failed to load classes for broadcast:", err);
+      } finally {
+        setIsLoadingClasses(false);
       }
     };
 
     fetchClassesData();
   }, []);
+
+  // Update when prefilled values change
+  useEffect(() => {
+    if (prefilledClassId) setSelectedClassId(prefilledClassId);
+    if (prefilledCategoryId) setSelectedCategory(prefilledCategoryId);
+    if (prefilledProgramId) setSelectedProgram(prefilledProgramId);
+    if (prefilledTermId) setSelectedTerm(prefilledTermId);
+    if (prefilledYear) setSelectedYear(prefilledYear);
+    if (prefilledDayOfWeek) setSelectedDay(prefilledDayOfWeek);
+  }, [
+    prefilledClassId,
+    prefilledCategoryId,
+    prefilledProgramId,
+    prefilledTermId,
+    prefilledYear,
+    prefilledDayOfWeek,
+  ]);
 
   // Reset selected program if category is cleared
   useEffect(() => {
@@ -140,45 +193,57 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
     }
   }, [selectedCategory]);
 
-  // Sync with activeClassId from redux if available
+  // Sync with activeClassId from redux if available and no prefilledClassId
   useEffect(() => {
-    if (activeClassId && !selectedClassId) {
+    if (activeClassId && !selectedClassId && !prefilledClassId) {
       setSelectedClassId(activeClassId);
     }
-  }, [activeClassId]);
+  }, [activeClassId, selectedClassId, prefilledClassId]);
 
-  // Reactive class filtering based on Term, Category, Program, and Day
+  // Reactive class filtering based on Year, Term, Category, Program, and Day
   const filteredClassesList = useMemo(() => {
     return classesList.filter((c: any) => {
-      // 1. Term filter
-      if (selectedTerm) {
-        const cTermId = c.term?._id || c.term || c.termId;
+      // 1. Year filter
+      if (selectedYear && selectedYear !== "all") {
+        const cYear = (c.term?.year || c.year)?.toString();
+        if (cYear && cYear !== selectedYear.toString()) return false;
+      }
+
+      // 2. Term filter
+      if (selectedTerm && selectedTerm !== "all") {
+        const cTermId = getEntityId(c.term) || c.termId;
         if (cTermId && cTermId !== selectedTerm) return false;
+        if (!cTermId && selectedTerm) return false;
       }
 
-      // 2. Category filter
-      if (selectedCategory) {
-        const cCatId = c.category?._id || c.category || c.categoryId;
+      // 3. Category filter
+      if (selectedCategory && selectedCategory !== "all") {
+        const cCatId = getEntityId(c.category) || c.categoryId;
         if (cCatId && cCatId !== selectedCategory) return false;
+        if (!cCatId && selectedCategory) return false;
       }
 
-      // 3. Program filter
-      if (selectedProgram) {
-        const cProgId = c.program?._id || c.program || c.programId;
+      // 4. Program filter
+      if (selectedProgram && selectedProgram !== "all") {
+        const cProgId = getEntityId(c.program) || c.programId;
         if (cProgId && cProgId !== selectedProgram) return false;
+        if (!cProgId && selectedProgram) return false;
       }
 
-      // 4. Day filter
-      if (selectedDay) {
-        const hasDay =
-          c.dayOfWeek === selectedDay ||
-          (Array.isArray(c.schedule) && c.schedule.some((s: any) => s.dayOfWeek === selectedDay));
-        if (!hasDay) return false;
+      // 5. Day filter (Case-insensitive comparison for "Monday", "MONDAY", etc.)
+      if (selectedDay && selectedDay !== "all") {
+        const targetDay = selectedDay.trim().toUpperCase();
+        const cDay = (c.dayOfWeek || "").trim().toUpperCase();
+        const matchesDay =
+          cDay === targetDay ||
+          (Array.isArray(c.schedule) &&
+            c.schedule.some((s: any) => (s.dayOfWeek || "").trim().toUpperCase() === targetDay));
+        if (!matchesDay) return false;
       }
 
       return true;
     });
-  }, [classesList, selectedTerm, selectedCategory, selectedProgram, selectedDay]);
+  }, [classesList, selectedYear, selectedTerm, selectedCategory, selectedProgram, selectedDay]);
 
   // Sync selectedClassId whenever filtered list changes
   useEffect(() => {
@@ -196,11 +261,14 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
         setSelectedClassId("");
       }
     }
-  }, [filteredClassesList, targetMode]);
+  }, [filteredClassesList, targetMode, selectedClassId]);
 
-  const hasActiveFilters = Boolean(selectedTerm || selectedCategory || selectedProgram || selectedDay);
+  const hasActiveFilters = Boolean(
+    selectedYear || selectedTerm || selectedCategory || selectedProgram || selectedDay
+  );
 
   const handleResetFilters = () => {
+    setSelectedYear("");
     setSelectedTerm("");
     setSelectedCategory("");
     setSelectedProgram("");
@@ -236,12 +304,11 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
         const payload: any = {
           text: cleanText,
         };
+        if (selectedYear) payload.year = selectedYear;
         if (selectedTerm) payload.term = selectedTerm;
         if (selectedCategory) payload.category = selectedCategory;
         if (selectedProgram) payload.program = selectedProgram;
-        if (selectedDay) {
-          payload.day = selectedDay;
-        }
+        if (selectedDay) payload.day = selectedDay;
 
         res = await broadcastApi.sendClassBroadcast(payload, "filter");
       }
@@ -249,7 +316,7 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
       if (res?.success) {
         toast.success(res.message || "Broadcast announcement published successfully!");
         setText("");
-        onSuccess();
+        if (onSuccess) onSuccess();
       } else {
         toast.error(res?.message || "Failed to publish broadcast.");
       }
@@ -265,12 +332,20 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
   const getAudienceDescription = () => {
     if (targetMode === "SPECIFIC") {
       const cls = classesList.find((c) => (c._id || c.classId || c.id) === selectedClassId);
-      return cls ? `Specific Class: ${cls.name || cls.className || "Selected Class"}` : "Specific Class";
+      if (cls) {
+        const progName = cls.program?.name || cls.category?.name || "";
+        const sched = cls.dayOfWeek ? ` (${cls.dayOfWeek} ${cls.startTime || ""})` : "";
+        return `Specific Class: ${cls.name || "Selected Class"} ${progName ? `• ${progName}` : ""} ${sched}`;
+      }
+      return "Specific Class";
     }
 
     const filters: string[] = [];
+    if (selectedYear) {
+      filters.push(`Year: ${selectedYear}`);
+    }
     if (selectedTerm) {
-      const t = termsList.find((term) => term._id === selectedTerm);
+      const t = allTermsList.find((term) => term._id === selectedTerm);
       if (t) filters.push(`Term: ${t.name}`);
     }
     if (selectedCategory) {
@@ -278,7 +353,7 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
       if (c) filters.push(`Category: ${c.name}`);
     }
     if (selectedProgram) {
-      const p = programsList.find((prog) => prog._id === selectedProgram);
+      const p = programsList.find((prog) => (prog._id || prog.id) === selectedProgram);
       if (p) filters.push(`Program: ${p.name}`);
     }
     if (selectedDay) {
@@ -292,7 +367,7 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none p-5 sm:p-6 shadow-theme-xs flex flex-col gap-5">
       {/* Top Header & Mode Switcher */}
-      <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
         <div>
           <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Megaphone size={16} className="text-[#0047FF]" />
@@ -303,30 +378,46 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
           </p>
         </div>
 
-        {/* Target Mode Segmented Toggle */}
-        <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-none border border-slate-200 dark:border-slate-700">
-          <button
-            type="button"
-            onClick={() => setTargetMode("SPECIFIC")}
-            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${targetMode === "SPECIFIC"
-                ? "bg-[#0047FF] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+        <div className="flex items-center gap-3">
+          {/* Target Mode Segmented Toggle */}
+          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-none border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setTargetMode("SPECIFIC")}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                targetMode === "SPECIFIC"
+                  ? "bg-[#0047FF] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
-          >
-            <School size={13} />
-            <span>Specific Class</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTargetMode("FILTER")}
-            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${targetMode === "FILTER"
-                ? "bg-[#0047FF] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+            >
+              <School size={13} />
+              <span>Specific Class</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTargetMode("FILTER")}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                targetMode === "FILTER"
+                  ? "bg-[#0047FF] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
-          >
-            <SlidersHorizontal size={13} />
-            <span>Filter Classes</span>
-          </button>
+            >
+              <SlidersHorizontal size={13} />
+              <span>Filter Classes</span>
+            </button>
+          </div>
+
+          {/* Optional Close button when used inside Modal */}
+          {isModal && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+              title="Close modal"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -352,7 +443,7 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-950/60 p-3.5 border border-slate-200 dark:border-slate-800">
-          {/* Term Filter */}
+          {/* Term / Year Filter */}
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Calendar size={11} className="text-[#0047FF]" />
@@ -364,7 +455,7 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none px-2.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#0047FF] cursor-pointer"
             >
               <option value="">All Terms</option>
-              {termsList.map((term) => (
+              {availableTerms.map((term) => (
                 <option key={term._id} value={term._id}>
                   {term.name} {term.year ? `(${term.year})` : ""}
                 </option>
@@ -405,8 +496,9 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
               value={selectedProgram}
               disabled={!selectedCategory}
               onChange={(e) => setSelectedProgram(e.target.value)}
-              className={`w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none px-2.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#0047FF] ${!selectedCategory ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                }`}
+              className={`w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none px-2.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#0047FF] ${
+                !selectedCategory ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+              }`}
             >
               <option value="">
                 {!selectedCategory ? "Select Category First" : "All Programs in Category"}
@@ -440,36 +532,72 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({ onSuccess 
           </div>
         </div>
 
+        {/* In Filter Classes Mode: Audience scope summary banner */}
+        {targetMode === "FILTER" && (
+          <div className="flex items-center justify-between flex-wrap gap-2 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 p-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#0047FF] dark:text-blue-300">
+              <SlidersHorizontal size={14} className="shrink-0 text-[#0047FF]" />
+              <span>
+                {filteredClassesList.length === 0
+                  ? "No active classes match the selected filter combination."
+                  : `Broadcasting to all ${filteredClassesList.length} matching classes.`}
+              </span>
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 bg-[#0047FF] text-white">
+              {filteredClassesList.length} {filteredClassesList.length === 1 ? "Class" : "Classes"} Target
+            </span>
+          </div>
+        )}
+
         {/* In Specific Class Mode: Class Selection Dropdown */}
         {targetMode === "SPECIFIC" && (
           <div className="flex flex-col gap-1.5 pt-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <School size={13} className="text-[#0047FF]" />
-                <span>Select Target Class <span className="text-rose-500">*</span></span>
+                <span>
+                  Select Target Class <span className="text-rose-500">*</span>
+                </span>
               </label>
               <span className="text-[11px] font-semibold text-slate-400">
-                {filteredClassesList.length} {filteredClassesList.length === 1 ? "class" : "classes"} available
+                {isLoadingClasses
+                  ? "Loading classes..."
+                  : `${filteredClassesList.length} ${
+                      filteredClassesList.length === 1 ? "class" : "classes"
+                    } available`}
               </span>
             </div>
 
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
+              disabled={isLoadingClasses}
               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-none px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] cursor-pointer"
             >
-              {filteredClassesList.length === 0 ? (
-                <option value="" disabled>-- No classes found matching selected filters --</option>
+              {isLoadingClasses ? (
+                <option value="" disabled>
+                  Loading classes...
+                </option>
+              ) : filteredClassesList.length === 0 ? (
+                <option value="" disabled>
+                  -- No classes found matching selected filters --
+                </option>
               ) : (
                 <>
-                  <option value="" disabled>-- Choose a Class ({filteredClassesList.length} available) --</option>
+                  <option value="" disabled>
+                    -- Choose a Class ({filteredClassesList.length} available) --
+                  </option>
                   {filteredClassesList.map((c) => {
                     const id = c._id || c.classId || c.id;
                     const name = c.name || c.className || "Class";
-                    const schedule = c.dayOfWeek ? ` (${c.dayOfWeek} ${c.startTime || ""})` : "";
+                    const progName = c.program?.name || c.category?.name || "";
+                    const termName = c.term?.name ? ` [${c.term.name}]` : "";
+                    const schedule = c.dayOfWeek
+                      ? ` (${c.dayOfWeek} ${c.startTime || ""})`
+                      : "";
                     return (
                       <option key={id} value={id}>
-                        {name} {schedule}
+                        {name} {progName ? `• ${progName}` : ""} {schedule} {termName}
                       </option>
                     );
                   })}

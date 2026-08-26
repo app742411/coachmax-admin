@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import apiClient from "../../api/apiClient";
 import { useCategories } from "../../hooks/useCategories";
 import { useCurrentTerm } from "../../hooks/useCurrentTerm";
@@ -11,6 +12,8 @@ import AddClassModal from "../../components/classes/AddClassModal";
 import Select from "../../components/form/Select";
 import Pagination from "../../components/common/Pagination";
 import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
+import ClassBroadcastModal from "../../components/classes/ClassBroadcastModal";
+import { Megaphone } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface ClassItem {
@@ -59,6 +62,8 @@ export default function ClassesList() {
   const { programs } = useProgramsByCategory(selectedCategory);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [broadcastClassId, setBroadcastClassId] = useState<string | null>(null);
   const [classToEdit, setClassToEdit] = useState<ClassItem | null>(null);
   const [viewPlayersClassId, setViewPlayersClassId] = useState<string | null>(null);
   const [deleteClassId, setDeleteClassId] = useState<string | null>(null);
@@ -135,54 +140,55 @@ export default function ClassesList() {
     <>
       <PageMeta title="Classes Management | CoachMax" description="Manage your classes" />
 
-      <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Classes Management</h1>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mt-1">
-            <span>Home</span>
-            <span>&gt;</span>
-            <span className="text-[#0047FF]">Classes Management</span>
-          </div>
+      <PageBreadcrumb
+        pageTitle="Classes Management"
+        items={[{ name: "Operations" }]}
+      >
+        {/* Year Selector */}
+        <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[130px]">
+          <Select
+            value={selectedYear}
+            onChange={(val) => setSelectedYear(val)}
+            options={[
+              { label: "All Years", value: "" },
+              ...availableYears.map((y) => ({ label: y, value: y }))
+            ]}
+            placeholder="All Years"
+            className="w-full select-none"
+            triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-slate-800 dark:text-white transition-all cursor-pointer group"
+          />
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          {/* Year Selector */}
-          <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[130px]">
-            <Select
-              value={selectedYear}
-              onChange={(val) => setSelectedYear(val)}
-              options={[
-                { label: "All Years", value: "" },
-                ...availableYears.map((y) => ({ label: y, value: y }))
-              ]}
-              placeholder="All Years"
-              className="w-full select-none"
-              triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-slate-800 dark:text-white transition-all cursor-pointer group"
-            />
-          </div>
 
-          {/* Term Selector */}
-          <div className="w-full sm:w-48 flex-1 sm:flex-initial min-w-[150px]">
-            <Select
-              value={selectedTerm}
-              onChange={(val) => setSelectedTerm(val)}
-              options={[
-                { label: "All Terms", value: "" },
-                ...terms.map((t) => ({ label: `${t.name} (${t.year})`, value: t._id }))
-              ]}
-              placeholder="All Terms"
-              className="w-full select-none"
-              triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-slate-800 dark:text-white transition-all cursor-pointer group"
-            />
-          </div>
-
-          <button
-            onClick={() => { setClassToEdit(null); setIsModalOpen(true); }}
-            className="inline-flex items-center justify-center rounded-none bg-[#0047FF] px-5 py-2.5 h-[42px] text-center text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700 transition-colors shadow-theme-xs w-full sm:w-auto shrink-0"
-          >
-            + Add Class
-          </button>
+        {/* Term Selector */}
+        <div className="w-full sm:w-48 flex-1 sm:flex-initial min-w-[150px]">
+          <Select
+            value={selectedTerm}
+            onChange={(val) => setSelectedTerm(val)}
+            options={[
+              { label: "All Terms", value: "" },
+              ...terms.map((t) => ({ label: `${t.name} (${t.year})`, value: t._id }))
+            ]}
+            placeholder="All Terms"
+            className="w-full select-none"
+            triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-slate-800 dark:text-white transition-all cursor-pointer group"
+          />
         </div>
-      </div>
+
+        <button
+          onClick={() => setIsBroadcastModalOpen(true)}
+          className="inline-flex items-center justify-center gap-1.5 rounded-none bg-[#031549] hover:bg-[#020e33] text-white px-5 py-2.5 h-[42px] text-center text-xs font-black uppercase tracking-wider transition-colors shadow-theme-xs w-full sm:w-auto shrink-0 cursor-pointer border border-[#031549]"
+        >
+          <Megaphone size={14} className="text-[#0047FF]" />
+          <span>Broadcast</span>
+        </button>
+
+        <button
+          onClick={() => { setClassToEdit(null); setIsModalOpen(true); }}
+          className="inline-flex items-center justify-center rounded-none bg-[#0047FF] px-5 py-2.5 h-[42px] text-center text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700 transition-colors shadow-theme-xs w-full sm:w-auto shrink-0 cursor-pointer"
+        >
+          + Add Class
+        </button>
+      </PageBreadcrumb>
 
       {/* Category Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6 overflow-x-auto custom-scrollbar gap-2">
@@ -274,6 +280,10 @@ export default function ClassesList() {
             }}
             onViewPlayers={(cls) => setViewPlayersClassId(cls._id)}
             onDeleteClass={(cls) => setDeleteClassId(cls._id)}
+            onBroadcastClass={(cls) => {
+              setBroadcastClassId(cls._id);
+              setIsBroadcastModalOpen(true);
+            }}
           />
           {!isLoading && totalPages > 1 && (
             <Pagination
@@ -320,6 +330,20 @@ export default function ClassesList() {
         loading={isDeleting}
         title="Delete Class"
         message="Are you sure you want to delete this class? This action cannot be undone."
+      />
+
+      <ClassBroadcastModal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => {
+          setIsBroadcastModalOpen(false);
+          setBroadcastClassId(null);
+        }}
+        prefilledClassId={broadcastClassId || undefined}
+        prefilledCategoryId={selectedCategory}
+        prefilledProgramId={selectedProgram}
+        prefilledTermId={selectedTerm}
+        prefilledYear={selectedYear}
+        prefilledDayOfWeek={selectedDay}
       />
     </>
   );
