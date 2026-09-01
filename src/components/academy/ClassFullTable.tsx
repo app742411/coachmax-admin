@@ -251,10 +251,18 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
   const handleUpdateStatus = async (userId: string, paymentStatus: string) => {
     try {
-      await apiClient.put(`/api/admin/updatePaymentStatus/${userId}`, { paymentStatus });
+      const payload: any = { paymentStatus };
+      if (classId) {
+        payload.classId = classId;
+      }
+      await apiClient.put(`/api/admin/updatePaymentStatus/${userId}`, payload);
+      toast.success("Status updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ["academySchedule"] });
+      queryClient.invalidateQueries({ queryKey: ["myClassesList"] });
+    } catch (error: any) {
       console.error("Failed to update status", error);
+      toast.error(error?.response?.data?.message || "Failed to update status");
     }
   };
 
@@ -472,10 +480,11 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
           <table className="w-full text-left border-separate border-spacing-0 text-[11px]">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
-                <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">Status</th>
-                <th className="sticky left-[40px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-100 dark:border-slate-800">Player</th>
-                <th className="sticky left-[200px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800">DOB</th>
-                <th className="sticky left-[280px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Med Cond</th>
+                <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1.5 text-center min-w-[35px] w-[35px] max-w-[35px] border-b border-slate-100 dark:border-slate-800">#</th>
+                <th className="sticky left-[35px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">Status</th>
+                <th className="sticky left-[75px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-100 dark:border-slate-800">Player</th>
+                <th className="sticky left-[235px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800">DOB</th>
+                <th className="sticky left-[315px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Med Cond</th>
                 {sessions.map((sessionDate: string, idx: number) => {
                   const formatted = formatDateLabel(sessionDate);
                   return (
@@ -502,9 +511,12 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
               </tr>
             </thead>
             <tbody>
-              {players.length > 0 ? players.map((row: any) => (
+              {players.length > 0 ? players.map((row: any, idx: number) => (
                 <tr key={row.playerId} className={`group border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10 ${openMenuId === row.playerId ? 'relative z-30' : ''}`}>
-                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1.5 text-center font-bold text-slate-400 text-xs min-w-[35px] w-[35px] max-w-[35px] border-b border-slate-50 dark:border-slate-800/40">
+                    {idx + 1}
+                  </td>
+                  <td className="sticky left-[35px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40">
                     {(() => {
                       const s = (row.paymentStatus || "UNPAID").toUpperCase();
                       if (s === "PAID" || s === "APPROVED" || s === "ACTIVE") {
@@ -518,7 +530,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       }
                       if (s === "TRIAL") {
                         return (
-                          <div className="flex justify-center text-amber-500" title="Trial">
+                          <div className="flex justify-center text-rose-600" title="Trial">
                             <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z" clipRule="evenodd" />
                             </svg>
@@ -527,7 +539,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       }
                       if (s === "UNPAID" || s === "REJECTED" || s === "INACTIVE" || s === "BLOCKED") {
                         return (
-                          <div className="flex justify-center text-rose-600" title="Unpaid">
+                          <div className="flex justify-center text-amber-500" title="Unpaid">
                             <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
@@ -535,7 +547,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                         );
                       }
                       return (
-                        <div className="flex justify-center text-blue-500" title={row.paymentStatus || "Other"}>
+                        <div className="flex justify-center text-blue-500" title={row.paymentStatus || "Others"}>
                           <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-3.5-9a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8A.75.75 0 017.25 9zm0 2.5a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75zm0 2.5a.75.75 0 01.75-.75h3.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75z" clipRule="evenodd" />
                           </svg>
@@ -543,7 +555,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       );
                     })()}
                   </td>
-                  <td className="sticky left-[40px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-50 dark:border-slate-800/40">
+                  <td className="sticky left-[75px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-50 dark:border-slate-800/40">
                     <div className="flex items-center gap-2 min-w-0 max-w-full">
                       {row.profileImage ? (
                         <img
@@ -606,8 +618,8 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       </div>
                     </div>
                   </td>
-                  <td className="sticky left-[200px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 font-semibold text-slate-500 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 text-xs">{new Date(row.dob).toLocaleDateString()}</td>
-                  <td className="sticky left-[280px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                  <td className="sticky left-[235px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 font-semibold text-slate-500 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 text-xs">{new Date(row.dob).toLocaleDateString()}</td>
+                  <td className="sticky left-[315px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
                     {row.isMedicalCondition ? (
                       <span className="text-rose-600 font-bold text-xs truncate block max-w-full" title={row.medicalConditionDetails || "Yes"}>
                         Yes
@@ -759,7 +771,8 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                                     setInvoicePlayer({
                                       _id: row.playerId,
                                       name: row.name,
-                                      parentId: row.parent?.id || row.parent?._id || row.parentId
+                                      parentId: row.parent?.id || row.parent?._id || row.parentId || row.parent,
+                                      classId: classId
                                     });
                                   }}
                                   className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-1"

@@ -45,7 +45,9 @@ export default function MyClassesListComp() {
   // Filter state
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
-  const [selectedDay, setSelectedDay] = useState("");
+  const [selectedDay, setSelectedDay] = useState(() => {
+    return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()];
+  });
 
   const {
     terms,

@@ -1,13 +1,23 @@
 import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getTeamById, deleteTeam, updateTeam, getAllCoaches, unassignPlayersFromTeam } from "../../api/adminApi";
+import { 
+  getTeamById, 
+  deleteTeam, 
+  updateTeam, 
+  getAllCoaches, 
+  unassignPlayersFromTeam,
+  getTemporaryPlayersForTeam,
+  deleteTemporaryPlayerFromTeam 
+} from "../../api/adminApi";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "../../components/management/AssignPlayerToTeamModal";
+import AddTemporaryPlayersModal from "../../components/management/AddTemporaryPlayersModal";
+import EditTemporaryPlayerModal from "../../components/management/EditTemporaryPlayerModal";
 import {
   Shield,
   User,
@@ -35,6 +45,9 @@ export default function TeamDetailsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isAddTempModalOpen, setIsAddTempModalOpen] = useState(false);
+  const [editTempPlayer, setEditTempPlayer] = useState<any | null>(null);
+  const [tempPlayerToDelete, setTempPlayerToDelete] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
@@ -46,6 +59,8 @@ export default function TeamDetailsPage() {
     coach: "",
     assistantCoach: "",
     ageGroup: "",
+    fee: "",
+    teamType: "INTERNAL",
     captain: "",
     viceCaptain: "",
   });
@@ -156,6 +171,8 @@ export default function TeamDetailsPage() {
       coach: team.coach?._id || team.coach || "",
       assistantCoach: team.assistantCoach?._id || team.assistantCoach || "",
       ageGroup: team.ageGroup || "",
+      fee: team.fee || "",
+      teamType: team.teamType || (team.isExternal ? "EXTERNAL" : "INTERNAL"),
       captain: team.captain?._id || team.captain || "",
       viceCaptain: team.viceCaptain?._id || team.viceCaptain || "",
     });
@@ -186,6 +203,13 @@ export default function TeamDetailsPage() {
       payload.append("assistantCoach", formData.assistantCoach);
     }
     payload.append("ageGroup", formData.ageGroup);
+    if (formData.fee) {
+      payload.append("fee", formData.fee);
+    }
+    if (formData.teamType) {
+      payload.append("teamType", formData.teamType);
+      payload.append("isExternal", formData.teamType === "EXTERNAL" ? "true" : "false");
+    }
     if (formData.captain) {
       payload.append("captain", formData.captain);
     }
@@ -198,7 +222,37 @@ export default function TeamDetailsPage() {
     updateMutation.mutate({ id: teamId, data: payload });
   };
 
-  const players: any[] = team?.players || [];
+  // Delete Temporary Player Mutation
+  const deleteTempPlayerMutation = useMutation({
+    mutationFn: (tempPlayerId: string) => deleteTemporaryPlayerFromTeam(teamId!, tempPlayerId),
+    onSuccess: (res: any) => {
+      toast.success(res?.message || "Temporary player deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["temporaryPlayers", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      setTempPlayerToDelete(null);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to delete temporary player");
+    },
+  });
+
+  const isExternalTeam = team?.teamType === "EXTERNAL" || team?.isExternal === true;
+
+  // Fetch Temporary Players if external team
+  const { data: tempPlayersData } = useQuery({
+    queryKey: ["temporaryPlayers", teamId],
+    queryFn: () => getTemporaryPlayersForTeam(teamId!),
+    enabled: !!teamId && isExternalTeam,
+  });
+
+  const rawTempArray = Array.isArray(tempPlayersData)
+    ? tempPlayersData
+    : (tempPlayersData?.data || tempPlayersData?.players || tempPlayersData?.temporaryPlayers || []);
+
+  const players: any[] = isExternalTeam
+    ? (rawTempArray.length > 0 ? rawTempArray : (team?.temporaryPlayers || team?.players || []))
+    : (team?.players || []);
 
   const filteredPlayers = players.filter((p: any) => {
     if (!searchQuery.trim()) return true;
@@ -299,11 +353,17 @@ export default function TeamDetailsPage() {
 
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
-              onClick={() => setIsAssignModalOpen(true)}
+              onClick={() => {
+                if (isExternalTeam) {
+                  setIsAddTempModalOpen(true);
+                } else {
+                  setIsAssignModalOpen(true);
+                }
+              }}
               className="px-4 py-2 text-xs font-bold bg-[#0047FF] hover:bg-blue-700 text-white rounded-none transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
-              <span>Assign Players</span>
+              <span>{isExternalTeam ? "+ Add Temporary Players" : "Assign Players"}</span>
             </button>
             <button
               onClick={handleOpenEdit}
@@ -352,9 +412,24 @@ export default function TeamDetailsPage() {
                   <h2 className="text-xl lg:text-2xl font-black text-white leading-tight tracking-tight">
                     {team.teamName}
                   </h2>
+                  {(() => {
+                    const isExt = team.teamType === "EXTERNAL" || team.isExternal === true;
+                    return (
+                      <span className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                        isExt ? "bg-amber-600 text-white" : "bg-blue-600 text-white"
+                      }`}>
+                        {isExt ? "External Team" : "Our Team"}
+                      </span>
+                    );
+                  })()}
                   {team.ageGroup && (
                     <span className="px-2.5 py-0.5 text-xs font-bold uppercase bg-[#0047FF] text-white tracking-wider">
                       {team.ageGroup}
+                    </span>
+                  )}
+                  {team.fee && (
+                    <span className="px-2.5 py-0.5 text-xs font-bold uppercase bg-emerald-600 text-white tracking-wider">
+                      Fee: ${team.fee}
                     </span>
                   )}
                 </div>
@@ -595,11 +670,17 @@ export default function TeamDetailsPage() {
               </div>
 
               <button
-                onClick={() => setIsAssignModalOpen(true)}
+                onClick={() => {
+                  if (isExternalTeam) {
+                    setIsAddTempModalOpen(true);
+                  } else {
+                    setIsAssignModalOpen(true);
+                  }
+                }}
                 className="px-3.5 py-2 text-xs font-bold bg-[#0047FF] hover:bg-blue-700 text-white rounded-none transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>+ Assign Players</span>
+                <span>{isExternalTeam ? "+ Add Temporary Players" : "+ Assign Players"}</span>
               </button>
             </div>
           </div>
@@ -613,15 +694,23 @@ export default function TeamDetailsPage() {
               <div>
                 <h4 className="text-base font-bold text-slate-700 dark:text-slate-200">No Players in Squad</h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  This team doesn't have any players assigned yet. Assign available players from your academy.
+                  {isExternalTeam
+                    ? "This team doesn't have any players assigned yet. Add temporary away players for this external team."
+                    : "This team doesn't have any players assigned yet. Assign available players from your academy."}
                 </p>
               </div>
               <button
-                onClick={() => setIsAssignModalOpen(true)}
+                onClick={() => {
+                  if (isExternalTeam) {
+                    setIsAddTempModalOpen(true);
+                  } else {
+                    setIsAssignModalOpen(true);
+                  }
+                }}
                 className="mt-2 px-5 py-2.5 text-xs font-bold bg-[#0047FF] hover:bg-blue-700 text-white rounded-none transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>Assign Players Now</span>
+                <span>{isExternalTeam ? "+ Add Temporary Players Now" : "Assign Players Now"}</span>
               </button>
             </div>
           ) : filteredPlayers.length === 0 ? (
@@ -792,14 +881,32 @@ export default function TeamDetailsPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setPlayerToRemove(player)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors rounded-none cursor-pointer"
-                            title="Unassign player from team"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            {isExternalTeam && (
+                              <button
+                                type="button"
+                                onClick={() => setEditTempPlayer(player)}
+                                className="p-1.5 text-slate-400 hover:text-[#0047FF] hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors rounded-none cursor-pointer"
+                                title="Edit temporary player"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isExternalTeam) {
+                                  setTempPlayerToDelete(player);
+                                } else {
+                                  setPlayerToRemove(player);
+                                }
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors rounded-none cursor-pointer"
+                              title={isExternalTeam ? "Delete temporary player" : "Unassign player from team"}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -879,14 +986,32 @@ export default function TeamDetailsPage() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setPlayerToRemove(player)}
-                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                        title="Unassign player"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {isExternalTeam && (
+                          <button
+                            type="button"
+                            onClick={() => setEditTempPlayer(player)}
+                            className="text-slate-400 hover:text-[#0047FF] p-1 cursor-pointer"
+                            title="Edit temporary player"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isExternalTeam) {
+                              setTempPlayerToDelete(player);
+                            } else {
+                              setPlayerToRemove(player);
+                            }
+                          }}
+                          className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                          title={isExternalTeam ? "Delete temporary player" : "Unassign player"}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Stats Matrix */}
@@ -975,18 +1100,48 @@ export default function TeamDetailsPage() {
                 required
               />
             </div>
-
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Age Group
+                Team Category
               </label>
-              <input
-                type="text"
-                value={formData.ageGroup}
-                onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-                placeholder="e.g. U10, U12"
-              />
+              <select
+                value={formData.teamType}
+                onChange={(e) => setFormData({ ...formData, teamType: e.target.value })}
+                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none appearance-none cursor-pointer"
+                required
+              >
+                <option value="INTERNAL">Our Team (Academy)</option>
+                <option value="EXTERNAL">External Team (Opponent)</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Age Group
+                </label>
+                <input
+                  type="text"
+                  value={formData.ageGroup}
+                  onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
+                  className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
+                  placeholder="e.g. U10, U12"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Team Fee ($)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={formData.fee}
+                  onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                  className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
+                  placeholder="e.g. 150"
+                />
+              </div>
             </div>
 
             <div>
@@ -1131,6 +1286,41 @@ export default function TeamDetailsPage() {
         }}
         title="Unassign Selected Players"
         message={`Are you sure you want to unassign ${selectedPlayerIds.length} selected player(s) from ${team.teamName}?`}
+      />
+
+      {/* ADD TEMPORARY AWAY PLAYERS MODAL (EXTERNAL TEAM) */}
+      {teamId && (
+        <AddTemporaryPlayersModal
+          isOpen={isAddTempModalOpen}
+          onClose={() => setIsAddTempModalOpen(false)}
+          teamId={teamId}
+          teamName={team.teamName}
+        />
+      )}
+
+      {/* EDIT TEMPORARY AWAY PLAYER MODAL (EXTERNAL TEAM) */}
+      {teamId && (
+        <EditTemporaryPlayerModal
+          isOpen={!!editTempPlayer}
+          onClose={() => setEditTempPlayer(null)}
+          teamId={teamId}
+          player={editTempPlayer}
+        />
+      )}
+
+      {/* CONFIRM DELETE TEMPORARY PLAYER MODAL */}
+      <ConfirmDeleteModal
+        isOpen={!!tempPlayerToDelete}
+        onClose={() => setTempPlayerToDelete(null)}
+        onConfirm={() => {
+          const id = tempPlayerToDelete?._id || tempPlayerToDelete?.id;
+          if (id) deleteTempPlayerMutation.mutate(id);
+        }}
+        loading={deleteTempPlayerMutation.isPending}
+        title="Delete Temporary Player"
+        message={`Are you sure you want to permanently delete ${
+          tempPlayerToDelete?.name || tempPlayerToDelete?.fullName || "this temporary player"
+        } from ${team.teamName}?`}
       />
     </>
   );

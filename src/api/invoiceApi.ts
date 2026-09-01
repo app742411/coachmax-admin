@@ -8,7 +8,9 @@ export interface InvoiceItem {
 
 export interface InvoicePayload {
   parentId: string;
-  players: string[];
+  playerId?: string;
+  players?: string[];
+  classId?: string;
   items: InvoiceItem[];
   discount: number;
   dueDate: string;

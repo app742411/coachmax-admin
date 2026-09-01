@@ -313,6 +313,35 @@ export const unassignPlayersFromTeam = async (teamId: string, playerIds: string 
   return res.data;
 };
 
+export const addTemporaryPlayersToTeam = async (teamId: string, data: FormData): Promise<any> => {
+  const res = await apiClient.post(`/api/admin/teams/${teamId}/temporary-players`, data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return res.data;
+};
+
+export const getTemporaryPlayersForTeam = async (teamId: string): Promise<any> => {
+  const res = await apiClient.get(`/api/admin/teams/${teamId}/temporary-players`);
+  return res.data;
+};
+
+export const updateTemporaryPlayer = async (teamId: string, tempPlayerId: string, data: any): Promise<any> => {
+  const isFormData = data instanceof FormData;
+  const res = await apiClient.put(
+    `/api/admin/teams/${teamId}/temporary-players/${tempPlayerId}`,
+    data,
+    isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
+  );
+  return res.data;
+};
+
+export const deleteTemporaryPlayerFromTeam = async (teamId: string, tempPlayerId: string): Promise<any> => {
+  const res = await apiClient.delete(`/api/admin/teams/${teamId}/temporary-players/${tempPlayerId}`);
+  return res.data;
+};
+
 export const removePlayersFromTeam = unassignPlayersFromTeam;
 
 

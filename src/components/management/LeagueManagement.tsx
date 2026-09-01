@@ -24,6 +24,7 @@ const LeagueManagement: React.FC = () => {
   const [formData, setFormData] = useState({
     name: "",
     season: "",
+    type: "NATIONAL",
     description: "",
     startDate: "",
     endDate: "",
@@ -95,7 +96,7 @@ const LeagueManagement: React.FC = () => {
   // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", season: "", description: "", startDate: "", endDate: "" });
+    setFormData({ name: "", season: "", type: "NATIONAL", description: "", startDate: "", endDate: "" });
     setSelectedFile(null);
     setPreviewImage(null);
     setIsEditing(false);
@@ -107,6 +108,7 @@ const LeagueManagement: React.FC = () => {
     setFormData({
       name: league.name || "",
       season: league.season || "",
+      type: league.type || league.leagueType || "NATIONAL",
       description: league.description || "",
       startDate: league.startDate ? new Date(league.startDate).toISOString().split('T')[0] : "",
       endDate: league.endDate ? new Date(league.endDate).toISOString().split('T')[0] : "",
@@ -141,10 +143,14 @@ const LeagueManagement: React.FC = () => {
     const payload = new FormData();
     payload.append("name", formData.name);
     payload.append("season", formData.season);
+    if (formData.type) {
+      payload.append("type", formData.type);
+      payload.append("leagueType", formData.type);
+    }
     payload.append("description", formData.description);
     if (formData.startDate) payload.append("startDate", formData.startDate);
     if (formData.endDate) payload.append("endDate", formData.endDate);
-    
+
     if (selectedFile) {
       payload.append("leagueLogo", selectedFile);
     }
@@ -156,9 +162,10 @@ const LeagueManagement: React.FC = () => {
     }
   };
 
-  const filteredLeagues = leagues.filter((league: any) => 
+  const filteredLeagues = leagues.filter((league: any) =>
     league.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     league.season?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (league.type || league.leagueType || "")?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     league.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -167,7 +174,7 @@ const LeagueManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="relative w-full max-w-sm">
           <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
@@ -186,21 +193,22 @@ const LeagueManagement: React.FC = () => {
             <thead>
               <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                 <th className="py-3 px-4 min-w-[200px]">League Detail</th>
-                <th className="py-3 px-4 min-w-[150px]">Season</th>
+                <th className="py-3 px-4 min-w-[100px]">Season</th>
+                <th className="py-3 px-4 min-w-[140px]">Type</th>
                 <th className="py-3 px-4 min-w-[150px]">Dates</th>
                 <th className="py-3 px-4 w-[50px] text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="text-center py-20">
-                   <div className="flex flex-col items-center gap-3 text-gray-400">
-                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
-                      <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Leagues...</span>
-                   </div>
+                <tr><td colSpan={5} className="text-center py-20">
+                  <div className="flex flex-col items-center gap-3 text-gray-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
+                    <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Leagues...</span>
+                  </div>
                 </td></tr>
               ) : filteredLeagues.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-20 text-gray-500 font-medium italic">No leagues found.</td></tr>
+                <tr><td colSpan={5} className="text-center py-20 text-gray-500 font-medium italic">No leagues found.</td></tr>
               ) : (
                 filteredLeagues.map((league: any) => (
                   <tr key={league._id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
@@ -214,26 +222,50 @@ const LeagueManagement: React.FC = () => {
                           )}
                         </div>
                         <div className="flex flex-col">
-                           <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{league.name}</span>
-                           <span className="text-[10px] font-semibold text-slate-500 max-w-[200px] truncate" title={league.description}>{league.description || "No description"}</span>
+                          <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{league.name}</span>
+                          <span className="text-[10px] font-semibold text-slate-500 max-w-[200px] truncate" title={league.description}>{league.description || "No description"}</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-bold tracking-tight">
-                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-none border border-slate-200 dark:border-slate-700 uppercase">
-                              {league.season || "N/A"}
-                          </span>
+                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-none border border-slate-200 dark:border-slate-700 uppercase">
+                          {league.season || "N/A"}
+                        </span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
+                      {(() => {
+                        const t = (league.type || league.leagueType || "NATIONAL").toUpperCase();
+                        let badgeClass = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60";
+                        let label = "National";
+
+                        if (t === "INTERNATIONAL") {
+                          badgeClass = "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/60";
+                          label = "International";
+                        } else if (t === "STATE") {
+                          badgeClass = "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/60";
+                          label = "State / Regional";
+                        } else if (t === "LOCAL" || t === "INTERNAL") {
+                          badgeClass = "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+                          label = "Local / Internal";
+                        }
+
+                        return (
+                          <span className={`px-2 py-1 text-[10px] font-bold rounded-none border uppercase tracking-wider ${badgeClass}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-4 px-4">
                       <div className="flex flex-col gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                          <span className="flex items-center gap-1.5"><Calendar size={12} className="text-brand-500"/> Start: {league.startDate ? new Date(league.startDate).toLocaleDateString() : "TBD"}</span>
-                          <span className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400"/> End: {league.endDate ? new Date(league.endDate).toLocaleDateString() : "TBD"}</span>
+                        <span className="flex items-center gap-1.5"><Calendar size={12} className="text-brand-500" /> Start: {league.startDate ? new Date(league.startDate).toLocaleDateString() : "TBD"}</span>
+                        <span className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /> End: {league.endDate ? new Date(league.endDate).toLocaleDateString() : "TBD"}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
-                      <button 
+                      <button
                         className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded-none shadow-sm hover:shadow transition-colors"
                         title="More Options"
                         onClick={(e) => {
@@ -248,7 +280,7 @@ const LeagueManagement: React.FC = () => {
 
                       {openDropdownId === league._id && (
                         <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                          <button 
+                          <button
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -258,7 +290,7 @@ const LeagueManagement: React.FC = () => {
                           >
                             Edit League
                           </button>
-                          <button 
+                          <button
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -282,7 +314,7 @@ const LeagueManagement: React.FC = () => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-none shadow-2xl" noBackgroundBlur={true}>
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
           <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-brand-500">
-             <Trophy size={22} />
+            <Trophy size={22} />
           </div>
           <div>
             <h4 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{isEditing ? "Modify League" : "New League"}</h4>
@@ -303,16 +335,34 @@ const LeagueManagement: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Season</label>
-              <input
-                type="text"
-                value={formData.season}
-                onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
-                placeholder="e.g. 2026"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Season</label>
+                <input
+                  type="text"
+                  value={formData.season}
+                  onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                  placeholder="e.g. 2026"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">League Type</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                  required
+                >
+                  <option value="INTERNATIONAL">International (Global)</option>
+                  <option value="NATIONAL">National (Domestic)</option>
+                  <option value="STATE">State / Regional</option>
+                  <option value="LOCAL">Local / Internal</option>
+                  <option value="OTHER">Other</option>
+
+                </select>
+              </div>
             </div>
 
             <div>
@@ -338,7 +388,7 @@ const LeagueManagement: React.FC = () => {
                     className="w-full rounded-none border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
                     required
                   />
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-pointer z-20"
                     onClick={() => {
                       try {
@@ -363,7 +413,7 @@ const LeagueManagement: React.FC = () => {
                     className="w-full rounded-none border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
                     required
                   />
-                  <div 
+                  <div
                     className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-pointer z-20"
                     onClick={() => {
                       try {
@@ -381,40 +431,40 @@ const LeagueManagement: React.FC = () => {
           </div>
 
           <div className="md:col-span-5">
-             <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-6 shadow-sm h-full flex flex-col items-center justify-center">
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-6 text-center">League Logo</label>
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-40 h-40 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 cursor-pointer overflow-hidden hover:border-brand-500 transition-colors group relative"
-                >
-                  {previewImage ? (
-                    <>
-                      <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ImageIcon className="text-white w-8 h-8" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center text-gray-400 group-hover:text-brand-500 transition-colors">
-                      <ImageIcon className="w-8 h-8 mb-2" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Upload</span>
+            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-6 shadow-sm h-full flex flex-col items-center justify-center">
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-6 text-center">League Logo</label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-40 h-40 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 cursor-pointer overflow-hidden hover:border-brand-500 transition-colors group relative"
+              >
+                {previewImage ? (
+                  <>
+                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ImageIcon className="text-white w-8 h-8" />
                     </div>
-                  )}
-                </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                />
-             </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center text-gray-400 group-hover:text-brand-500 transition-colors">
+                    <ImageIcon className="w-8 h-8 mb-2" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Upload</span>
+                  </div>
+                )}
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </div>
           </div>
-          
+
           <div className="md:col-span-12 flex justify-end gap-3 mt-4 pt-6 border-t border-gray-100 dark:border-gray-800">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
-                {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Save League"}
+              {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Save League"}
             </Button>
           </div>
         </form>

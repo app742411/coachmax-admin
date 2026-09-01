@@ -3,11 +3,17 @@ import { generateInvoice, getInvoices, getInvoiceDetails, updateInvoice, Invoice
 import toast from "react-hot-toast";
 
 export const useGenerateInvoice = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: InvoicePayload) => generateInvoice(payload),
     onSuccess: (data: any) => {
-      // Invalidate relevant queries if necessary, like invoices list
-      // queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["classFullTable"] });
+      queryClient.invalidateQueries({ queryKey: ["classPlayers"] });
+      queryClient.invalidateQueries({ queryKey: ["academySchedule"] });
+      queryClient.invalidateQueries({ queryKey: ["myClassesList"] });
+      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["unallocatedPlayers"] });
       toast.success(data?.message || "Invoice generated successfully");
     },
     onError: (error: any) => {

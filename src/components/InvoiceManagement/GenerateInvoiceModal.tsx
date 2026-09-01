@@ -54,19 +54,35 @@ export default function GenerateInvoiceModal({ isOpen, onClose, player }: Genera
       } else if (player.parentId._id) {
         parentId = player.parentId._id;
       }
+    } else if (player.parent) {
+      if (typeof player.parent === "string") {
+        parentId = player.parent;
+      } else if (player.parent._id || player.parent.id) {
+        parentId = player.parent._id || player.parent.id;
+      }
+    }
+
+    const playerId = player._id || player.id || player.playerId || "";
+    const playerIds = playerId ? [playerId] : (Array.isArray(player.players) ? player.players : []);
+
+    const payload: any = {
+      parentId,
+      playerId,
+      players: playerIds,
+      items: items.map(item => ({ ...item, amount: Number(item.amount) })),
+      discount: Number(discount),
+      dueDate,
+      type,
+      description,
+      notes,
+    };
+
+    if (player.classId) {
+      payload.classId = player.classId;
     }
 
     generateInvoiceMutation.mutate(
-      {
-        parentId,
-        players: [player._id],
-        items: items.map(item => ({ ...item, amount: Number(item.amount) })),
-        discount: Number(discount),
-        dueDate,
-        type,
-        description,
-        notes,
-      },
+      payload,
       {
         onSuccess: () => {
           onClose();

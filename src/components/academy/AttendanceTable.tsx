@@ -121,6 +121,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
         <table className="w-full text-left border-collapse text-[11px]">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
+              <th className="py-2.5 px-1.5 w-[35px] text-center">#</th>
               <th className="py-2.5 px-2 w-[40px] text-center">Status</th>
               <th className="py-2.5 px-3 min-w-[130px]">Player</th>
               <th className="py-2.5 px-3 min-w-[80px]">DOB</th>
@@ -138,8 +139,11 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
             </tr>
           </thead>
           <tbody>
-            {schedule.players.map((row) => (
+            {schedule.players.map((row, idx) => (
               <tr key={row.id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10">
+                <td className="py-2 px-1.5 text-center font-bold text-slate-400 text-xs">
+                  {idx + 1}
+                </td>
                 <td className="py-2 px-2 text-center">
                   {(() => {
                     const s = ((row as any).paymentStatus || (row as any).status || "UNPAID").toUpperCase();
@@ -154,7 +158,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
                     }
                     if (s === "TRIAL") {
                       return (
-                        <div className="flex justify-center text-amber-500" title="Trial">
+                        <div className="flex justify-center text-rose-600" title="Trial">
                           <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z" clipRule="evenodd" />
                           </svg>
@@ -163,7 +167,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
                     }
                     if (s === "UNPAID" || s === "REJECTED" || s === "INACTIVE" || s === "BLOCKED") {
                       return (
-                        <div className="flex justify-center text-rose-600" title="Unpaid">
+                        <div className="flex justify-center text-amber-500" title="Unpaid">
                           <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                           </svg>

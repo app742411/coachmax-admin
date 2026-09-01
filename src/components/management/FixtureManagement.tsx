@@ -55,7 +55,14 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
             )}
           </div>
           <div className="flex flex-col">
-              <span className="font-bold text-base text-slate-800 dark:text-slate-200 tracking-tight">{league.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-base text-slate-800 dark:text-slate-200 tracking-tight">{league.name}</span>
+                {(league.type || league.leagueType) && (
+                  <span className="px-2 py-0.5 text-[9px] font-bold uppercase rounded-none border bg-blue-50 text-[#0047FF] border-blue-200">
+                    {league.type || league.leagueType}
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-semibold text-slate-500 uppercase">{league.season || "N/A"}</span>
           </div>
         </div>

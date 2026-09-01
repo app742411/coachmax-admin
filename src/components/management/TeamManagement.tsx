@@ -8,6 +8,7 @@ import { toast } from "react-hot-toast";
 import { User, Shield, Image as ImageIcon } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "./AssignPlayerToTeamModal";
+import AddTemporaryPlayersModal from "./AddTemporaryPlayersModal";
 
 const TeamManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const TeamManagement: React.FC = () => {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
   const [assignTeamId, setAssignTeamId] = useState<string | null>(null);
+  const [tempPlayersTeam, setTempPlayersTeam] = useState<{ id: string; name: string } | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -34,6 +36,8 @@ const TeamManagement: React.FC = () => {
     coach: "",
     assistantCoach: "",
     ageGroup: "",
+    fee: "",
+    teamType: "INTERNAL",
     captain: "",
     viceCaptain: "",
   });
@@ -104,7 +108,7 @@ const TeamManagement: React.FC = () => {
   // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
-    setFormData({ teamName: "", coach: "", assistantCoach: "", ageGroup: "", captain: "", viceCaptain: "" });
+    setFormData({ teamName: "", coach: "", assistantCoach: "", ageGroup: "", fee: "", teamType: "INTERNAL", captain: "", viceCaptain: "" });
     setSelectedFile(null);
     setPreviewImage(null);
     setIsEditing(false);
@@ -118,6 +122,8 @@ const TeamManagement: React.FC = () => {
       coach: team.coach?._id || team.coach || "",
       assistantCoach: team.assistantCoach?._id || team.assistantCoach || "",
       ageGroup: team.ageGroup || "",
+      fee: team.fee || "",
+      teamType: team.teamType || (team.isExternal ? "EXTERNAL" : "INTERNAL"),
       captain: team.captain?._id || team.captain || "",
       viceCaptain: team.viceCaptain?._id || team.viceCaptain || "",
     });
@@ -153,6 +159,13 @@ const TeamManagement: React.FC = () => {
       payload.append("assistantCoach", formData.assistantCoach);
     }
     payload.append("ageGroup", formData.ageGroup);
+    if (formData.fee) {
+      payload.append("fee", formData.fee);
+    }
+    if (formData.teamType) {
+      payload.append("teamType", formData.teamType);
+      payload.append("isExternal", formData.teamType === "EXTERNAL" ? "true" : "false");
+    }
     if (formData.captain) {
       payload.append("captain", formData.captain);
     }
@@ -181,6 +194,7 @@ const TeamManagement: React.FC = () => {
   const filteredTeams = teams.filter((team: any) => 
     team.teamName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     team.ageGroup?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (team.teamType || (team.isExternal ? "external" : "our team"))?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     getCoachName(team.coach).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -189,7 +203,7 @@ const TeamManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="relative w-full max-w-sm">
           <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
@@ -208,22 +222,24 @@ const TeamManagement: React.FC = () => {
             <thead>
               <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                 <th className="py-3 px-4 min-w-[200px]">Team Detail</th>
+                <th className="py-3 px-4 min-w-[110px]">Type</th>
                 <th className="py-3 px-4 min-w-[150px]">Coach</th>
-                <th className="py-3 px-4 min-w-[120px]">Age Group</th>
-                <th className="py-3 px-4 min-w-[100px] text-center">Players</th>
+                <th className="py-3 px-4 min-w-[100px]">Age Group</th>
+                <th className="py-3 px-4 min-w-[90px]">Fee</th>
+                <th className="py-3 px-4 min-w-[80px] text-center">Players</th>
                 <th className="py-3 px-4 w-[50px] text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center py-20">
-                   <div className="flex flex-col items-center gap-3 text-gray-400">
-                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
-                      <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Teams...</span>
-                   </div>
+                <tr><td colSpan={7} className="text-center py-20">
+                  <div className="flex flex-col items-center gap-3 text-gray-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
+                    <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Teams...</span>
+                  </div>
                 </td></tr>
               ) : filteredTeams.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-20 text-gray-500 font-medium italic">No teams found.</td></tr>
+                <tr><td colSpan={7} className="text-center py-20 text-gray-500 font-medium italic">No teams found.</td></tr>
               ) : (
                 filteredTeams.map((team: any) => (
                   <tr
@@ -250,6 +266,20 @@ const TeamManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
+                      {(() => {
+                        const isExt = team.teamType === "EXTERNAL" || team.isExternal === true;
+                        return (
+                          <span className={`px-2 py-1 text-[10px] font-bold rounded-none border uppercase tracking-wider ${
+                            isExt 
+                              ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/60" 
+                              : "bg-blue-50 text-[#0047FF] border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60"
+                          }`}>
+                            {isExt ? "External Team" : "Our Team"}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-4 px-4">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300 font-bold tracking-tight">
                             <User size={12} className="text-gray-400 mt-0.5 shrink-0" />
@@ -273,6 +303,9 @@ const TeamManagement: React.FC = () => {
                       <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-none border border-slate-200 dark:border-slate-700">
                           {team.ageGroup || "N/A"}
                       </span>
+                    </td>
+                    <td className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300">
+                      {team.fee ? `$${team.fee}` : "N/A"}
                     </td>
                     <td className="py-4 px-4 text-center">
                       <button
@@ -328,11 +361,15 @@ const TeamManagement: React.FC = () => {
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setAssignTeamId(team._id);
                               setOpenDropdownId(null);
+                              if (team.teamType === "EXTERNAL" || team.isExternal === true) {
+                                setTempPlayersTeam({ id: team._id, name: team.teamName });
+                              } else {
+                                setAssignTeamId(team._id);
+                              }
                             }}
                           >
-                            Assign Players
+                            {(team.teamType === "EXTERNAL" || team.isExternal === true) ? "+ Temp Players" : "Assign Players"}
                           </button>
                           <button 
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
@@ -367,16 +404,30 @@ const TeamManagement: React.FC = () => {
         </div>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-8">
           <div className="md:col-span-7 space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Name</label>
-              <input
-                type="text"
-                value={formData.teamName}
-                onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
-                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
-                placeholder="Camelot FC"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Name</label>
+                <input
+                  type="text"
+                  value={formData.teamName}
+                  onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
+                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                  placeholder="Camelot FC"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Category</label>
+                <select
+                  value={formData.teamType}
+                  onChange={(e) => setFormData({ ...formData, teamType: e.target.value })}
+                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                  required
+                >
+                  <option value="INTERNAL">Our Team (Academy)</option>
+                  <option value="EXTERNAL">External Team (Opponent)</option>
+                </select>
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -409,16 +460,30 @@ const TeamManagement: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group</label>
-              <input
-                type="text"
-                value={formData.ageGroup}
-                onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
-                placeholder="e.g. Under-13"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group</label>
+                <input
+                  type="text"
+                  value={formData.ageGroup}
+                  onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
+                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                  placeholder="e.g. Under-13"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Fee ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={formData.fee}
+                  onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
+                  placeholder="e.g. 150"
+                />
+              </div>
             </div>
 
             {isEditing && selectedTeamId && (() => {
@@ -531,6 +596,15 @@ const TeamManagement: React.FC = () => {
         onClose={() => setAssignTeamId(null)}
         teamId={assignTeamId}
       />
+
+      {tempPlayersTeam && (
+        <AddTemporaryPlayersModal
+          isOpen={!!tempPlayersTeam}
+          onClose={() => setTempPlayersTeam(null)}
+          teamId={tempPlayersTeam.id}
+          teamName={tempPlayersTeam.name}
+        />
+      )}
     </div>
   );
 };
