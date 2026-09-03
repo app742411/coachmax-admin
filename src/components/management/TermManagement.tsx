@@ -346,10 +346,10 @@ const TermManagement: React.FC = () => {
                 </div>
             )}
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 overflow-visible">
                 <h4 className="text-xl font-bold mb-2">{isEditing ? "Modify Term" : "Schedule New Term"}</h4>
                 <p className="text-xs text-gray-500 mb-6 font-medium">Coordinate the seasonal training timeline.</p>
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="col-span-2">
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Term Name</label>

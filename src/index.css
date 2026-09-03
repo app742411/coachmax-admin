@@ -833,3 +833,8 @@ span.flatpickr-weekday,
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #1e3a8a; /* Lighter navy for dark mode */
 }
+
+/* Ensure Flatpickr calendar popups float cleanly over modals */
+.flatpickr-calendar {
+  z-index: 9999999 !important;
+}

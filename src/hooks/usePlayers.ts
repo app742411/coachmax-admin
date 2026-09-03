@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile, getAdminPlayerDetails, updatePlayerStatistics } from "../api/players";
-import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer } from "../api/adminApi";
+import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer, getTeamFullTable, markSingleTeamAttendance, markTeamAttendance } from "../api/adminApi";
 import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
 
@@ -94,6 +94,45 @@ export const useClassFullTable = (classId: string) => {
     queryKey: ["classFullTable", classId],
     queryFn: () => getClassFullTable(classId),
     enabled: !!classId,
+  });
+};
+
+export const useTeamFullTable = (teamId: string) => {
+  return useQuery({
+    queryKey: ["teamFullTable", teamId],
+    queryFn: () => getTeamFullTable(teamId),
+    enabled: !!teamId,
+  });
+};
+
+export const useMarkSingleTeamAttendance = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => markSingleTeamAttendance(teamId, data),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      const statusSuffix = data?.data?.status ? `: ${data.data.status}` : "";
+      toast.success((data?.message || "Team attendance marked") + statusSuffix);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to mark team attendance");
+    }
+  });
+};
+
+export const useMarkTeamAttendance = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { sessionDate: string; records: { player: string; status: string }[] }) => markTeamAttendance(teamId, data),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      toast.success(data?.message || "Bulk team attendance marked!");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to mark bulk team attendance");
+    }
   });
 };
 

@@ -185,6 +185,11 @@ export const getClassFiltersWithTimeSlots = async (categoryId: string, programId
   return res.data;
 };
 
+export const getAllClasses = async (params: { page?: number; limit?: number; categoryId?: string; programId?: string; termId?: string; day?: string; search?: string }): Promise<any> => {
+  const res = await apiClient.get("/api/admin/getAllClasses", { params });
+  return res.data;
+};
+
 export const getClassFullTable = async (classId: string): Promise<any> => {
   const res = await apiClient.get(`${ENDPOINTS.GET_CLASS_FULL_TABLE}?classId=${classId}`);
   return res.data;
@@ -202,6 +207,45 @@ export const markBulkAttendance = async (classId: string, data: { sessionDate: s
 
 export const getClassPlayers = async (classId: string): Promise<any> => {
   const res = await apiClient.get(`/api/admin/getClassPlayers/${classId}`);
+  return res.data;
+};
+
+// ================= TEAM ATTENDANCE & FULL TABLE =================
+
+export const getTeamFullTable = async (teamId: string): Promise<any> => {
+  let isAdmin = false;
+  try {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(user?.role);
+  } catch { }
+  const endpoint = isAdmin ? "/api/admin/getTeamFullTable" : "/api/user/getTeamFullTable";
+  const url = `${endpoint}?teamId=${teamId}`;
+  const res = await apiClient.get(url);
+  return res.data;
+};
+
+export const markSingleTeamAttendance = async (teamId: string, data: { sessionDate: string; playerId: string; status: string }): Promise<any> => {
+  let isAdmin = false;
+  try {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(user?.role);
+  } catch { }
+  const endpoint = isAdmin ? `/api/admin/markSingleTeamAttendance/${teamId}` : `/api/user/markSingleTeamAttendance/${teamId}`;
+  const res = await apiClient.post(endpoint, data);
+  return res.data;
+};
+
+export const markTeamAttendance = async (teamId: string, data: { sessionDate: string; records: { player: string; status: string }[] }): Promise<any> => {
+  let isAdmin = false;
+  try {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(user?.role);
+  } catch { }
+  const endpoint = isAdmin ? `/api/admin/markTeamAttendance/${teamId}` : `/api/user/markTeamAttendance/${teamId}`;
+  const res = await apiClient.post(endpoint, data);
   return res.data;
 };
 
@@ -253,8 +297,12 @@ export const deleteNews = async (id: string): Promise<any> => {
 
 // ================= TEAMS =================
 
-export const getAllTeams = async (): Promise<any> => {
-  const res = await apiClient.get(ENDPOINTS.TEAMS);
+export const getAllTeams = async (termId?: string): Promise<any> => {
+  let url = ENDPOINTS.TEAMS;
+  if (termId) {
+    url += `?termId=${termId}`;
+  }
+  const res = await apiClient.get(url);
   return res.data;
 };
 

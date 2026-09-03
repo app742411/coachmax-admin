@@ -18,6 +18,8 @@ interface PlayerTableProps {
   onAddCoachNote?: (player: Player) => void;
   showStatusColumn?: boolean;
   showPaymentStatus?: boolean;
+  page?: number;
+  limit?: number;
 }
 
 export default function PlayerTable({
@@ -32,6 +34,8 @@ export default function PlayerTable({
   onAddCoachNote,
   showStatusColumn = false,
   showPaymentStatus = false,
+  page = 1,
+  limit = 10,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
@@ -117,6 +121,7 @@ export default function PlayerTable({
         <table className="min-w-[1100px] w-full text-left border-collapse text-[11px] [&_th]:border [&_th]:border-slate-700/50 [&_td]:border [&_td]:border-slate-200 dark:[&_td]:border-slate-700 [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
           <thead>
             <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
+              <th className="py-2.5 px-2 w-[45px] min-w-[45px] text-center">S.No</th>
               {showPaymentStatus && <th className="py-2.5 px-2 min-w-[65px] text-center">Payment Status</th>}
               {showStatusColumn && <th className="py-2.5 px-2 min-w-[65px] text-center">Status</th>}
               <th className="py-2.5 px-2 min-w-[120px]">Player</th>
@@ -134,7 +139,8 @@ export default function PlayerTable({
             </tr>
           </thead>
           <tbody>
-            {players.map((player) => {
+            {players.map((player, index) => {
+              const serialNo = (page - 1) * limit + index + 1;
               const isRequest = !!(player as any).requestId || !!(player as any).requestType;
               const paymentStatus = player.paymentStatus || "PENDING";
               const playerStatus = isRequest ? (player.status || "PENDING") : ((player as any).playerStatus || player.status || "PENDING");
@@ -147,6 +153,9 @@ export default function PlayerTable({
                   className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${selectedPlayerId === player._id ? "bg-slate-50 dark:bg-slate-800/40" : ""
                     }`}
                 >
+                  <td className="py-3 px-2 text-center font-bold text-slate-500 dark:text-slate-400">
+                    {serialNo}
+                  </td>
                   {showPaymentStatus && (
                     <td className="py-3 px-2 text-center">
                       <span
@@ -169,7 +178,7 @@ export default function PlayerTable({
                                 : "bg-amber-500"
                             }`}
                         />
-                        {paymentStatus}
+                        {paymentStatus === "OTHERS" ? "EXTRA" : paymentStatus}
                       </span>
                     </td>
                   )}
@@ -195,7 +204,7 @@ export default function PlayerTable({
                                 : "bg-amber-500"
                             }`}
                         />
-                        {playerStatus}
+                        {playerStatus === "OTHERS" ? "EXTRA" : playerStatus}
                       </span>
                     </td>
                   )}
@@ -215,16 +224,7 @@ export default function PlayerTable({
                     </div>
                   </td>
                   <td className="py-3 px-2 font-semibold text-slate-500">
-                    {player.dob ? (
-                      <div className="flex flex-col">
-                        <span>{new Date(player.dob).toLocaleDateString()}</span>
-                        <span className="text-[10px] text-slate-450 font-normal">
-                          {new Date().getFullYear() - new Date(player.dob).getFullYear()} yrs
-                        </span>
-                      </div>
-                    ) : (
-                      "N/A"
-                    )}
+                    {player.dob ? new Date(player.dob).toLocaleDateString("en-GB") : "N/A"}
                   </td>
                   <td className="py-3 px-2 text-center" title={player.medicalConditionDetails || player.medicalConditions}>
                     {player.isMedicalCondition ? (

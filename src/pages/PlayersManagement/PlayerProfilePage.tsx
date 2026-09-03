@@ -56,6 +56,30 @@ export default function PlayerProfilePage() {
   const overallAttendance = responseData?.overallAttendance;
   const notes = notesRes?.data || [];
 
+  // Extract assigned classes with per-class payment status
+  const assignedClassesInfo: any[] = 
+    responseData?.assignedClassesPaymentInfo || 
+    responseData?.classPaymentSummary?.assignedClassesWithPaymentStatus || 
+    player?.classPaymentStatuses?.map((cps: any) => ({
+      classId: cps.class?._id || cps.class,
+      className: cps.class?.name || "Class",
+      paymentStatus: cps.paymentStatus
+    })) || 
+    player?.assignedClasses?.map((c: any) => ({
+      classId: c._id || c.id,
+      className: c.name || c.className || "Class",
+      paymentStatus: c.paymentStatus || player?.paymentStatus || "UNPAID",
+      dayOfWeek: c.dayOfWeek,
+      startTime: c.startTime,
+      endTime: c.endTime,
+      location: c.location
+    })) || [];
+
+  // Extract assigned teams with team payment status
+  const assignedTeamsInfo: any[] = 
+    responseData?.assignedTeamsPaymentInfo || 
+    responseData?.teamPaymentSummary?.assignedTeamsWithPaymentStatus || [];
+
   if (loadingDetails) {
     return (
       <div className="flex justify-center items-center py-40">
@@ -418,40 +442,114 @@ export default function PlayerProfilePage() {
 
             {/* Assigned Classes */}
             <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-6 shadow-theme-xs space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pb-2 border-b border-slate-50 dark:border-slate-800/40">
-                Assigned Classes
-              </h3>
-              {player.assignedClasses && player.assignedClasses.length > 0 ? (
+              <div className="flex items-center justify-between pb-2 border-b border-slate-50 dark:border-slate-800/40">
+                <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Assigned Classes ({assignedClassesInfo.length})
+                </h3>
+              </div>
+              {assignedClassesInfo.length > 0 ? (
                 <div className="divide-y divide-slate-50 dark:divide-slate-800/40">
-                  {player.assignedClasses.map((cls: any, idx: number) => {
-                    let day = cls.dayOfWeek;
-                    if (!day && cls.name) {
-                      const match = cls.name.match(/^([a-zA-Z]+)/);
+                  {assignedClassesInfo.map((item: any, idx: number) => {
+                    const classId = item.classId || item._id;
+                    const className = item.className || item.name || "Class";
+                    const status = item.paymentStatus || player?.paymentStatus || "UNPAID";
+                    let day = item.dayOfWeek;
+                    if (!day && className) {
+                      const match = className.match(/^([a-zA-Z]+)/);
                       if (match) day = match[1];
                     }
                     return (
                       <div 
                         key={idx} 
-                        onClick={() => navigate('/program/academy', { state: { classId: cls._id, day } })}
-                        className="py-2.5 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
+                        onClick={() => navigate('/program/academy', { state: { classId, day } })}
+                        className="py-3 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
                       >
                         <div>
-                          <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-500">{cls.name || cls.className || "Class"}</span>
-                          {(cls.dayOfWeek || cls.startTime || cls.location) && (
-                            <span className="text-slate-400 block text-[10px] mt-0.5">
-                              {[cls.dayOfWeek, cls.startTime, cls.location].filter(Boolean).join(" at ")}
+                          <span className="font-bold text-slate-800 dark:text-slate-200 hover:text-[#0047FF] transition-colors">{className}</span>
+                          {(item.dayOfWeek || item.startTime || item.location) && (
+                            <span className="text-slate-400 block text-[10px] mt-0.5 font-medium">
+                              {[item.dayOfWeek, item.startTime, item.location].filter(Boolean).join(" • ")}
                             </span>
                           )}
                         </div>
-                        <span className="px-2.5 py-0.5 bg-slate-50 border border-slate-200 text-slate-600 font-bold text-[10px] uppercase rounded-none dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
-                          ACTIVE
-                        </span>
+                        <div>
+                          {(() => {
+                            const st = (status || "UNPAID").toUpperCase();
+                            if (st === "PAID" || st === "APPROVED" || st === "ACTIVE") {
+                              return <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[10px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>;
+                            }
+                            if (st === "TRIAL") {
+                              return <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[10px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>;
+                            }
+                            if (st === "EXTRA" || st === "OTHERS") {
+                              return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">EXTRA</span>;
+                            }
+                            if (st === "SUBSTITUTE") {
+                              return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">SUBSTITUTE</span>;
+                            }
+                            return <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-[10px] uppercase rounded-none dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">UNPAID</span>;
+                          })()}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
                 <p className="text-xs text-slate-450 italic">No active classes assigned to this player.</p>
+              )}
+            </div>
+
+            {/* Assigned Teams */}
+            <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-6 shadow-theme-xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-50 dark:border-slate-800/40">
+                <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Assigned Teams ({assignedTeamsInfo.length})
+                </h3>
+              </div>
+              {assignedTeamsInfo.length > 0 ? (
+                <div className="divide-y divide-slate-50 dark:divide-slate-800/40">
+                  {assignedTeamsInfo.map((team: any, idx: number) => {
+                    const teamId = team.teamId || team._id;
+                    const teamName = team.teamName || team.name || "Team";
+                    const status = team.paymentStatus || "PAID";
+                    return (
+                      <div 
+                        key={idx} 
+                        onClick={() => navigate(`/teams/${teamId}`)}
+                        className="py-3 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 hover:text-[#0047FF] transition-colors">{teamName}</span>
+                          {team.teamFee !== undefined && (
+                            <span className="text-slate-400 block text-[10px] mt-0.5 font-medium">
+                              Team Fee: ${team.teamFee}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          {(() => {
+                            const st = (status || "PAID").toUpperCase();
+                            if (st === "PAID" || st === "APPROVED" || st === "ACTIVE") {
+                              return <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[10px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>;
+                            }
+                            if (st === "TRIAL") {
+                              return <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[10px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>;
+                            }
+                            if (st === "EXTRA" || st === "OTHERS") {
+                              return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">EXTRA</span>;
+                            }
+                            if (st === "SUBSTITUTE") {
+                              return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">SUBSTITUTE</span>;
+                            }
+                            return <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-[10px] uppercase rounded-none dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">UNPAID</span>;
+                          })()}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-450 italic">No assigned teams for this player.</p>
               )}
             </div>
           </div>

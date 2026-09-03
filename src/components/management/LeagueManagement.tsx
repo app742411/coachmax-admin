@@ -311,7 +311,7 @@ const LeagueManagement: React.FC = () => {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-none shadow-2xl" noBackgroundBlur={true}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-lg shadow-2xl" noBackgroundBlur={true}>
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
           <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-brand-500">
             <Trophy size={22} />

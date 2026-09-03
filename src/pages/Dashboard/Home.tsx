@@ -551,6 +551,7 @@ export default function Home() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <th className="pb-3 w-[45px] text-center">S.No</th>
                 <th className="pb-3 min-w-[150px]">Player</th>
                 <th className="pb-3 min-w-[120px]">Parent</th>
                 <th className="pb-3 min-w-[130px]">Email</th>
@@ -564,7 +565,7 @@ export default function Home() {
             </thead>
             <tbody>
               {recentActivity.recentPlayers && recentActivity.recentPlayers.length > 0 ? (
-                recentActivity.recentPlayers.map((row: any) => {
+                recentActivity.recentPlayers.map((row: any, idx: number) => {
                   const avatarUrl = row.profileImage ? `/${row.profileImage}` : `https://ui-avatars.com/api/?name=${row.fullName}`;
                   const pStatus = row.paymentStatus || "TRIAL";
                   const activeStat = row.playerStatus || "ACTIVE";
@@ -575,6 +576,9 @@ export default function Home() {
                       onClick={() => navigate(`/player/${row._id}`)}
                       className="border-b border-slate-100 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-colors"
                     >
+                      <td className="py-4 text-center font-bold text-slate-400">
+                        {idx + 1}
+                      </td>
                       {/* Player */}
                       <td className="py-4 font-bold text-slate-800 dark:text-slate-200">
                         <div className="flex items-center gap-2">

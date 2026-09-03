@@ -389,7 +389,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                 { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
                 { value: "UNPAID", label: "Unpaid", desc: "Requires Payment", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
                 { value: "PAID", label: "Paid (Allocate)", desc: "Payment Completed", activeClass: "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", inactiveClass: "border-slate-200 hover:border-emerald-300/50 hover:bg-emerald-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "OTHERS", label: "Others", desc: "Other Status", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400", inactiveClass: "border-slate-200 hover:border-blue-300/50 hover:bg-blue-500/[0.02] text-slate-500 dark:border-slate-800" }
+                { value: "EXTRA", label: "Extra", desc: "Extra Status", activeClass: "border-[#dee08b] bg-[#dee08b]/20 text-[#8a8c23] dark:text-[#dee08b]", inactiveClass: "border-slate-200 hover:border-[#dee08b]/50 hover:bg-[#dee08b]/10 text-slate-500 dark:border-slate-800" }
               ].map((status) => (
                 <button
                   key={status.value}

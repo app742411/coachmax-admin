@@ -59,6 +59,30 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
   const overallAttendance = playerEnvelope?.overallAttendance;
   const statistics = player.statistics || {};
 
+  // Extract assigned classes with per-class payment status
+  const assignedClassesInfo: any[] = 
+    playerEnvelope?.assignedClassesPaymentInfo || 
+    playerEnvelope?.classPaymentSummary?.assignedClassesWithPaymentStatus || 
+    player?.classPaymentStatuses?.map((cps: any) => ({
+      classId: cps.class?._id || cps.class,
+      className: cps.class?.name || "Class",
+      paymentStatus: cps.paymentStatus
+    })) || 
+    player?.assignedClasses?.map((c: any) => ({
+      classId: c._id || c.id,
+      className: c.name || c.className || "Class",
+      paymentStatus: c.paymentStatus || player?.paymentStatus || "UNPAID",
+      dayOfWeek: c.dayOfWeek,
+      startTime: c.startTime,
+      endTime: c.endTime,
+      location: c.location
+    })) || [];
+
+  // Extract assigned teams with team payment status
+  const assignedTeamsInfo: any[] = 
+    playerEnvelope?.assignedTeamsPaymentInfo || 
+    playerEnvelope?.teamPaymentSummary?.assignedTeamsWithPaymentStatus || [];
+
   const { data: notesRes } = useCoachNotes(playerId);
   const notes = notesRes?.data || [];
   const [editingNote, setEditingNote] = useState<any | null>(null);
@@ -379,6 +403,88 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                   <span className="text-slate-400 block mb-0.5 text-[9px]">Matches</span>
                   <span className="text-slate-800 dark:text-slate-200 text-xs block">{player.appearances || statistics.appearances || 0}</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Section 5.5: Assigned Classes with per-class Payment Status */}
+          {assignedClassesInfo.length > 0 && (
+            <div className="text-xs text-slate-700 dark:text-slate-350">
+              <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px] mb-3 pb-1 border-b border-slate-50 dark:border-slate-800/40 flex justify-between items-center">
+                <span>Assigned Classes</span>
+                <span className="text-[#0047FF] font-extrabold">{assignedClassesInfo.length}</span>
+              </h4>
+              <div className="space-y-2">
+                {assignedClassesInfo.map((clsItem: any, idx: number) => {
+                  const className = clsItem.className || clsItem.name || "Class";
+                  const status = clsItem.paymentStatus || player?.paymentStatus || "UNPAID";
+                  const st = (status || "UNPAID").toUpperCase();
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">{className}</span>
+                        {(clsItem.dayOfWeek || clsItem.startTime) && (
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {[clsItem.dayOfWeek, clsItem.startTime].filter(Boolean).join(" • ")}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        {st === "PAID" || st === "APPROVED" || st === "ACTIVE" ? (
+                          <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[9px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>
+                        ) : st === "TRIAL" ? (
+                          <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[9px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>
+                        ) : st === "EXTRA" || st === "OTHERS" ? (
+                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">EXTRA</span>
+                        ) : st === "SUBSTITUTE" ? (
+                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">SUBSTITUTE</span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-[9px] uppercase rounded-none dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">UNPAID</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 5.6: Assigned Teams with Team Payment Status */}
+          {assignedTeamsInfo.length > 0 && (
+            <div className="text-xs text-slate-700 dark:text-slate-350">
+              <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px] mb-3 pb-1 border-b border-slate-50 dark:border-slate-800/40 flex justify-between items-center">
+                <span>Assigned Teams</span>
+                <span className="text-[#0047FF] font-extrabold">{assignedTeamsInfo.length}</span>
+              </h4>
+              <div className="space-y-2">
+                {assignedTeamsInfo.map((teamItem: any, idx: number) => {
+                  const teamName = teamItem.teamName || teamItem.name || "Team";
+                  const status = teamItem.paymentStatus || "PAID";
+                  const st = (status || "PAID").toUpperCase();
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">{teamName}</span>
+                        {teamItem.teamFee !== undefined && (
+                          <span className="text-[10px] text-slate-400 font-medium">Fee: ${teamItem.teamFee}</span>
+                        )}
+                      </div>
+                      <div>
+                        {st === "PAID" || st === "APPROVED" || st === "ACTIVE" ? (
+                          <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[9px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>
+                        ) : st === "TRIAL" ? (
+                          <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[9px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>
+                        ) : st === "EXTRA" || st === "OTHERS" ? (
+                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">EXTRA</span>
+                        ) : st === "SUBSTITUTE" ? (
+                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">SUBSTITUTE</span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-[9px] uppercase rounded-none dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">UNPAID</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

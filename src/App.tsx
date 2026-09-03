@@ -58,6 +58,7 @@ import TeamDetailsPage from "./pages/Teams/TeamDetailsPage";
 import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
 import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
 import AuditLogsPage from "./pages/AuditLogs/AuditLogsPage";
+import UserManual from "./pages/Docs/UserManual";
 import { Toaster } from "react-hot-toast";
 
 function DynamicProgramRoute() {
@@ -153,8 +154,9 @@ export default function App() {
             <Route path="/term-earnings" element={<TermEarningsPage />} />
             <Route path="/finance-report" element={<TermEarningsPage />} />
 
-            {/* Audit */}
+            {/* Audit & Manual */}
             <Route path="/audit-logs" element={<AuditLogsPage />} />
+            <Route path="/user-manual" element={<UserManual />} />
 
             {/* Notifications */}
             <Route path="/notifications" element={<NotificationsPage />} />

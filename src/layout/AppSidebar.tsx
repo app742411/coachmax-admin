@@ -288,6 +288,7 @@ const AppSidebar: React.FC = () => {
         { name: "Sponsors", icon: <GridIcon />, path: "/sponsors" },
         { name: "Audit Logs", icon: <ClipboardList size={18} />, path: "/audit-logs" },
         { name: "Clone Term", icon: <Copy size={18} />, path: "/clone-term" },
+        // { name: "User Manual", icon: <BookOpen size={18} />, path: "/user-manual" },
       ],
     },
     {

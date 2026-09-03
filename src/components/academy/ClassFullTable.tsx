@@ -14,6 +14,7 @@ import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
 import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import { chatApi } from "../../services/chatApi";
+import { getPlayerStatusTextClass } from "../common/StatusColorCode";
 
 interface ClassFullTableProps {
   classId: string;
@@ -481,10 +482,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
                 <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1.5 text-center min-w-[35px] w-[35px] max-w-[35px] border-b border-slate-100 dark:border-slate-800">#</th>
-                <th className="sticky left-[35px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">Status</th>
+                <th className="sticky left-[35px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">Status</th>
                 <th className="sticky left-[75px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-100 dark:border-slate-800">Player</th>
-                <th className="sticky left-[235px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800">DOB</th>
-                <th className="sticky left-[315px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Med Cond</th>
+                <th className="sticky left-[235px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1.5 text-center min-w-[75px] w-[75px] max-w-[75px] border-b border-slate-100 dark:border-slate-800">DOB</th>
+                <th className="sticky left-[310px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[50px] w-[50px] max-w-[50px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Cond</th>
                 {sessions.map((sessionDate: string, idx: number) => {
                   const formatted = formatDateLabel(sessionDate);
                   return (
@@ -507,7 +508,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                     </th>
                   );
                 })}
-                <th className="right-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-4 min-w-[70px] w-[70px] text-center border-l border-b border-slate-100 dark:border-slate-800 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]"></th>
+                <th className="sticky right-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 min-w-[40px] w-[40px] max-w-[40px] text-center border-l border-b border-slate-100 dark:border-slate-800 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]"></th>
               </tr>
             </thead>
             <tbody>
@@ -547,9 +548,9 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                         );
                       }
                       return (
-                        <div className="flex justify-center text-blue-500" title={row.paymentStatus || "Others"}>
+                        <div className="flex justify-center text-[#9ca02e] dark:text-[#dee08b]" title={row.paymentStatus === "OTHERS" ? "Extra" : row.paymentStatus || "Extra"}>
                           <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-3.5-9a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8A.75.75 0 017.25 9zm0 2.5a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75zm0 2.5a.75.75 0 01.75-.75h3.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clipRule="evenodd" />
                           </svg>
                         </div>
                       );
@@ -595,7 +596,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                             rating: row.rating
                           })}
                           title={row.name}
-                          className="font-bold text-slate-800 dark:text-slate-200 hover:text-[#0047FF] dark:hover:text-[#336eff] text-left hover:underline transition-all text-xs truncate leading-tight block w-full"
+                          className={`font-bold text-left hover:underline transition-all text-xs truncate leading-tight block w-full ${getPlayerStatusTextClass(row.paymentStatus || row.status)}`}
                         >
                           {row.name}
                         </button>
@@ -604,11 +605,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                           {Array.from({ length: 5 }).map((_, i) => (
                             <svg
                               key={i}
-                              className={`w-2.5 h-2.5 ${
-                                (row.rating || 0) > i
-                                  ? "text-amber-400 fill-amber-400"
-                                  : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
-                              }`}
+                              className={`w-2.5 h-2.5 ${(row.rating || 0) > i
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
+                                }`}
                               viewBox="0 0 20 20"
                             >
                               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -618,8 +618,17 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       </div>
                     </div>
                   </td>
-                  <td className="sticky left-[235px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 font-semibold text-slate-500 min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 text-xs">{new Date(row.dob).toLocaleDateString()}</td>
-                  <td className="sticky left-[315px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[80px] w-[80px] max-w-[80px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                  <td className="sticky left-[235px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1.5 text-center font-semibold text-slate-500 min-w-[75px] w-[75px] max-w-[75px] border-b border-slate-50 dark:border-slate-800/40 text-xs">
+                    {row.dob ? (() => {
+                      const d = new Date(row.dob);
+                      if (isNaN(d.getTime())) return "-";
+                      const day = String(d.getDate()).padStart(2, "0");
+                      const month = String(d.getMonth() + 1).padStart(2, "0");
+                      const year = d.getFullYear();
+                      return `${day}/${month}/${year}`;
+                    })() : "-"}
+                  </td>
+                  <td className="sticky left-[310px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1 text-center min-w-[50px] w-[50px] max-w-[50px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
                     {row.isMedicalCondition ? (
                       <span className="text-rose-600 font-bold text-xs truncate block max-w-full" title={row.medicalConditionDetails || "Yes"}>
                         Yes
@@ -640,7 +649,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       </td>
                     );
                   })}
-                  <td className="sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-4 text-center border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-10">
+                  <td className="sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-10">
                     <div className="flex items-center justify-center relative">
                       <button
                         id={`trigger-${row.playerId}`}
@@ -716,7 +725,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                               <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
                                 Update Status
                               </div>
-                              {["TRIAL", "UNPAID", "PAID", "OTHERS"]
+                              {["TRIAL", "UNPAID", "PAID", "EXTRA"]
                                 .filter(status => status !== row.paymentStatus)
                                 .map((status) => {
                                   let activeClasses = "";
@@ -731,7 +740,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                                   } else if (status === "TRIAL") {
                                     activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20";
                                     dotColor = "bg-rose-500";
-                                  } else if (status === "OTHERS") {
+                                  } else if (status === "OVER_DUE") {
+                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20";
+                                    dotColor = "bg-purple-500";
+                                  } else if (status === "EXTRA" || status === "OTHERS") {
                                     activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20";
                                     dotColor = "bg-blue-500";
                                   }
@@ -905,7 +917,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                 { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
                 { value: "UNPAID", label: "Unpaid", desc: "Requires Payment", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
                 { value: "PAID", label: "Paid (Allocate)", desc: "Payment Completed", activeClass: "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", inactiveClass: "border-slate-200 hover:border-emerald-300/50 hover:bg-emerald-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "OTHERS", label: "Others", desc: "Other Status", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400", inactiveClass: "border-slate-200 hover:border-blue-300/50 hover:bg-blue-500/[0.02] text-slate-500 dark:border-slate-800" }
+                { value: "EXTRA", label: "Extra", desc: "Extra Status", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400", inactiveClass: "border-slate-200 hover:border-blue-300/50 hover:bg-blue-500/[0.02] text-slate-500 dark:border-slate-800" }
               ].map((status) => (
                 <button
                   key={status.value}

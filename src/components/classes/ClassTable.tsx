@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import Badge from "../../components/ui/badge/Badge";
 import { MoreVertical } from "lucide-react";
@@ -37,6 +38,7 @@ interface ClassTableProps {
 
 export default function ClassTable({ classes, isLoading, onEditClass, onViewPlayers, onDeleteClass, onBroadcastClass }: ClassTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
@@ -201,14 +203,27 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                       title="More Options"
                       onClick={(e) => {
                         e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMenuPosition({
+                          top: rect.bottom + window.scrollY,
+                          left: rect.right - 144 + window.scrollX,
+                        });
                         setOpenDropdownId(openDropdownId === cls._id ? null : cls._id);
                       }}
                     >
                       <MoreVertical size={16} />
                     </button>
 
-                    {openDropdownId === cls._id && (
-                      <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                    {openDropdownId === cls._id && menuPosition && createPortal(
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: `${menuPosition.top}px`,
+                          left: `${menuPosition.left}px`,
+                        }}
+                        className="w-36 bg-white dark:bg-slate-800 rounded-none shadow-xl border border-slate-200 dark:border-slate-700 z-[99999] py-1.5 overflow-hidden text-left"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                           onClick={(e) => {
@@ -249,7 +264,8 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                         >
                           Delete Class
                         </button>
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </td>
                 </tr>

@@ -132,6 +132,8 @@ export default function PlayersManagement() {
                 onAssignClass={handleAssignPlayer}
                 onGenerateInvoice={handleGenerateInvoice}
                 onAddCoachNote={setCoachNotePlayer}
+                page={page}
+                limit={10}
               />
 
               {totalPages > 1 && (

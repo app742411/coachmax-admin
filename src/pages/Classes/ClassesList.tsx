@@ -92,7 +92,7 @@ export default function ClassesList() {
         params.termId = selectedTerm;
       }
       if (selectedDay && selectedDay !== "all") {
-        params.dayOfWeek = selectedDay;
+        params.day = selectedDay;
       }
 
       const response = await apiClient.get("/api/admin/getAllClasses", { params });

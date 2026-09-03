@@ -1,0 +1,927 @@
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import toast from "react-hot-toast";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
+import { useAppDispatch } from "../../store";
+import { setActiveRoomId } from "../../store/slices/chatSlice";
+import apiClient from "../../api/apiClient";
+import { unassignPlayersFromTeam } from "../../api/adminApi";
+import {
+  useTeamFullTable,
+  useMarkSingleTeamAttendance,
+  useMarkTeamAttendance,
+} from "../../hooks/usePlayers";
+import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
+import PlayerDetailCard from "../players/PlayerDetailCard";
+import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
+import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import { getPlayerStatusTextClass } from "../common/StatusColorCode";
+
+interface TeamFullTableProps {
+  teamId: string;
+  teamName?: string;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+}
+
+export default function TeamFullTable({
+  teamId,
+  teamName = "Team",
+  isExpanded = true,
+  onToggle,
+}: TeamFullTableProps) {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
+
+  // Fetch Team Full Table Matrix
+  const { data: scheduleData, isLoading } = useTeamFullTable(teamId);
+
+  // Attendance Mutations
+  const markSingleMutation = useMarkSingleTeamAttendance(teamId);
+  const markBulkMutation = useMarkTeamAttendance(teamId);
+
+  // UI state for menus & modals
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left: number;
+    placement: "top" | "bottom";
+  } | null>(null);
+
+  const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
+  const [invoicePlayer, setInvoicePlayer] = useState<any | null>(null);
+  const [coachNotePlayer, setCoachNotePlayer] = useState<{
+    playerId: string;
+    name: string;
+    teamId?: string;
+  } | null>(null);
+  const [unassignPlayer, setUnassignPlayer] = useState<any | null>(null);
+
+  // Unassign Player Mutation
+  const unassignMutation = useMutation({
+    mutationFn: (playerId: string) => unassignPlayersFromTeam(teamId, [playerId]),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      toast.success(res?.message || "Player unassigned successfully!");
+      setUnassignPlayer(null);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to unassign player");
+    },
+  });
+
+  const updatePosition = () => {
+    if (!openMenuId) return;
+    const trigger = document.getElementById(`trigger-${openMenuId}`);
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = 240;
+
+    const menuEl = document.getElementById("portal-action-menu-team");
+    const menuHeight = menuEl ? menuEl.offsetHeight : 280;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let top = rect.bottom + window.scrollY;
+    let placement: "top" | "bottom" = "bottom";
+
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      top = rect.top - menuHeight + window.scrollY;
+      placement = "top";
+    }
+
+    let left = rect.right - menuWidth + window.scrollX;
+    if (left < 0) {
+      left = rect.left + window.scrollX;
+    }
+
+    setMenuPosition({ top, left, placement });
+  };
+
+  useEffect(() => {
+    if (openMenuId) {
+      updatePosition();
+      const handle = requestAnimationFrame(() => {
+        updatePosition();
+      });
+      window.addEventListener("scroll", updatePosition, true);
+      window.addEventListener("resize", updatePosition);
+
+      return () => {
+        cancelAnimationFrame(handle);
+        window.removeEventListener("scroll", updatePosition, true);
+        window.removeEventListener("resize", updatePosition);
+      };
+    } else {
+      setMenuPosition(null);
+    }
+  }, [openMenuId]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    const handleOutsideClick = (e: MouseEvent) => {
+      const menu = document.getElementById("portal-action-menu-team");
+      const trigger = document.getElementById(`trigger-${openMenuId}`);
+      if (
+        menu &&
+        !menu.contains(e.target as Node) &&
+        trigger &&
+        !trigger.contains(e.target as Node)
+      ) {
+        setOpenMenuId(null);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openMenuId]);
+
+  const handleChatWithParent = async (row: any) => {
+    const parentId = row.parent?.id || row.parent?._id || row.parentId;
+    if (!parentId) {
+      toast.error("Parent ID not found for this player.");
+      return;
+    }
+
+    try {
+      const res = await apiClient.post("/api/coach/chat/direct", { parentId });
+      if (res.data && res.data.success && res.data.data) {
+        const roomId = res.data.data._id;
+        dispatch(setActiveRoomId(roomId));
+
+        const userStr = localStorage.getItem("user");
+        let isCoach = false;
+        if (userStr) {
+          try {
+            const parsed = JSON.parse(userStr);
+            isCoach = parsed?.role === "COACH";
+          } catch (e) { }
+        }
+        navigate(isCoach ? "/messages" : "/communication");
+      } else {
+        toast.error(res.data?.message || "Failed to start conversation.");
+      }
+    } catch (error: any) {
+      console.error("Chat redirection error:", error);
+      toast.error(
+        error?.response?.data?.message || "Failed to start direct conversation."
+      );
+    }
+  };
+
+  const schedule = scheduleData?.data || scheduleData || {};
+  const sessions: string[] = schedule.sessions || [];
+  const players: any[] = schedule.players || [];
+
+  const renderStatusIcon = (status: string) => {
+    switch (status) {
+      case "PRESENT":
+        return (
+          <div className="flex justify-center text-emerald-600">
+            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+        );
+      case "ABSENT":
+        return (
+          <div className="flex justify-center text-rose-600">
+            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+        );
+      case "LATE":
+        return (
+          <div className="flex justify-center text-amber-500">
+            <svg
+              className="w-5 h-5 stroke-current fill-none"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="9" />
+            </svg>
+          </div>
+        );
+      case "NOT_MARKED":
+      default:
+        return (
+          <div className="flex justify-center text-slate-300 dark:text-slate-700">
+            <span className="font-semibold">—</span>
+          </div>
+        );
+    }
+  };
+
+  const handleToggleAttendance = (
+    playerId: string,
+    sessionDate: string,
+    currentStatus: string
+  ) => {
+    let newStatus = "PRESENT";
+    if (currentStatus === "PRESENT") newStatus = "LATE";
+    else if (currentStatus === "LATE") newStatus = "ABSENT";
+    else if (currentStatus === "ABSENT") newStatus = "PRESENT";
+
+    markSingleMutation.mutate({
+      sessionDate,
+      playerId,
+      status: newStatus,
+    });
+  };
+
+  const handleMarkAllPresent = (sessionDate: string) => {
+    const records = players.map((p: any) => ({
+      player: p.playerId,
+      status: "PRESENT",
+    }));
+
+    markBulkMutation.mutate({
+      sessionDate,
+      records,
+    });
+  };
+
+  const getImageUrl = (path: string | undefined | null) => {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${baseUrl}${cleanPath}`;
+  };
+
+  const formatDob = (dobStr?: string) => {
+    if (!dobStr) return "—";
+    try {
+      const d = new Date(dobStr);
+      if (isNaN(d.getTime())) return dobStr;
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dobStr;
+    }
+  };
+
+  const handleUpdateStatus = async (userId: string, paymentStatus: string) => {
+    try {
+      const payload: any = { paymentStatus };
+      if (teamId) {
+        payload.teamId = teamId;
+      }
+      await apiClient.put(`/api/admin/updatePaymentStatus/${userId}`, payload);
+      toast.success("Status updated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+    } catch (error: any) {
+      console.error("Failed to update status", error);
+      toast.error(error?.response?.data?.message || "Failed to update status");
+    }
+  };
+
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return {
+      day: d.toLocaleDateString("en-US", { weekday: "short" }),
+      date: `${d.getDate()}/${d.getMonth() + 1 < 10 ? "0" + (d.getMonth() + 1) : d.getMonth() + 1
+        }`,
+    };
+  };
+
+  return (
+    <div className="relative border overflow-hidden shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mb-6">
+      {/* Header Controls & Filter Bar */}
+      <div className="bg-[#031549] text-white px-5 py-3.5 flex flex-wrap gap-4 items-center justify-between">
+        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold flex-1">
+          <div className="flex items-center gap-2">
+            <svg
+              className="w-4 h-4 text-sky-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            <span className="font-bold text-white uppercase tracking-wider">
+              {teamName} Attendance Matrix
+            </span>
+          </div>
+
+        </div>
+
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            className="ml-2 pl-3 border-l border-white/20 text-slate-300 hover:text-white"
+          >
+            <svg
+              className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""
+                }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Attendance Grid Table */}
+      {isExpanded && (
+        <div className="relative">
+          {isLoading ? (
+            <div className="p-12 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+              <div className="w-7 h-7 border-2 border-[#0047FF] border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs font-bold animate-pulse">
+                Loading Team Attendance Matrix...
+              </span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-separate border-spacing-0 text-[11px]">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80 dark:bg-slate-900/80">
+                    <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1.5 text-center min-w-[35px] w-[35px] max-w-[35px] border-b border-slate-100 dark:border-slate-800">
+                      #
+                    </th>
+                    <th className="sticky left-[35px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">
+                      Status
+                    </th>
+                    <th className="sticky left-[75px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 min-w-[180px] w-[180px] max-w-[180px] border-b border-slate-100 dark:border-slate-800">
+                      Player
+                    </th>
+                    <th className="sticky left-[255px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1.5 text-center min-w-[90px] w-[90px] max-w-[90px] border-b border-slate-100 dark:border-slate-800">
+                      DOB
+                    </th>
+                    <th className="sticky left-[345px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[50px] w-[50px] max-w-[50px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                      Cond
+                    </th>
+
+                    {/* Session Columns */}
+                    {sessions.map((sessionDate: string, idx: number) => {
+                      const formatted = formatDateLabel(sessionDate);
+                      return (
+                        <th
+                          key={sessionDate}
+                          className="py-2.5 px-1.5 text-center min-w-[55px] font-semibold border-l border-slate-100 dark:border-slate-800/40 relative group"
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className="text-[8px] text-slate-400 font-bold">
+                              {idx + 1}
+                            </span>
+                            <span className="text-slate-500">{formatted.day}</span>
+                            <span className="text-slate-700 dark:text-slate-200 font-bold">
+                              {formatted.date}
+                            </span>
+                          </div>
+
+                          {/* Hover button: Mark All Present */}
+                          <button
+                            onClick={() => handleMarkAllPresent(sessionDate)}
+                            className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[#0047FF] font-bold text-[10px]"
+                            title="Mark all present"
+                          >
+                            <svg
+                              className="w-4 h-4 text-[#0047FF]"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2.5}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </button>
+                        </th>
+                      );
+                    })}
+
+                    <th className="sticky right-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 min-w-[40px] w-[40px] max-w-[40px] text-center border-l border-b border-slate-100 dark:border-slate-800 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {players.length > 0 ? (
+                    players.map((row: any, idx: number) => (
+                      <tr
+                        key={row.playerId || idx}
+                        className={`group border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 ${openMenuId === row.playerId ? "relative z-30" : ""
+                          }`}
+                      >
+                        <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1.5 text-center font-bold text-slate-400 text-xs min-w-[35px] w-[35px] max-w-[35px] border-b border-slate-50 dark:border-slate-800/40">
+                          {idx + 1}
+                        </td>
+                        <td
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const pId = row.playerId || row._id;
+                            setOpenMenuId(openMenuId === pId ? null : pId);
+                          }}
+                          className="sticky left-[35px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40 cursor-pointer"
+                          title="Click to update status"
+                        >
+                          {(() => {
+                            const s = (
+                              row.paymentStatus ||
+                              row.status ||
+                              "ACTIVE"
+                            ).toUpperCase();
+                            if (
+                              s === "PAID" ||
+                              s === "APPROVED" ||
+                              s === "ACTIVE"
+                            ) {
+                              return (
+                                <div
+                                  className="flex justify-center text-emerald-600"
+                                  title="Paid / Active"
+                                >
+                                  <svg
+                                    className="w-5 h-5 fill-current"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            if (s === "TRIAL") {
+                              return (
+                                <div
+                                  className="flex justify-center text-rose-600"
+                                  title="Trial"
+                                >
+                                  <svg
+                                    className="w-5 h-5 fill-current"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            if (s === "OVER_DUE") {
+                              return (
+                                <div
+                                  className="flex justify-center text-purple-600"
+                                  title="Overdue"
+                                >
+                                  <svg
+                                    className="w-5 h-5 fill-current"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            if (s === "SUBSTITUTE") {
+                              return (
+                                <div
+                                  className="flex justify-center text-[#9ca02e] dark:text-[#dee08b]"
+                                  title="Substitute"
+                                >
+                                  <svg
+                                    className="w-5 h-5 fill-current"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.609-1.276z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            if (s === "EXTRA" || s === "OTHERS") {
+                              return (
+                                <div
+                                  className="flex justify-center text-[#9ca02e] dark:text-[#dee08b]"
+                                  title="Extra"
+                                >
+                                  <svg
+                                    className="w-5 h-5 fill-current"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div
+                                className="flex justify-center text-amber-500"
+                                title={s}
+                              >
+                                <svg
+                                  className="w-5 h-5 fill-current"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </div>
+                            );
+                          })()}
+                        </td>
+
+                        {/* Player Details */}
+                        <td className="sticky left-[75px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 min-w-[180px] w-[180px] max-w-[180px] border-b border-slate-50 dark:border-slate-800/40">
+                          {(() => {
+                            const playerName =
+                              row.playerName ||
+                              row.name ||
+                              `${row.firstName || ""} ${row.lastName || ""}`.trim() ||
+                              "Player";
+
+                            const avatarSrc = row.profileImage
+                              ? getImageUrl(row.profileImage)
+                              : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                playerName
+                              )}&background=0A1930&color=fff`;
+
+                            return (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <img
+                                  src={avatarSrc!}
+                                  alt={playerName}
+                                  className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0 cursor-pointer"
+                                  onClick={() => setSelectedPlayer(row)}
+                                  onError={(e) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                      playerName
+                                    )}&background=0A1930&color=fff`;
+                                  }}
+                                />
+                                <div className="flex flex-col min-w-0 flex-1">
+                                  <span
+                                    onClick={() => setSelectedPlayer(row)}
+                                    className={`font-bold truncate cursor-pointer transition-colors leading-tight block text-xs ${getPlayerStatusTextClass(row.paymentStatus || row.status)}`}
+                                  >
+                                    {playerName}
+                                  </span>
+                                  {row.jerseyNumber && (
+                                    <span className="text-[9px] font-bold text-slate-400">
+                                      #{row.jerseyNumber}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+
+                        {/* DOB */}
+                        <td className="sticky left-[255px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1.5 text-center text-slate-600 dark:text-slate-300 font-medium text-[11px] min-w-[90px] w-[90px] max-w-[90px] border-b border-slate-50 dark:border-slate-800/40">
+                          {formatDob(row.dob || row.dateOfBirth)}
+                        </td>
+
+                        {/* Condition */}
+                        <td className="sticky left-[345px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1 text-center min-w-[50px] w-[50px] max-w-[50px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                          <span
+                            className={`font-semibold ${row.medicalCondition || row.isMedicalCondition || row.condition
+                              ? "text-rose-600 font-bold"
+                              : "text-slate-400"
+                              }`}
+                          >
+                            {row.medicalCondition || row.isMedicalCondition || row.condition
+                              ? "Yes"
+                              : "No"}
+                          </span>
+                        </td>
+
+                        {/* Session Attendance Cells */}
+                        {sessions.map((sessionDate: string) => {
+                          const currentStatus =
+                            row.attendance?.[sessionDate] || "NOT_MARKED";
+                          return (
+                            <td
+                              key={sessionDate}
+                              onClick={() =>
+                                handleToggleAttendance(
+                                  row.playerId,
+                                  sessionDate,
+                                  currentStatus
+                                )
+                              }
+                              className="py-2 px-1.5 text-center border-l border-slate-50 dark:border-slate-800/40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              {renderStatusIcon(currentStatus)}
+                            </td>
+                          );
+                        })}
+
+                        {/* Action Column */}
+                        <td className="sticky right-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                          <button
+                            id={`trigger-${row.playerId}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(
+                                openMenuId === row.playerId ? null : row.playerId
+                              );
+                            }}
+                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-none"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                              />
+                            </svg>
+                          </button>
+
+                          {/* Dropdown Menu Portal */}
+                          {openMenuId === row.playerId &&
+                            menuPosition &&
+                            createPortal(
+                              <div
+                                id="portal-action-menu-team"
+                                style={{
+                                  position: "absolute",
+                                  top: `${menuPosition.top}px`,
+                                  left: `${menuPosition.left}px`,
+                                }}
+                                className="z-[9999] w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-left"
+                              >
+                                {/* UPDATE STATUS Header */}
+                                <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
+                                  Update Status
+                                </div>
+                                {[
+                                  { status: "TRIAL", label: "TRIAL", dotColor: "bg-rose-500", textClass: "hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20" },
+                                  { status: "UNPAID", label: "UNPAID", dotColor: "bg-amber-500", textClass: "hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20" },
+                                  { status: "PAID", label: "PAID", dotColor: "bg-emerald-500", textClass: "hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20" },
+                                  // { status: "OVER_DUE", label: "OVER DUE", dotColor: "bg-purple-500", textClass: "hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20" },
+                                  { status: "EXTRA", label: "EXTRA", dotColor: "bg-[#dee08b]", textClass: "hover:bg-[#dee08b]/20 hover:text-[#8a8c23] dark:hover:text-[#dee08b]" },
+                                  { status: "SUBSTITUTE", label: "SUBSTITUTE", dotColor: "bg-[#dee08b]", textClass: "hover:bg-[#dee08b]/20 hover:text-[#8a8c23] dark:hover:text-[#dee08b]" },
+                                ]
+                                  .filter(item => item.status !== (row.paymentStatus || row.status || "").toUpperCase())
+                                  .map((item) => (
+                                    <button
+                                      key={item.status}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(null);
+                                        handleUpdateStatus(row.playerId || row._id, item.status);
+                                      }}
+                                      className={`w-full text-left px-4 py-1.5 text-xs font-bold transition-colors flex items-center gap-2 text-slate-700 dark:text-slate-200 ${item.textClass}`}
+                                    >
+                                      <span className={`w-2 h-2 rounded-full ${item.dotColor}`} />
+                                      {item.label}
+                                    </button>
+                                  ))}
+                                <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    setSelectedPlayer(row);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5 text-slate-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    />
+                                  </svg>
+                                  View Player Profile
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    handleChatWithParent(row);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5 text-[#0047FF]"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                  </svg>
+                                  Chat with Parent
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    setCoachNotePlayer({
+                                      playerId: row.playerId,
+                                      name:
+                                        row.playerName ||
+                                        `${row.firstName || ""} ${row.lastName || ""
+                                          }`.trim(),
+                                      teamId,
+                                    });
+                                  }}
+                                  className="w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5 text-amber-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
+                                  </svg>
+                                  Add Coach Note
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    setInvoicePlayer(row);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5 text-emerald-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                  </svg>
+                                  Generate Invoice
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    setUnassignPlayer(row);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 font-semibold"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5 text-rose-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6h12m.707-14.707a1 1 0 00-1.414 0L12 7.586l-1.293-1.293a1 1 0 00-1.414 1.414L10.586 9l-1.293 1.293a1 1 0 101.414 1.414L12 10.414l1.293 1.293a1 1 0 001.414-1.414L13.414 9l1.293-1.293a1 1 0 000-1.414z"
+                                    />
+                                  </svg>
+                                  Unassign Player
+                                </button>
+                              </div>,
+                              document.body
+                            )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={sessions.length + 6}
+                        className="py-12 text-center text-slate-400 font-bold"
+                      >
+                        No players or session records found for selected filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Player Detail Card Modal */}
+      {selectedPlayer && (
+        <PlayerDetailCard
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
+
+      {/* Invoice Generator Modal */}
+      {invoicePlayer && (
+        <GenerateInvoiceModal
+          isOpen={!!invoicePlayer}
+          onClose={() => setInvoicePlayer(null)}
+          player={invoicePlayer}
+        />
+      )}
+
+      {/* Coach Note Modal */}
+      {coachNotePlayer && (
+        <AddCoachNoteModal
+          isOpen={!!coachNotePlayer}
+          onClose={() => setCoachNotePlayer(null)}
+          playerId={coachNotePlayer.playerId}
+          playerName={coachNotePlayer.name}
+        />
+      )}
+
+      {/* Unassign Player Modal */}
+      {unassignPlayer && (
+        <ConfirmDeleteModal
+          isOpen={!!unassignPlayer}
+          onClose={() => setUnassignPlayer(null)}
+          onConfirm={() => unassignMutation.mutate(unassignPlayer.playerId || unassignPlayer._id)}
+          title="Unassign Player"
+          message={`Are you sure you want to unassign ${unassignPlayer.playerName || `${unassignPlayer.firstName || ""} ${unassignPlayer.lastName || ""}`.trim() || "this player"} from ${teamName}?`}
+          loading={unassignMutation.isPending}
+        />
+      )}
+    </div>
+  );
+}

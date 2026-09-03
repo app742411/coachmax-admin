@@ -10,6 +10,7 @@ import {
   getTemporaryPlayersForTeam,
   deleteTemporaryPlayerFromTeam 
 } from "../../api/adminApi";
+import { getAllTerms } from "../../api/terms";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import PageMeta from "../../components/common/PageMeta";
 import Button from "../../components/ui/button/Button";
@@ -18,21 +19,20 @@ import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "../../components/management/AssignPlayerToTeamModal";
 import AddTemporaryPlayersModal from "../../components/management/AddTemporaryPlayersModal";
 import EditTemporaryPlayerModal from "../../components/management/EditTemporaryPlayerModal";
+import TeamFullTable from "../../components/teams/TeamFullTable";
 import {
   Shield,
   User,
-  Users,
   Calendar,
-  Search,
   UserPlus,
   Trash2,
   Edit,
   ArrowLeft,
   Mail,
   Phone,
-  LayoutGrid,
-  List,
   AlertCircle,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -41,8 +41,6 @@ export default function TeamDetailsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isAddTempModalOpen, setIsAddTempModalOpen] = useState(false);
@@ -60,10 +58,20 @@ export default function TeamDetailsPage() {
     assistantCoach: "",
     ageGroup: "",
     fee: "",
+    teamFee: "",
+    year: new Date().getFullYear().toString(),
+    term: "",
+    scheduleType: "SINGLE_DAY" as "SINGLE_DAY" | "WEEKDAYS" | "CUSTOM",
+    dayOfWeek: "Monday",
+    startTime: "17:00",
+    endTime: "18:30",
+    venue: "",
+    location: "",
     teamType: "INTERNAL",
     captain: "",
     viceCaptain: "",
   });
+  const [customSchedules, setCustomSchedules] = useState<{ dayOfWeek: string; startTime: string; endTime: string }[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -74,32 +82,6 @@ export default function TeamDetailsPage() {
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
     return `${baseUrl}${cleanPath}`;
-  };
-
-  // Format DOB and calculate Age
-  const formatDobAndAge = (dobString?: string | null) => {
-    if (!dobString) return { formattedDob: "N/A", age: null };
-    try {
-      const birthDate = new Date(dobString);
-      if (isNaN(birthDate.getTime())) return { formattedDob: "N/A", age: null };
-
-      const formattedDob = birthDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-
-      return { formattedDob, age: age >= 0 ? `${age} yrs` : null };
-    } catch {
-      return { formattedDob: "N/A", age: null };
-    }
   };
 
   // Fetch Team Details
@@ -119,6 +101,14 @@ export default function TeamDetailsPage() {
   });
 
   const coaches = Array.isArray(coachesData) ? coachesData : (coachesData?.data || []);
+
+  // Fetch Terms for edit modal
+  const { data: termsData } = useQuery({
+    queryKey: ["terms", formData.year],
+    queryFn: () => getAllTerms(formData.year ? Number(formData.year) : undefined),
+    enabled: isEditModalOpen,
+  });
+  const terms = Array.isArray(termsData) ? termsData : (termsData?.data || termsData?.terms || []);
 
   // Update Team Mutation
   const updateMutation = useMutation({
@@ -166,16 +156,32 @@ export default function TeamDetailsPage() {
 
   const handleOpenEdit = () => {
     if (!team) return;
+    const feeVal = team.fee || team.teamFee || "";
+    const yearVal = team.year || team.term?.year || new Date().getFullYear();
     setFormData({
       teamName: team.teamName || "",
       coach: team.coach?._id || team.coach || "",
       assistantCoach: team.assistantCoach?._id || team.assistantCoach || "",
       ageGroup: team.ageGroup || "",
-      fee: team.fee || "",
+      fee: feeVal,
+      teamFee: feeVal,
+      year: yearVal ? yearVal.toString() : "",
+      term: team.term?._id || team.term || "",
+      scheduleType: team.scheduleType || "SINGLE_DAY",
+      dayOfWeek: team.dayOfWeek || "Monday",
+      startTime: team.startTime || "17:00",
+      endTime: team.endTime || "18:30",
+      venue: team.venue || "",
+      location: team.location || "",
       teamType: team.teamType || (team.isExternal ? "EXTERNAL" : "INTERNAL"),
       captain: team.captain?._id || team.captain || "",
       viceCaptain: team.viceCaptain?._id || team.viceCaptain || "",
     });
+    if (Array.isArray(team.schedule) && team.schedule.length > 0) {
+      setCustomSchedules(team.schedule);
+    } else {
+      setCustomSchedules([{ dayOfWeek: "Monday", startTime: "17:00", endTime: "18:30" }]);
+    }
     setSelectedFile(null);
     setPreviewImage(team.teamLogo ? getImageUrl(team.teamLogo) : (team.logo ? getImageUrl(team.logo) : null));
     setIsEditModalOpen(true);
@@ -198,18 +204,46 @@ export default function TeamDetailsPage() {
     if (!teamId) return;
     const payload = new FormData();
     payload.append("teamName", formData.teamName);
-    payload.append("coach", formData.coach);
+    if (formData.coach) payload.append("coach", formData.coach);
     if (formData.assistantCoach) {
       payload.append("assistantCoach", formData.assistantCoach);
     }
     payload.append("ageGroup", formData.ageGroup);
-    if (formData.fee) {
-      payload.append("fee", formData.fee);
+
+    const effectiveFee = formData.fee || formData.teamFee;
+    if (effectiveFee) {
+      payload.append("fee", effectiveFee);
+      payload.append("teamFee", effectiveFee);
     }
+
     if (formData.teamType) {
       payload.append("teamType", formData.teamType);
       payload.append("isExternal", formData.teamType === "EXTERNAL" ? "true" : "false");
     }
+
+    if (formData.year) {
+      payload.append("year", formData.year);
+    }
+
+    if (formData.term) {
+      payload.append("term", formData.term);
+    }
+
+    payload.append("scheduleType", formData.scheduleType);
+    if (formData.scheduleType === "SINGLE_DAY") {
+      if (formData.dayOfWeek) payload.append("dayOfWeek", formData.dayOfWeek);
+      if (formData.startTime) payload.append("startTime", formData.startTime);
+      if (formData.endTime) payload.append("endTime", formData.endTime);
+    } else if (formData.scheduleType === "WEEKDAYS") {
+      if (formData.startTime) payload.append("startTime", formData.startTime);
+      if (formData.endTime) payload.append("endTime", formData.endTime);
+    } else if (formData.scheduleType === "CUSTOM") {
+      payload.append("schedule", JSON.stringify(customSchedules));
+    }
+
+    if (formData.venue) payload.append("venue", formData.venue);
+    if (formData.location) payload.append("location", formData.location);
+
     if (formData.captain) {
       payload.append("captain", formData.captain);
     }
@@ -254,35 +288,7 @@ export default function TeamDetailsPage() {
     ? (rawTempArray.length > 0 ? rawTempArray : (team?.temporaryPlayers || team?.players || []))
     : (team?.players || []);
 
-  const filteredPlayers = players.filter((p: any) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const name = (p.fullName || `${p.firstName || ""} ${p.lastName || ""}` || p.name || "").toLowerCase();
-    const email = (p.email || "").toLowerCase();
-    const phone = (p.phone || "").toLowerCase();
-    const jersey = (p.jerseyNumber ? `#${p.jerseyNumber}` : "").toLowerCase();
-    return name.includes(q) || email.includes(q) || phone.includes(q) || jersey.includes(q);
-  });
 
-  const allFilteredSelected =
-    filteredPlayers.length > 0 && filteredPlayers.every((p: any) => selectedPlayerIds.includes(p._id));
-
-  const toggleSelectAll = () => {
-    if (allFilteredSelected) {
-      const filteredIds = new Set(filteredPlayers.map((p: any) => p._id));
-      setSelectedPlayerIds((prev) => prev.filter((id) => !filteredIds.has(id)));
-    } else {
-      const newIds = new Set(selectedPlayerIds);
-      filteredPlayers.forEach((p: any) => newIds.add(p._id));
-      setSelectedPlayerIds(Array.from(newIds));
-    }
-  };
-
-  const toggleSelectPlayer = (playerId: string) => {
-    setSelectedPlayerIds((prev) =>
-      prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]
-    );
-  };
 
   if (isLoading) {
     return (
@@ -427,24 +433,49 @@ export default function TeamDetailsPage() {
                       {team.ageGroup}
                     </span>
                   )}
-                  {team.fee && (
+                  {(team.fee || team.teamFee) && (
                     <span className="px-2.5 py-0.5 text-xs font-bold uppercase bg-emerald-600 text-white tracking-wider">
-                      Fee: ${team.fee}
+                      Fee: ${team.fee || team.teamFee}
+                    </span>
+                  )}
+                  {team.term && (
+                    <span className="px-2.5 py-0.5 text-xs font-bold uppercase bg-purple-600 text-white tracking-wider">
+                      Term: {typeof team.term === 'object' ? (team.term.name || team.term.termName) : "Assigned"}
                     </span>
                   )}
                 </div>
 
-                <p className="text-xs text-gray-300 flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                  <span>
-                    Created{" "}
-                    {new Date(team.createdAt || Date.now()).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                <div className="flex items-center gap-4 flex-wrap text-xs text-gray-300 pt-1">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                    <span>
+                      Created{" "}
+                      {new Date(team.createdAt || Date.now()).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
                   </span>
-                </p>
+
+                  {(team.venue || team.location) && (
+                    <span className="flex items-center gap-1.5 text-amber-300 font-medium">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>{[team.venue, team.location].filter(Boolean).join(" • ")}</span>
+                    </span>
+                  )}
+
+                  {team.scheduleType && (
+                    <span className="flex items-center gap-1.5 text-blue-300 font-medium">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>
+                        {team.scheduleType === "SINGLE_DAY" ? `${team.dayOfWeek || ""} ${team.startTime || ""}-${team.endTime || ""}`.trim() :
+                         team.scheduleType === "WEEKDAYS" ? `Mon-Fri ${team.startTime || ""}-${team.endTime || ""}`.trim() :
+                         "Custom Schedule"}
+                      </span>
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-3 pt-1">
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 border border-emerald-800/60">
@@ -602,463 +633,8 @@ export default function TeamDetailsPage() {
           </div>
         </div>
 
-        {/* SQUAD ROSTER SECTION */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          {/* Section Toolbar */}
-          <div className="p-4 lg:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-none bg-[#0047FF] text-white flex items-center justify-center">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                  Squad Players Roster
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {players.length} players assigned to {team.teamName}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Bulk Unassign Button */}
-              {selectedPlayerIds.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setIsBulkDeleteModalOpen(true)}
-                  className="px-3.5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-none transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer animate-in fade-in"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Unassign Selected ({selectedPlayerIds.length})</span>
-                </button>
-              )}
-
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search player name, email, jersey..."
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-slate-800 dark:text-slate-200"
-                />
-              </div>
-
-              {/* View Mode Switcher */}
-              <div className="flex items-center border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5">
-                <button
-                  onClick={() => setViewMode("table")}
-                  className={`p-1.5 transition-colors cursor-pointer ${viewMode === "table"
-                      ? "bg-white dark:bg-slate-700 text-[#0047FF] shadow-xs"
-                      : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                    }`}
-                  title="Table View"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-1.5 transition-colors cursor-pointer ${viewMode === "grid"
-                      ? "bg-white dark:bg-slate-700 text-[#0047FF] shadow-xs"
-                      : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                    }`}
-                  title="Grid View"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (isExternalTeam) {
-                    setIsAddTempModalOpen(true);
-                  } else {
-                    setIsAssignModalOpen(true);
-                  }
-                }}
-                className="px-3.5 py-2 text-xs font-bold bg-[#0047FF] hover:bg-blue-700 text-white rounded-none transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>{isExternalTeam ? "+ Add Temporary Players" : "+ Assign Players"}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Roster Display Content */}
-          {players.length === 0 ? (
-            <div className="py-20 text-center text-slate-400 flex flex-col items-center gap-3">
-              <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                <Users className="w-7 h-7" />
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-slate-700 dark:text-slate-200">No Players in Squad</h4>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  {isExternalTeam
-                    ? "This team doesn't have any players assigned yet. Add temporary away players for this external team."
-                    : "This team doesn't have any players assigned yet. Assign available players from your academy."}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  if (isExternalTeam) {
-                    setIsAddTempModalOpen(true);
-                  } else {
-                    setIsAssignModalOpen(true);
-                  }
-                }}
-                className="mt-2 px-5 py-2.5 text-xs font-bold bg-[#0047FF] hover:bg-blue-700 text-white rounded-none transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>{isExternalTeam ? "+ Add Temporary Players Now" : "Assign Players Now"}</span>
-              </button>
-            </div>
-          ) : filteredPlayers.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-xs font-semibold">
-              No players found matching "{searchQuery}".
-            </div>
-          ) : viewMode === "table" ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
-                    <th className="py-3 px-3 w-[45px] text-center">
-                      <input
-                        type="checkbox"
-                        checked={allFilteredSelected}
-                        onChange={toggleSelectAll}
-                        className="w-4 h-4 text-[#0047FF] rounded-none border-slate-300 focus:ring-[#0047FF] cursor-pointer"
-                        title="Select All Players"
-                      />
-                    </th>
-                    <th className="py-3 px-3 w-[40px] text-center text-slate-400">#</th>
-                    <th className="py-3 px-4 min-w-[220px]">Player</th>
-                    <th className="py-3 px-4 min-w-[180px]">Contact Info</th>
-                    <th className="py-3 px-4 min-w-[120px]">DOB / Age</th>
-                    <th className="py-3 px-4 min-w-[180px] text-center">Season Stats</th>
-                    <th className="py-3 px-4 w-[70px] text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPlayers.map((player: any, idx: number) => {
-                    const isSelected = selectedPlayerIds.includes(player._id);
-                    const playerName =
-                      player.fullName ||
-                      `${player.firstName || ""} ${player.lastName || ""}`.trim() ||
-                      player.name ||
-                      (player.email ? player.email.split("@")[0] : `Player #${idx + 1}`);
-
-                    const avatarSrc = player.profileImage
-                      ? getImageUrl(player.profileImage)
-                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName)}&background=0A1930&color=fff`;
-
-                    const { formattedDob, age } = formatDobAndAge(player.dob);
-                    const stats = player.statistics || {};
-
-                    return (
-                      <tr
-                        key={player._id || idx}
-                        className={`border-b border-slate-100 last:border-0 dark:border-slate-800/40 transition-colors ${isSelected
-                            ? "bg-blue-50/80 dark:bg-blue-950/40"
-                            : "hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
-                          }`}
-                      >
-                        <td className="py-3 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelectPlayer(player._id)}
-                            className="w-4 h-4 text-[#0047FF] rounded-none border-slate-300 focus:ring-[#0047FF] cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-3 px-3 text-center font-bold text-slate-400">
-                          {idx + 1}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="relative shrink-0">
-                              <img
-                                src={avatarSrc!}
-                                alt={playerName}
-                                className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
-                                onError={(e) => {
-                                  e.currentTarget.onerror = null;
-                                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName)}&background=0A1930&color=fff`;
-                                }}
-                              />
-                              {player.jerseyNumber && (
-                                <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-[#0047FF] text-white text-[9px] font-black rounded-none border border-white">
-                                  #{player.jerseyNumber}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex flex-col min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
-                                  {playerName}
-                                </span>
-                                {player._id && player._id === (team.captain?._id || team.captain) && (
-                                  <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-amber-500 text-white rounded-none shadow-xs" title="Team Captain">
-                                    Captain
-                                  </span>
-                                )}
-                                {player._id && player._id === (team.viceCaptain?._id || team.viceCaptain) && (
-                                  <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-blue-600 text-white rounded-none shadow-xs" title="Vice Captain">
-                                    Vice Captain
-                                  </span>
-                                )}
-                                {player.gender && (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase">
-                                    {player.gender}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Star Rating under Player Name */}
-                              <div className="flex items-center gap-0.5 text-amber-400 mt-0.5">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <svg
-                                    key={i}
-                                    className={`w-3 h-3 ${(player.rating || 0) > i
-                                        ? "text-amber-400 fill-amber-400"
-                                        : "text-slate-200 fill-slate-200 dark:text-slate-700 dark:fill-slate-700"
-                                      }`}
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                  </svg>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium">
-                          {player.email ? (
-                            <span className="block truncate text-xs font-semibold text-slate-700 dark:text-slate-200">
-                              {player.email}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-xs italic">No email</span>
-                          )}
-                          {player.phone && (
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                              {player.phone}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 block text-xs">
-                            {formattedDob}
-                          </span>
-                          {age && (
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                              {age}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 border border-slate-200 dark:border-slate-700 text-[11px] font-bold">
-                            <span title="Appearances" className="text-slate-700 dark:text-slate-300">
-                              {stats.appearances || 0} Apps
-                            </span>
-                            <span className="text-slate-300 dark:text-slate-700">•</span>
-                            <span title="Goals Scored" className="text-emerald-600 dark:text-emerald-400">
-                              ⚽ {stats.goals || 0}
-                            </span>
-                            <span className="text-slate-300 dark:text-slate-700">•</span>
-                            <span title="Assists" className="text-blue-600 dark:text-blue-400">
-                              👟 {stats.assists || 0}
-                            </span>
-                            {(stats.yellowCards > 0 || stats.redCards > 0) && (
-                              <>
-                                <span className="text-slate-300 dark:text-slate-700">•</span>
-                                <span className="text-amber-500 font-bold" title="Yellow/Red Cards">
-                                  🟨{stats.yellowCards || 0} 🟥{stats.redCards || 0}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {isExternalTeam && (
-                              <button
-                                type="button"
-                                onClick={() => setEditTempPlayer(player)}
-                                className="p-1.5 text-slate-400 hover:text-[#0047FF] hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors rounded-none cursor-pointer"
-                                title="Edit temporary player"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isExternalTeam) {
-                                  setTempPlayerToDelete(player);
-                                } else {
-                                  setPlayerToRemove(player);
-                                }
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors rounded-none cursor-pointer"
-                              title={isExternalTeam ? "Delete temporary player" : "Unassign player from team"}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredPlayers.map((player: any, idx: number) => {
-                const isSelected = selectedPlayerIds.includes(player._id);
-                const playerName =
-                  player.fullName ||
-                  `${player.firstName || ""} ${player.lastName || ""}`.trim() ||
-                  player.name ||
-                  (player.email ? player.email.split("@")[0] : `Player #${idx + 1}`);
-
-                const avatarSrc = player.profileImage
-                  ? getImageUrl(player.profileImage)
-                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName)}&background=0A1930&color=fff`;
-
-                const { formattedDob, age } = formatDobAndAge(player.dob);
-                const stats = player.statistics || {};
-
-                return (
-                  <div
-                    key={player._id || idx}
-                    className={`p-4 border transition-all flex flex-col justify-between gap-3 relative group ${isSelected
-                        ? "bg-blue-50/80 dark:bg-blue-950/40 border-[#0047FF] shadow-xs"
-                        : "bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
-                      }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectPlayer(player._id)}
-                          className="w-4 h-4 text-[#0047FF] rounded-none border-slate-300 focus:ring-[#0047FF] cursor-pointer shrink-0"
-                        />
-                        <div className="relative shrink-0">
-                          <img
-                            src={avatarSrc!}
-                            alt={playerName}
-                            className="w-11 h-11 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName)}&background=0A1930&color=fff`;
-                            }}
-                          />
-                          {player.jerseyNumber && (
-                            <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-[#0047FF] text-white text-[9px] font-black rounded-none border border-white">
-                              #{player.jerseyNumber}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                              {playerName}
-                            </h4>
-                            {player._id && player._id === (team.captain?._id || team.captain) && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-amber-500 text-white rounded-none shadow-xs" title="Team Captain">
-                                Captain
-                              </span>
-                            )}
-                            {player._id && player._id === (team.viceCaptain?._id || team.viceCaptain) && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-blue-600 text-white rounded-none shadow-xs" title="Vice Captain">
-                                Vice Captain
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-slate-400 truncate block">
-                            {player.email || player.phone || "No contact"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        {isExternalTeam && (
-                          <button
-                            type="button"
-                            onClick={() => setEditTempPlayer(player)}
-                            className="text-slate-400 hover:text-[#0047FF] p-1 cursor-pointer"
-                            title="Edit temporary player"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isExternalTeam) {
-                              setTempPlayerToDelete(player);
-                            } else {
-                              setPlayerToRemove(player);
-                            }
-                          }}
-                          className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                          title={isExternalTeam ? "Delete temporary player" : "Unassign player"}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Stats Matrix */}
-                    <div className="grid grid-cols-3 gap-1 py-2 px-2.5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 text-center">
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Goals</span>
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          {stats.goals || 0}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Assists</span>
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                          {stats.assists || 0}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Apps</span>
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                          {stats.appearances || 0}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between text-[10px]">
-                      <span className="font-semibold text-slate-600 dark:text-slate-300">
-                        {formattedDob} {age && `(${age})`}
-                      </span>
-                      <div className="flex items-center gap-0.5 text-amber-400">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <svg
-                            key={i}
-                            className={`w-2.5 h-2.5 ${(player.rating || 0) > i ? "text-amber-400 fill-amber-400" : "text-slate-300 fill-slate-300"
-                              }`}
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        {/* TEAM ATTENDANCE MATRIX & FULL TABLE */}
+        <TeamFullTable teamId={teamId!} teamName={team.teamName} />
       </div>
 
       {/* ASSIGN PLAYERS MODAL */}
@@ -1072,172 +648,396 @@ export default function TeamDetailsPage() {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        className="max-w-[700px] p-6 rounded-none shadow-2xl"
+        className="max-w-[920px] max-h-[90vh] overflow-y-auto p-6 lg:p-8 rounded-none shadow-2xl"
+        noBackgroundBlur={true}
       >
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 rounded-none text-[#0047FF]">
+          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-[#0047FF]">
             <Shield size={22} />
           </div>
           <div>
-            <h4 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+            <h4 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
               Edit Team Profile
             </h4>
-            <p className="text-xs text-slate-500 font-medium">Update team credentials, age group, and coaches.</p>
+            <p className="text-xs text-slate-500 font-medium">Update team credentials, academic term, schedule, and venue details.</p>
           </div>
         </div>
 
-        <form onSubmit={handleSaveEdit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Team Name <span className="text-red-500">*</span>
-              </label>
+        <form onSubmit={handleSaveEdit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="md:col-span-8 space-y-4">
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Name *</label>
+                  <input
+                    type="text"
+                    value={formData.teamName}
+                    onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all dark:text-white"
+                    placeholder="Under 16 Tigers"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Category *</label>
+                  <select
+                    value={formData.teamType}
+                    onChange={(e) => setFormData({ ...formData, teamType: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                    required
+                  >
+                    <option value="INTERNAL">Our Team (Academy)</option>
+                    <option value="EXTERNAL">External Team (Opponent)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group *</label>
+                  <input
+                    type="text"
+                    value={formData.ageGroup}
+                    onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all dark:text-white"
+                    placeholder="e.g. U16"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Fee ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={formData.fee}
+                    onChange={(e) => setFormData({ ...formData, fee: e.target.value, teamFee: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all dark:text-white"
+                    placeholder="e.g. 5000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Year</label>
+                  <select
+                    value={formData.year}
+                    onChange={(e) => setFormData({ ...formData, year: e.target.value, term: "" })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                  >
+                    <option value="">All Years</option>
+                    {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((yr) => (
+                      <option key={yr} value={yr}>
+                        {yr}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Academic Term</label>
+                  <select
+                    value={formData.term}
+                    onChange={(e) => setFormData({ ...formData, term: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                  >
+                    <option value="">Select Academic Term</option>
+                    {terms.map((t: any) => (
+                      <option key={t._id || t.id} value={t._id || t.id}>
+                        {t.name || t.termName || t.title || "Term"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Coaches & Leadership */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Assigned Head Coach *</label>
+                  <select
+                    value={formData.coach}
+                    onChange={(e) => setFormData({ ...formData, coach: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                  >
+                    <option value="">Select Head Coach</option>
+                    {coaches.map((c: any) => (
+                      <option key={c._id} value={c._id}>
+                        {c.fullName || c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Assistant Coach</label>
+                  <select
+                    value={formData.assistantCoach}
+                    onChange={(e) => setFormData({ ...formData, assistantCoach: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                  >
+                    <option value="">Select Assistant Coach</option>
+                    {coaches.map((c: any) => (
+                      <option key={c._id} value={c._id}>
+                        {c.fullName || c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {players.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Captain</label>
+                    <select
+                      value={formData.captain}
+                      onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
+                      className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                    >
+                      <option value="">-- None --</option>
+                      {players.map((p: any) => {
+                        const pName = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || p.email;
+                        return (
+                          <option key={p._id || p} value={p._id || p}>
+                            {pName} {p.jerseyNumber ? `(#${p.jerseyNumber})` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Vice Captain</label>
+                    <select
+                      value={formData.viceCaptain}
+                      onChange={(e) => setFormData({ ...formData, viceCaptain: e.target.value })}
+                      className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                    >
+                      <option value="">-- None --</option>
+                      {players.map((p: any) => {
+                        const pName = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || p.email;
+                        return (
+                          <option key={p._id || p} value={p._id || p}>
+                            {pName} {p.jerseyNumber ? `(#${p.jerseyNumber})` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Logo Upload Panel */}
+            <div className="md:col-span-4 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 p-6 border border-gray-200 dark:border-gray-700">
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4 text-center">Team Logo</label>
+              <div 
+                onClick={() => {
+                  const input = document.getElementById("team-details-logo-input");
+                  if (input) input.click();
+                }}
+                className="w-36 h-36 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center bg-white dark:bg-slate-900 cursor-pointer overflow-hidden hover:border-[#0047FF] transition-colors group relative shadow-xs"
+              >
+                {previewImage ? (
+                  <>
+                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Edit className="text-white w-7 h-7" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center text-gray-400 group-hover:text-[#0047FF] transition-colors">
+                    <Shield className="w-8 h-8 mb-2 text-[#0047FF]" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Upload Logo</span>
+                  </div>
+                )}
+              </div>
               <input
-                type="text"
-                value={formData.teamName}
-                onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
-                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-                required
+                id="team-details-logo-input"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
               />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Team Category
-              </label>
-              <select
-                value={formData.teamType}
-                onChange={(e) => setFormData({ ...formData, teamType: e.target.value })}
-                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none appearance-none cursor-pointer"
-                required
-              >
-                <option value="INTERNAL">Our Team (Academy)</option>
-                <option value="EXTERNAL">External Team (Opponent)</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Age Group
-                </label>
-                <input
-                  type="text"
-                  value={formData.ageGroup}
-                  onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                  className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-                  placeholder="e.g. U10, U12"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Team Fee ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={formData.fee}
-                  onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
-                  className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-                  placeholder="e.g. 150"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Head Coach
-              </label>
-              <select
-                value={formData.coach}
-                onChange={(e) => setFormData({ ...formData, coach: e.target.value })}
-                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-              >
-                <option value="">-- Select Head Coach --</option>
-                {coaches.map((c: any) => (
-                  <option key={c._id} value={c._id}>
-                    {c.fullName || c.name} ({c.email || "No email"})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Assistant Coach
-              </label>
-              <select
-                value={formData.assistantCoach}
-                onChange={(e) => setFormData({ ...formData, assistantCoach: e.target.value })}
-                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-              >
-                <option value="">-- Select Assistant Coach (Optional) --</option>
-                {coaches.map((c: any) => (
-                  <option key={c._id} value={c._id}>
-                    {c.fullName || c.name} ({c.email || "No email"})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Team Captain
-              </label>
-              <select
-                value={formData.captain}
-                onChange={(e) => setFormData({ ...formData, captain: e.target.value })}
-                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-              >
-                <option value="">-- Select Captain (Optional) --</option>
-                {players.map((p: any) => {
-                  const pName = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || p.email;
-                  return (
-                    <option key={p._id} value={p._id}>
-                      {pName} {p.jerseyNumber ? `(#${p.jerseyNumber})` : ""}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Vice Captain
-              </label>
-              <select
-                value={formData.viceCaptain}
-                onChange={(e) => setFormData({ ...formData, viceCaptain: e.target.value })}
-                className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs font-bold focus:border-[#0047FF] outline-none"
-              >
-                <option value="">-- Select Vice Captain (Optional) --</option>
-                {players.map((p: any) => {
-                  const pName = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || p.email;
-                  return (
-                    <option key={p._id} value={p._id}>
-                      {pName} {p.jerseyNumber ? `(#${p.jerseyNumber})` : ""}
-                    </option>
-                  );
-                })}
-              </select>
+              <span className="text-[10px] text-gray-400 mt-3 text-center">Supports PNG, JPG, WEBP</span>
             </div>
           </div>
 
-          {/* Logo upload */}
-          <div>
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-              Team Logo
-            </label>
-            <div className="flex items-center gap-4">
-              {previewImage && (
-                <img src={previewImage} alt="Preview" className="w-12 h-12 rounded-none object-cover border" />
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-[#0047FF] hover:file:bg-blue-100 cursor-pointer"
-              />
+          {/* Schedule & Location Section */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-5 space-y-4">
+            <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Clock size={15} className="text-[#0047FF]" />
+              Schedule & Location Details
+            </h5>
+
+            {/* Schedule Type Selector */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schedule Type</label>
+              <div className="flex items-center gap-3">
+                {(["SINGLE_DAY"/*, "WEEKDAYS", "CUSTOM"*/] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, scheduleType: st })}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border transition-all ${
+                      formData.scheduleType === st
+                        ? "bg-[#0047FF] text-white border-[#0047FF] shadow-xs"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-[#0047FF]"
+                    }`}
+                  >
+                    {st.replace("_", " ")}
+                  </button>
+                ))}
+                {/* 
+                <button
+                  type="button"
+                  disabled
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border border-gray-200 text-gray-300 cursor-not-allowed opacity-50"
+                >
+                  WEEKDAYS
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border border-gray-200 text-gray-300 cursor-not-allowed opacity-50"
+                >
+                  CUSTOM
+                </button>
+                */}
+              </div>
+            </div>
+
+            {/* Schedule Fields */}
+            {formData.scheduleType === "SINGLE_DAY" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Day of Week</label>
+                  <select
+                    value={formData.dayOfWeek}
+                    onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                  >
+                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Start Time</label>
+                  <input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">End Time</label>
+                  <input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* WEEKDAYS AND CUSTOM SCHEDULE TYPES COMMENTED OUT
+            {formData.scheduleType === "WEEKDAYS" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Start Time (Mon - Fri)</label>
+                  <input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">End Time (Mon - Fri)</label>
+                  <input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                  />
+                </div>
+              </div>
+            )}
+
+            {formData.scheduleType === "CUSTOM" && (
+              <div className="space-y-3 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Custom Schedule Slots</span>
+                  <button
+                    type="button"
+                    onClick={addCustomScheduleSlot}
+                    className="text-xs font-bold text-[#0047FF] hover:underline flex items-center gap-1"
+                  >
+                    <Plus size={14} /> Add Slot
+                  </button>
+                </div>
+                {customSchedules.map((slot, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-gray-700">
+                    <select
+                      value={slot.dayOfWeek}
+                      onChange={(e) => updateCustomScheduleSlot(idx, "dayOfWeek", e.target.value)}
+                      className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold dark:text-white"
+                    >
+                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="time"
+                      value={slot.startTime}
+                      onChange={(e) => updateCustomScheduleSlot(idx, "startTime", e.target.value)}
+                      className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold dark:text-white"
+                    />
+                    <span className="text-xs text-gray-400">to</span>
+                    <input
+                      type="time"
+                      value={slot.endTime}
+                      onChange={(e) => updateCustomScheduleSlot(idx, "endTime", e.target.value)}
+                      className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold dark:text-white"
+                    />
+                    {customSchedules.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCustomScheduleSlot(idx)}
+                        className="text-rose-500 hover:text-rose-700 p-1"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            */}
+
+            {/* Venue & Location */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 ml-1">Venue</label>
+                <input
+                  type="text"
+                  value={formData.venue}
+                  onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                  className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-xs font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all dark:text-white"
+                  placeholder="Main Ground"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 ml-1">Location</label>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-xs font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all dark:text-white"
+                  placeholder="Bhopal Sports Complex"
+                />
+              </div>
             </div>
           </div>
 

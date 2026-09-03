@@ -44,8 +44,8 @@ const LayoutContent: React.FC = () => {
       </div>
       <div
         className={`flex-1 min-w-0 transition-all duration-300 ease-in-out ${isExpanded || isHovered
-            ? "lg:ml-[240px] 2xl:ml-[290px]"
-            : "lg:ml-[80px] xl:ml-[90px]"
+          ? "lg:ml-[240px] 2xl:ml-[290px]"
+          : "lg:ml-[80px] xl:ml-[90px]"
           } ${isMobileOpen ? "ml-0" : ""}`}
       >
         <AppHeader />
