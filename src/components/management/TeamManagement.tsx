@@ -732,79 +732,67 @@ const TeamManagement: React.FC = () => {
           <div className="border-t border-gray-100 dark:border-gray-800 pt-5 space-y-4">
             <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <Clock size={15} className="text-[#0047FF]" />
-              Team Schedule & Venue Details
+              {formData.teamType === "EXTERNAL" ? "Venue & Location Details" : "Team Schedule & Venue Details"}
             </h5>
 
-            {/* Schedule Type Selector */}
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schedule Type</label>
-              <div className="flex items-center gap-3">
-                {(["SINGLE_DAY"/*, "WEEKDAYS", "CUSTOM"*/] as const).map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, scheduleType: st })}
-                    className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border transition-all ${formData.scheduleType === st
-                        ? "bg-[#0047FF] text-white border-[#0047FF] shadow-xs"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-[#0047FF]"
-                      }`}
-                  >
-                    {st.replace("_", " ")}
-                  </button>
-                ))}
-                {/* 
-                <button
-                  type="button"
-                  disabled
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border border-gray-200 text-gray-300 cursor-not-allowed opacity-50"
-                >
-                  WEEKDAYS
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border border-gray-200 text-gray-300 cursor-not-allowed opacity-50"
-                >
-                  CUSTOM
-                </button>
-                */}
-              </div>
-            </div>
-
-            {/* Schedule Fields */}
-            {formData.scheduleType === "SINGLE_DAY" && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
+            {formData.teamType !== "EXTERNAL" && (
+              <>
+                {/* Schedule Type Selector */}
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Day of Week</label>
-                  <select
-                    value={formData.dayOfWeek}
-                    onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                  >
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
-                      <option key={d} value={d}>{d}</option>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schedule Type</label>
+                  <div className="flex items-center gap-3">
+                    {(["SINGLE_DAY"/*, "WEEKDAYS", "CUSTOM"*/] as const).map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, scheduleType: st })}
+                        className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border transition-all ${formData.scheduleType === st
+                            ? "bg-[#0047FF] text-white border-[#0047FF] shadow-xs"
+                            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-[#0047FF]"
+                          }`}
+                      >
+                        {st.replace("_", " ")}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Start Time</label>
-                  <input
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">End Time</label>
-                  <input
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                  />
-                </div>
-              </div>
+
+                {/* Schedule Fields */}
+                {formData.scheduleType === "SINGLE_DAY" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Day of Week</label>
+                      <select
+                        value={formData.dayOfWeek}
+                        onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
+                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                      >
+                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Start Time</label>
+                      <input
+                        type="time"
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">End Time</label>
+                      <input
+                        type="time"
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* WEEKDAYS AND CUSTOM SCHEDULE TYPES COMMENTED OUT

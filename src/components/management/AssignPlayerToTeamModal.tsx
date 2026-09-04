@@ -105,11 +105,19 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId }: Ass
 
   const assignMutation = useMutation({
     mutationFn: ({ tId, pIds }: { tId: string; pIds: string[] }) => assignPlayerToTeam(tId, pIds),
-    onSuccess: (res) => {
+    onSuccess: (res, variables) => {
       toast.success(res?.message || "Players assigned successfully!");
+      if (variables?.tId || teamId) {
+        const targetId = variables?.tId || teamId;
+        queryClient.invalidateQueries({ queryKey: ["team", targetId] });
+        queryClient.invalidateQueries({ queryKey: ["teamFullTable", targetId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["team"] });
+      queryClient.invalidateQueries({ queryKey: ["teamFullTable"] });
       queryClient.invalidateQueries({ queryKey: ["teams"] });
       queryClient.invalidateQueries({ queryKey: ["availablePlayers"] });
       queryClient.invalidateQueries({ queryKey: ["availablePlayersForTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["players"] });
       onClose();
       setSelectedPlayerIds([]);
     },

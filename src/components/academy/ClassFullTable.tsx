@@ -14,7 +14,7 @@ import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
 import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import { chatApi } from "../../services/chatApi";
-import { getPlayerStatusTextClass } from "../common/StatusColorCode";
+import { getPlayerStatusTextClass, StatusIcon, StatusUpdateMenuList } from "../common/StatusColorCode";
 
 interface ClassFullTableProps {
   classId: string;
@@ -518,43 +518,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                     {idx + 1}
                   </td>
                   <td className="sticky left-[35px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40">
-                    {(() => {
-                      const s = (row.paymentStatus || "UNPAID").toUpperCase();
-                      if (s === "PAID" || s === "APPROVED" || s === "ACTIVE") {
-                        return (
-                          <div className="flex justify-center text-emerald-600" title="Paid">
-                            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        );
-                      }
-                      if (s === "TRIAL") {
-                        return (
-                          <div className="flex justify-center text-rose-600" title="Trial">
-                            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        );
-                      }
-                      if (s === "UNPAID" || s === "REJECTED" || s === "INACTIVE" || s === "BLOCKED") {
-                        return (
-                          <div className="flex justify-center text-amber-500" title="Unpaid">
-                            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        );
-                      }
-                      return (
-                        <div className="flex justify-center text-[#9ca02e] dark:text-[#dee08b]" title={row.paymentStatus === "OTHERS" ? "Extra" : row.paymentStatus || "Extra"}>
-                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      );
-                    })()}
+                    <StatusIcon status={row.paymentStatus} />
                   </td>
                   <td className="sticky left-[75px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-50 dark:border-slate-800/40">
                     <div className="flex items-center gap-2 min-w-0 max-w-full">
@@ -722,47 +686,13 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
                           return (
                             <>
-                              <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
-                                Update Status
-                              </div>
-                              {["TRIAL", "UNPAID", "PAID", "EXTRA"]
-                                .filter(status => status !== row.paymentStatus)
-                                .map((status) => {
-                                  let activeClasses = "";
-                                  let dotColor = "";
-
-                                  if (status === "PAID") {
-                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20";
-                                    dotColor = "bg-emerald-500";
-                                  } else if (status === "UNPAID") {
-                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20";
-                                    dotColor = "bg-amber-500";
-                                  } else if (status === "TRIAL") {
-                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20";
-                                    dotColor = "bg-rose-500";
-                                  } else if (status === "OVER_DUE") {
-                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20";
-                                    dotColor = "bg-purple-500";
-                                  } else if (status === "EXTRA" || status === "OTHERS") {
-                                    activeClasses = "text-slate-700 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20";
-                                    dotColor = "bg-blue-500";
-                                  }
-
-                                  return (
-                                    <button
-                                      key={status}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenMenuId(null);
-                                        handleUpdateStatus(row.playerId, status);
-                                      }}
-                                      className={`w-full text-left px-4 py-1.5 text-xs font-semibold transition-colors flex items-center gap-2 ${activeClasses}`}
-                                    >
-                                      <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                                      {status.replace("_", " ")}
-                                    </button>
-                                  );
-                                })}
+                              <StatusUpdateMenuList
+                                currentStatus={row.paymentStatus}
+                                onSelectStatus={(newStatus) => {
+                                  setOpenMenuId(null);
+                                  handleUpdateStatus(row.playerId, newStatus);
+                                }}
+                              />
                               <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
                                 <button
                                   onClick={(e) => {
@@ -912,12 +842,12 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
           <div className="mb-6">
             <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2.5 uppercase tracking-widest">Select Assignment Status</label>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "UNPAID", label: "Unpaid", desc: "Requires Payment", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "PAID", label: "Paid (Allocate)", desc: "Payment Completed", activeClass: "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", inactiveClass: "border-slate-200 hover:border-emerald-300/50 hover:bg-emerald-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "EXTRA", label: "Extra", desc: "Extra Status", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400", inactiveClass: "border-slate-200 hover:border-blue-300/50 hover:bg-blue-500/[0.02] text-slate-500 dark:border-slate-800" }
+                { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "UNPAID", label: "Approved", desc: "Assign & Allocate Fee (Auto)", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "EXTRA", label: "Extra", desc: "Extra Status", activeClass: "border-[#dee08b] bg-[#dee08b]/20 text-[#8a8c23] dark:text-[#dee08b]", inactiveClass: "border-slate-200 hover:border-[#dee08b]/50 hover:bg-[#dee08b]/10 text-slate-500 dark:border-slate-800" },
+                { value: "TBC", label: "TBC", desc: "To Be Confirmed", activeClass: "border-slate-400 bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white dark:border-slate-400", inactiveClass: "border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 dark:border-slate-800 dark:hover:bg-slate-800 dark:text-slate-400" }
               ].map((status) => (
                 <button
                   key={status.value}

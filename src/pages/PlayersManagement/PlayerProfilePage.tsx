@@ -481,6 +481,12 @@ export default function PlayerProfilePage() {
                             if (st === "TRIAL") {
                               return <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[10px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>;
                             }
+                            if (st === "TBC") {
+                              return <span className="px-2.5 py-0.5 bg-white border border-slate-300 text-slate-800 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 font-bold text-[10px] uppercase rounded-none shadow-xs">TBC</span>;
+                            }
+                            if (st === "HANDSHAKE") {
+                              return <span className="px-2.5 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[10px] uppercase rounded-none dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-400">HANDSHAKE</span>;
+                            }
                             if (st === "EXTRA" || st === "OTHERS") {
                               return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">EXTRA</span>;
                             }
@@ -534,6 +540,12 @@ export default function PlayerProfilePage() {
                             }
                             if (st === "TRIAL") {
                               return <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[10px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>;
+                            }
+                            if (st === "TBC") {
+                              return <span className="px-2.5 py-0.5 bg-white border border-slate-300 text-slate-800 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 font-bold text-[10px] uppercase rounded-none shadow-xs">TBC</span>;
+                            }
+                            if (st === "HANDSHAKE") {
+                              return <span className="px-2.5 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[10px] uppercase rounded-none dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-400">HANDSHAKE</span>;
                             }
                             if (st === "EXTRA" || st === "OTHERS") {
                               return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">EXTRA</span>;

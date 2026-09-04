@@ -5,6 +5,7 @@ import { useAppDispatch } from "../../store";
 import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
 import { ShieldAlert } from "lucide-react";
+import { StatusDot, getStatusConfig } from "../common/StatusColorCode";
 
 interface PlayerTableProps {
   players: Player[];
@@ -158,54 +159,28 @@ export default function PlayerTable({
                   </td>
                   {showPaymentStatus && (
                     <td className="py-3 px-2 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1 font-bold ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
-                          ? "text-emerald-600"
-                          : paymentStatus === "OTHERS"
-                            ? "text-blue-600"
-                            : paymentStatus === "UNPAID" || paymentStatus === "REJECTED" || paymentStatus === "TRIAL" || paymentStatus === "INACTIVE" || paymentStatus === "BLOCKED"
-                              ? "text-rose-600"
-                              : "text-amber-500"
-                          }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${paymentStatus === "PAID" || paymentStatus === "APPROVED" || paymentStatus === "ACTIVE"
-                            ? "bg-emerald-600"
-                            : paymentStatus === "OTHERS"
-                              ? "bg-blue-600"
-                              : paymentStatus === "UNPAID" || paymentStatus === "REJECTED" || paymentStatus === "TRIAL" || paymentStatus === "INACTIVE" || paymentStatus === "BLOCKED"
-                                ? "bg-rose-600"
-                                : "bg-amber-500"
-                            }`}
-                        />
-                        {paymentStatus === "OTHERS" ? "EXTRA" : paymentStatus}
-                      </span>
+                      {(() => {
+                        const config = getStatusConfig(paymentStatus);
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 font-bold ${config.textClass}`}>
+                            <StatusDot status={paymentStatus} className="w-1.5 h-1.5" />
+                            {config.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                   )}
                   {showStatusColumn && (
                     <td className="py-3 px-2 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1 font-bold ${playerStatus === "PAID" || playerStatus === "APPROVED" || playerStatus === "ACTIVE"
-                          ? "text-emerald-600"
-                          : playerStatus === "OTHERS"
-                            ? "text-blue-600"
-                            : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
-                              ? "text-rose-600"
-                              : "text-amber-500"
-                          }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${playerStatus === "PAID" || playerStatus === "APPROVED" || playerStatus === "ACTIVE"
-                            ? "bg-emerald-600"
-                            : playerStatus === "OTHERS"
-                              ? "bg-blue-600"
-                              : playerStatus === "UNPAID" || playerStatus === "REJECTED" || playerStatus === "TRIAL" || playerStatus === "INACTIVE" || playerStatus === "BLOCKED"
-                                ? "bg-rose-600"
-                                : "bg-amber-500"
-                            }`}
-                        />
-                        {playerStatus === "OTHERS" ? "EXTRA" : playerStatus}
-                      </span>
+                      {(() => {
+                        const config = getStatusConfig(playerStatus);
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 font-bold ${config.textClass}`}>
+                            <StatusDot status={playerStatus} className="w-1.5 h-1.5" />
+                            {config.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                   )}
                   <td className="py-3 px-2">

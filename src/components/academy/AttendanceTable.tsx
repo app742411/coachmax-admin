@@ -1,4 +1,5 @@
 import { ClassSchedule } from "../../types/academy";
+import { StatusIcon } from "../common/StatusColorCode";
 
 interface AttendanceTableProps {
   schedule: ClassSchedule;
@@ -145,43 +146,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
                   {idx + 1}
                 </td>
                 <td className="py-2 px-2 text-center">
-                  {(() => {
-                    const s = ((row as any).paymentStatus || (row as any).status || "UNPAID").toUpperCase();
-                    if (s === "PAID" || s === "APPROVED" || s === "ACTIVE") {
-                      return (
-                        <div className="flex justify-center text-emerald-600" title="Paid">
-                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      );
-                    }
-                    if (s === "TRIAL") {
-                      return (
-                        <div className="flex justify-center text-rose-600" title="Trial">
-                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      );
-                    }
-                    if (s === "UNPAID" || s === "REJECTED" || s === "INACTIVE" || s === "BLOCKED") {
-                      return (
-                        <div className="flex justify-center text-amber-500" title="Unpaid">
-                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="flex justify-center text-blue-500" title={s || "Other"}>
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-3.5-9a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8A.75.75 0 017.25 9zm0 2.5a.75.75 0 01.75-.75h5.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75zm0 2.5a.75.75 0 01.75-.75h3.5a.75.75 0 010 1.5H8a.75.75 0 01-.75-.75z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    );
-                  })()}
+                  <StatusIcon status={(row as any).paymentStatus || (row as any).status} />
                 </td>
                 <td className="py-2 px-3">
                   <div className="flex items-center gap-2.5">

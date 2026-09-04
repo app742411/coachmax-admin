@@ -16,7 +16,7 @@ import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
 import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
-import { getPlayerStatusTextClass } from "../common/StatusColorCode";
+import { getPlayerStatusTextClass, StatusIcon, StatusUpdateMenuList } from "../common/StatusColorCode";
 
 interface TeamFullTableProps {
   teamId: string;
@@ -459,129 +459,7 @@ export default function TeamFullTable({
                           className="sticky left-[35px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40 cursor-pointer"
                           title="Click to update status"
                         >
-                          {(() => {
-                            const s = (
-                              row.paymentStatus ||
-                              row.status ||
-                              "ACTIVE"
-                            ).toUpperCase();
-                            if (
-                              s === "PAID" ||
-                              s === "APPROVED" ||
-                              s === "ACTIVE"
-                            ) {
-                              return (
-                                <div
-                                  className="flex justify-center text-emerald-600"
-                                  title="Paid / Active"
-                                >
-                                  <svg
-                                    className="w-5 h-5 fill-current"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                </div>
-                              );
-                            }
-                            if (s === "TRIAL") {
-                              return (
-                                <div
-                                  className="flex justify-center text-rose-600"
-                                  title="Trial"
-                                >
-                                  <svg
-                                    className="w-5 h-5 fill-current"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 000-1.5H10.75V6.75z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                </div>
-                              );
-                            }
-                            if (s === "OVER_DUE") {
-                              return (
-                                <div
-                                  className="flex justify-center text-purple-600"
-                                  title="Overdue"
-                                >
-                                  <svg
-                                    className="w-5 h-5 fill-current"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                </div>
-                              );
-                            }
-                            if (s === "SUBSTITUTE") {
-                              return (
-                                <div
-                                  className="flex justify-center text-[#9ca02e] dark:text-[#dee08b]"
-                                  title="Substitute"
-                                >
-                                  <svg
-                                    className="w-5 h-5 fill-current"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.609-1.276z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                </div>
-                              );
-                            }
-                            if (s === "EXTRA" || s === "OTHERS") {
-                              return (
-                                <div
-                                  className="flex justify-center text-[#9ca02e] dark:text-[#dee08b]"
-                                  title="Extra"
-                                >
-                                  <svg
-                                    className="w-5 h-5 fill-current"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                </div>
-                              );
-                            }
-                            return (
-                              <div
-                                className="flex justify-center text-amber-500"
-                                title={s}
-                              >
-                                <svg
-                                  className="w-5 h-5 fill-current"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </div>
-                            );
-                          })()}
+                          <StatusIcon status={row.paymentStatus || row.status} />
                         </td>
 
                         {/* Player Details */}
@@ -711,33 +589,14 @@ export default function TeamFullTable({
                                 }}
                                 className="z-[9999] w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-left"
                               >
-                                {/* UPDATE STATUS Header */}
-                                <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 mb-1">
-                                  Update Status
-                                </div>
-                                {[
-                                  { status: "TRIAL", label: "TRIAL", dotColor: "bg-rose-500", textClass: "hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20" },
-                                  { status: "UNPAID", label: "UNPAID", dotColor: "bg-amber-500", textClass: "hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20" },
-                                  { status: "PAID", label: "PAID", dotColor: "bg-emerald-500", textClass: "hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20" },
-                                  // { status: "OVER_DUE", label: "OVER DUE", dotColor: "bg-purple-500", textClass: "hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20" },
-                                  { status: "EXTRA", label: "EXTRA", dotColor: "bg-[#dee08b]", textClass: "hover:bg-[#dee08b]/20 hover:text-[#8a8c23] dark:hover:text-[#dee08b]" },
-                                  { status: "SUBSTITUTE", label: "SUBSTITUTE", dotColor: "bg-[#dee08b]", textClass: "hover:bg-[#dee08b]/20 hover:text-[#8a8c23] dark:hover:text-[#dee08b]" },
-                                ]
-                                  .filter(item => item.status !== (row.paymentStatus || row.status || "").toUpperCase())
-                                  .map((item) => (
-                                    <button
-                                      key={item.status}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenMenuId(null);
-                                        handleUpdateStatus(row.playerId || row._id, item.status);
-                                      }}
-                                      className={`w-full text-left px-4 py-1.5 text-xs font-bold transition-colors flex items-center gap-2 text-slate-700 dark:text-slate-200 ${item.textClass}`}
-                                    >
-                                      <span className={`w-2 h-2 rounded-full ${item.dotColor}`} />
-                                      {item.label}
-                                    </button>
-                                  ))}
+                                <StatusUpdateMenuList
+                                  currentStatus={row.paymentStatus || row.status}
+                                  isTeam={true}
+                                  onSelectStatus={(newStatus) => {
+                                    setOpenMenuId(null);
+                                    handleUpdateStatus(row.playerId || row._id, newStatus);
+                                  }}
+                                />
                                 <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
 
                                 <button

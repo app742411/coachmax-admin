@@ -54,9 +54,16 @@ export default function ViewTeamPlayersModal({
     },
     onSuccess: () => {
       toast.success("Player removed from team successfully");
+      if (team?._id) {
+        queryClient.invalidateQueries({ queryKey: ["team", team._id] });
+        queryClient.invalidateQueries({ queryKey: ["teamFullTable", team._id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["team"] });
+      queryClient.invalidateQueries({ queryKey: ["teamFullTable"] });
       queryClient.invalidateQueries({ queryKey: ["teams"] });
       queryClient.invalidateQueries({ queryKey: ["availablePlayersForTeam"] });
       queryClient.invalidateQueries({ queryKey: ["availablePlayers"] });
+      queryClient.invalidateQueries({ queryKey: ["players"] });
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || "Failed to remove player from team");

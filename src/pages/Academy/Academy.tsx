@@ -384,12 +384,12 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
           <div className="mb-6">
             <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2.5 uppercase tracking-widest">Select Assignment Status</label>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 { value: "TRIAL", label: "Trial", desc: "Trial Session", activeClass: "border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400", inactiveClass: "border-slate-200 hover:border-rose-300/50 hover:bg-rose-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "UNPAID", label: "Unpaid", desc: "Requires Payment", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "PAID", label: "Paid (Allocate)", desc: "Payment Completed", activeClass: "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", inactiveClass: "border-slate-200 hover:border-emerald-300/50 hover:bg-emerald-500/[0.02] text-slate-500 dark:border-slate-800" },
-                { value: "EXTRA", label: "Extra", desc: "Extra Status", activeClass: "border-[#dee08b] bg-[#dee08b]/20 text-[#8a8c23] dark:text-[#dee08b]", inactiveClass: "border-slate-200 hover:border-[#dee08b]/50 hover:bg-[#dee08b]/10 text-slate-500 dark:border-slate-800" }
+                { value: "UNPAID", label: "Approved", desc: "Assign & Allocate Fee (Auto)", activeClass: "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400", inactiveClass: "border-slate-200 hover:border-amber-300/50 hover:bg-amber-500/[0.02] text-slate-500 dark:border-slate-800" },
+                { value: "EXTRA", label: "Extra", desc: "Extra Status", activeClass: "border-[#dee08b] bg-[#dee08b]/20 text-[#8a8c23] dark:text-[#dee08b]", inactiveClass: "border-slate-200 hover:border-[#dee08b]/50 hover:bg-[#dee08b]/10 text-slate-500 dark:border-slate-800" },
+                { value: "TBC", label: "TBC", desc: "To Be Confirmed", activeClass: "border-slate-400 bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white dark:border-slate-400", inactiveClass: "border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 dark:border-slate-800 dark:hover:bg-slate-800 dark:text-slate-400" }
               ].map((status) => (
                 <button
                   key={status.value}

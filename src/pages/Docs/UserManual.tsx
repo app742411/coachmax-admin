@@ -5,14 +5,16 @@ import {
   Calendar, 
   Users, 
   PlusCircle, 
-  CheckCircle2, 
   BookOpen, 
   Clock, 
   AlertCircle,
   Sparkles,
   ShieldCheck,
-  Tag
+  Tag,
+  HelpCircle,
+  RotateCw
 } from "lucide-react";
+import { StatusIcon } from "../../components/common/StatusColorCode";
 
 const UserManual: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"holiday" | "assign" | "colors">("holiday");
@@ -21,7 +23,7 @@ const UserManual: React.FC = () => {
     <>
       <PageMeta
         title="User Manual | CoachMax Admin"
-        description="Step-by-step guide for creating Holiday Programs and assigning players"
+        description="Step-by-step guide for creating Holiday Programs, assigning players, and managing statuses"
       />
       <PageBreadcrumb pageTitle="User Manual & Documentation" />
 
@@ -37,7 +39,7 @@ const UserManual: React.FC = () => {
               Holiday Programs & Player Assignments
             </h1>
             <p className="text-slate-300 text-sm font-medium leading-relaxed">
-              Complete step-by-step instructions on setting up Holiday Programs, scheduling sessions, and allocating players with payment status color codes.
+              Complete step-by-step instructions on setting up Holiday Programs, scheduling sessions, allocating players, and status management.
             </p>
           </div>
 
@@ -192,7 +194,7 @@ const UserManual: React.FC = () => {
                   <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                     When assigning a player, select one of the 4 payment statuses in the assignment popup:
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="p-3 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 rounded-none">
                       <span className="text-xs font-bold text-rose-600 flex items-center gap-1.5 mb-1">
                         <Clock className="w-3.5 h-3.5" /> TRIAL
@@ -201,24 +203,24 @@ const UserManual: React.FC = () => {
                     </div>
 
                     <div className="p-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-none">
-                      <span className="text-xs font-bold text-amber-500 flex items-center gap-1.5 mb-1">
-                        <AlertCircle className="w-3.5 h-3.5" /> UNPAID
+                      <span className="text-xs font-bold text-amber-600 flex items-center gap-1.5 mb-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> APPROVED
                       </span>
-                      <p className="text-[11px] text-slate-500 leading-tight">Registered player pending payment confirmation.</p>
+                      <p className="text-[11px] text-slate-500 leading-tight">Assign & Allocate Fee (Auto). Approved registration with automatic fee allocation.</p>
                     </div>
 
-                    <div className="p-3 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 rounded-none">
-                      <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 mb-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> PAID (Allocate)
-                      </span>
-                      <p className="text-[11px] text-slate-500 leading-tight">Confirmed active player with completed payment.</p>
-                    </div>
-
-                    <div className="p-3 bg-white dark:bg-slate-900 border border-[#dee08b] dark:border-amber-900/50 rounded-none">
-                      <span className="text-xs font-bold text-[#8a8c23] dark:text-[#dee08b] flex items-center gap-1.5 mb-1">
+                    <div className="p-3 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/50 rounded-none">
+                      <span className="text-xs font-bold text-blue-600 flex items-center gap-1.5 mb-1">
                         <PlusCircle className="w-3.5 h-3.5" /> EXTRA
                       </span>
-                      <p className="text-[11px] text-slate-500 leading-tight">Additional or overflow player assigned to holiday class.</p>
+                      <p className="text-[11px] text-slate-500 leading-tight">Additional or overflow player assigned to class session.</p>
+                    </div>
+
+                    <div className="p-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 mb-1">
+                        <HelpCircle className="w-3.5 h-3.5" /> TBC
+                      </span>
+                      <p className="text-[11px] text-slate-500 leading-tight">To Be Confirmed player awaiting enrollment status confirmation.</p>
                     </div>
                   </div>
                 </div>
@@ -227,63 +229,112 @@ const UserManual: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: COLOR CODE REFERENCE */}
+        {/* TAB 3: COLOR CODE & STATUS REFERENCE */}
         {activeTab === "colors" && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
             <div>
               <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 flex items-center gap-2">
                 <Tag className="w-5 h-5 text-[#0047FF]" />
-                Part 3: Table Status Color Code Reference
+                Part 3: Table Statuses & Color Code Reference
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Visual guide for status badges, player text colors, and icons used in Program Matrix tables.
+                Complete visual guide for all player statuses, their meanings, dot indicators, and how to perform a status update.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* PAID */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* PAID / ACTIVE */}
               <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <StatusIcon status="PAID" size="w-4 h-4" />
                   <span className="font-bold text-xs text-emerald-700 dark:text-emerald-400">PAID / ACTIVE</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                  Green checkmark icon & standard text. Confirmed attendance.
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  Green checkmark icon. Confirmed active player with verified payment completed. Player name displays in standard text.
+                </p>
+              </div>
+
+              {/* APPROVED (UNPAID) */}
+              <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
+                <div className="flex items-center gap-2">
+                  <StatusIcon status="UNPAID" size="w-4 h-4" />
+                  <span className="font-bold text-xs text-amber-600 dark:text-amber-400">APPROVED (UNPAID)</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  Amber warning/cross icon. Player approved and allocated; fee invoice generated automatically (pending payment). Player name displays in standard text.
                 </p>
               </div>
 
               {/* TRIAL */}
               <div className="p-4 bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-500" />
+                  <StatusIcon status="TRIAL" size="w-4 h-4" />
                   <span className="font-bold text-xs text-rose-600 dark:text-rose-400">TRIAL (RED TEXT)</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                  Rose red clock icon & red player name text. Trial attendee.
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  Rose red clock icon & <strong className="text-rose-600 dark:text-rose-400">red player name text</strong>. Temporary trial attendee session.
                 </p>
               </div>
 
-              {/* UNPAID */}
-              <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
+              {/* TBC */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="font-bold text-xs text-amber-600 dark:text-amber-400">UNPAID</span>
+                  <StatusIcon status="TBC" size="w-4 h-4" />
+                  <span className="font-bold text-xs text-slate-500 dark:text-slate-400">TBC (GREY TEXT)</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                  Amber warning icon. Payment pending verification.
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  Grey circle question mark icon & <strong className="text-slate-400 dark:text-slate-400">grey player name text</strong>. Attendance or class spot pending final confirmation.
+                </p>
+              </div>
+
+              {/* HANDSHAKE */}
+              <div className="p-4 bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800 space-y-2">
+                <div className="flex items-center gap-2">
+                  <StatusIcon status="HANDSHAKE" size="w-4 h-4" />
+                  <span className="font-bold text-xs text-teal-700 dark:text-teal-400">HANDSHAKE</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  Teal agreement icon. Special director-approved arrangement, scholarship, or direct admission without payment. Player name displays in standard text.
                 </p>
               </div>
 
               {/* EXTRA / SUBSTITUTE */}
-              <div className="p-4 bg-[#dee08b]/20 dark:bg-amber-950/30 border border-[#dee08b] dark:border-amber-800 space-y-2">
+              <div className="p-4 bg-[#dee08b]/10 dark:bg-amber-950/20 border border-[#dee08b] dark:border-amber-800/40 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#dee08b] border border-amber-400" />
-                  <span className="font-bold text-xs text-[#8a8c23] dark:text-[#dee08b]">EXTRA / SUBSTITUTE</span>
+                  <StatusIcon status="EXTRA" size="w-4 h-4" />
+                  <span className="font-bold text-xs text-[#8a8c23] dark:text-[#dee08b]">EXTRA / SUBSTITUTE (KHAKI TEXT)</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                  Khaki-yellow Plus Circle (+) icon & olive text. Extra/sub player.
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  Khaki plus (+) or swap arrows icon & <strong className="text-[#8a8c23] dark:text-[#dee08b]">khaki yellow player name text</strong>. Overflow or substitute player allocated to session.
                 </p>
               </div>
+            </div>
+
+            {/* STATUS UPDATE GUIDE */}
+            <div className="mt-8 border-t border-slate-200 dark:border-slate-800 pt-6">
+              <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+                <RotateCw className="w-4 h-4 text-[#0047FF]" />
+                How to Perform a Status Update for a Player
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                Administrators can change any player's status directly from the class schedule matrix at any time:
+              </p>
+              <ol className="list-decimal list-inside text-xs text-slate-600 dark:text-slate-300 space-y-2.5 font-medium bg-slate-50 dark:bg-slate-800/40 p-4 border border-slate-200 dark:border-slate-700">
+                <li>Go to <strong>Programs &gt; Matrix View</strong> or <strong>Classes</strong>.</li>
+                <li>Locate the player row in the class table.</li>
+                <li>Click the <strong>3-dots action menu button (⋮)</strong> on the right side of the player's row.</li>
+                <li>Under the <strong>UPDATE STATUS</strong> header in the menu, select the desired new status:
+                  <ul className="list-disc list-inside ml-5 mt-1 space-y-1 text-slate-500 dark:text-slate-400">
+                    <li><strong className="text-rose-600">TRIAL:</strong> Mark as trial session attendee (Red icon & Red name text).</li>
+                    <li><strong className="text-amber-600">APPROVED / UNPAID:</strong> Mark as approved pending fee payment (Amber warning icon).</li>
+                    <li><strong className="text-emerald-600">PAID:</strong> Confirm full payment completed (Green checkmark icon).</li>
+                    <li><strong className="text-slate-500 dark:text-slate-400">TBC:</strong> Mark as pending confirmation (Grey question mark icon & Grey name text).</li>
+                    <li><strong className="text-teal-600">HANDSHAKE:</strong> Apply director-approved arrangement/scholarship (Teal handshake icon).</li>
+                    <li><strong className="text-[#8a8c23] dark:text-[#dee08b]">EXTRA / SUBSTITUTE:</strong> Assign as extra/substitute player (Khaki yellow icon & Khaki yellow name text).</li>
+                  </ul>
+                </li>
+                <li>The status badge and dot color in the table will update immediately.</li>
+              </ol>
             </div>
           </div>
         )}

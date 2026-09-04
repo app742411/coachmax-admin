@@ -6,6 +6,7 @@ import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import EditPlayerStatsModal from "./EditPlayerStatsModal";
 import { ShieldAlert } from "lucide-react";
 import RatingEditor from "./RatingEditor";
+import { StatusBadge } from "../common/StatusColorCode";
 
 const getBadgeStyles = (noteType: string) => {
   switch (noteType) {
@@ -434,6 +435,10 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                           <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[9px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>
                         ) : st === "TRIAL" ? (
                           <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[9px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>
+                        ) : st === "TBC" ? (
+                          <span className="px-2 py-0.5 bg-white border border-slate-300 text-slate-800 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 font-bold text-[9px] uppercase rounded-none shadow-xs">TBC</span>
+                        ) : st === "HANDSHAKE" ? (
+                          <span className="px-2 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[9px] uppercase rounded-none dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-400">HANDSHAKE</span>
                         ) : st === "EXTRA" || st === "OTHERS" ? (
                           <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">EXTRA</span>
                         ) : st === "SUBSTITUTE" ? (
@@ -460,7 +465,6 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                 {assignedTeamsInfo.map((teamItem: any, idx: number) => {
                   const teamName = teamItem.teamName || teamItem.name || "Team";
                   const status = teamItem.paymentStatus || "PAID";
-                  const st = (status || "PAID").toUpperCase();
                   return (
                     <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 text-xs">
                       <div>
@@ -470,17 +474,7 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                         )}
                       </div>
                       <div>
-                        {st === "PAID" || st === "APPROVED" || st === "ACTIVE" ? (
-                          <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[9px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>
-                        ) : st === "TRIAL" ? (
-                          <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[9px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>
-                        ) : st === "EXTRA" || st === "OTHERS" ? (
-                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">EXTRA</span>
-                        ) : st === "SUBSTITUTE" ? (
-                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">SUBSTITUTE</span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-[9px] uppercase rounded-none dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">UNPAID</span>
-                        )}
+                        <StatusBadge status={status} />
                       </div>
                     </div>
                   );
