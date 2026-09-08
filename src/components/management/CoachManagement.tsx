@@ -12,7 +12,6 @@ import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 const CoachManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
-  // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
@@ -35,15 +34,11 @@ const CoachManagement: React.FC = () => {
     return [];
   };
 
-  // ── Queries ─────────────────────────────────────────────────────
-
   const { data: coachesData, isLoading: loading } = useQuery({
     queryKey: ["coaches"],
     queryFn: () => getAllCoaches(),
   });
   const coaches = getDataArray(coachesData);
-
-  // ── Mutations ───────────────────────────────────────────────────
 
   const createMutation = useMutation({
     mutationFn: createCoach,
@@ -94,8 +89,6 @@ const CoachManagement: React.FC = () => {
       toast.error("Failed to update coach access");
     }
   });
-
-  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
     setFormData({ fullName: "", email: "", phone: "", password: "", confirmPassword: "" });

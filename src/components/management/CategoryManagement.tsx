@@ -13,22 +13,17 @@ import { Edit, Trash, Tag } from "../../icons/lucide-icons";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const CategoryManagement: React.FC = () => {
-  // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", isEvent: false });
 
-  // ── Queries ─────────────────────────────────────────────────────
   const { categories, isLoading: loading } = useCategories();
 
-  // ── Mutations ───────────────────────────────────────────────────
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
-
-  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
     setFormData({ name: "", isEvent: false });

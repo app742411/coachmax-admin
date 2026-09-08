@@ -61,7 +61,6 @@ export default function MyClassesListComp() {
   const { categories } = useCategories({ isEvent: "all" });
   const { programs } = useProgramsByCategory(selectedCategory);
 
-  // ── Fetch classes (with backend filters) ──────────────────────
   const fetchClasses = async () => {
     try {
       setLoading(true);
@@ -111,7 +110,6 @@ export default function MyClassesListComp() {
   return (
     <div className="space-y-4">
 
-      {/* ── Page Header ──────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 mb-2 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">My Classes</h1>
@@ -152,15 +150,14 @@ export default function MyClassesListComp() {
         </div>
       </div>
 
-      {/* ── Category Tabs ─────────────────────────────────────────── */}
+
       <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto custom-scrollbar gap-2">
         <button
           onClick={() => { setSelectedCategory(""); setSelectedProgram(""); }}
-          className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-[3px] shrink-0 ${
-            selectedCategory === ""
+          className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-[3px] shrink-0 ${selectedCategory === ""
               ? "border-[#0047FF] text-[#0047FF]"
               : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          }`}
+            }`}
         >
           All Classes
         </button>
@@ -168,27 +165,25 @@ export default function MyClassesListComp() {
           <button
             key={c._id}
             onClick={() => { setSelectedCategory(c._id); setSelectedProgram(""); }}
-            className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-[3px] shrink-0 ${
-              selectedCategory === c._id
+            className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-[3px] shrink-0 ${selectedCategory === c._id
                 ? "border-[#0047FF] text-[#0047FF]"
                 : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-            }`}
+              }`}
           >
             {c.name}
           </button>
         ))}
       </div>
 
-      {/* ── Program (Sub-category) Tabs ───────────────────────────── */}
+
       {selectedCategory && programs.length > 0 && (
         <div className="flex border-b border-slate-100 dark:border-slate-800/60 overflow-x-auto custom-scrollbar gap-2 -mt-4 bg-slate-50/50 dark:bg-slate-900/10 px-2 py-0.5">
           <button
             onClick={() => setSelectedProgram("")}
-            className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 shrink-0 ${
-              selectedProgram === ""
+            className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 shrink-0 ${selectedProgram === ""
                 ? "border-[#0047FF] text-[#0047FF]"
                 : "border-transparent text-slate-400 hover:text-slate-600"
-            }`}
+              }`}
           >
             All Programs
           </button>
@@ -196,11 +191,10 @@ export default function MyClassesListComp() {
             <button
               key={p._id}
               onClick={() => setSelectedProgram(p._id)}
-              className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 shrink-0 ${
-                selectedProgram === p._id
+              className={`px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 shrink-0 ${selectedProgram === p._id
                   ? "border-[#0047FF] text-[#0047FF]"
                   : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
+                }`}
             >
               {p.name}
             </button>
@@ -208,24 +202,23 @@ export default function MyClassesListComp() {
         </div>
       )}
 
-      {/* ── Day Tabs ──────────────────────────────────────────────── */}
+
       <div className="flex border-b border-slate-100 dark:border-slate-800 overflow-x-auto no-scrollbar gap-1">
         {DAYS.map((day) => (
           <button
             key={day}
             onClick={() => setSelectedDay(day === "All Days" ? "" : day)}
-            className={`py-3 px-6 transition-all border-b-[3px] shrink-0 text-xs font-semibold tracking-wider cursor-pointer ${
-              (selectedDay === "" && day === "All Days") || selectedDay === day
+            className={`py-3 px-6 transition-all border-b-[3px] shrink-0 text-xs font-semibold tracking-wider cursor-pointer ${(selectedDay === "" && day === "All Days") || selectedDay === day
                 ? "bg-[#031549] text-white font-bold border-[#0047FF]"
                 : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40 border-transparent"
-            }`}
+              }`}
           >
             {day}
           </button>
         ))}
       </div>
 
-      {/* ── Search ──────────────────────────────────────────────── */}
+
       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-none shadow-theme-xs">
         <div className="relative max-w-md">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -243,7 +236,6 @@ export default function MyClassesListComp() {
         </div>
       </div>
 
-      {/* ── Table ────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
         <div className="max-w-full overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs [&_th]:border [&_th]:border-slate-700/50 [&_td]:border [&_td]:border-slate-200 dark:[&_td]:border-slate-700">
@@ -292,13 +284,12 @@ export default function MyClassesListComp() {
                         </div>
                         <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              (cls.totalPlayers / (cls.capacity || 1)) >= 1
+                            className={`h-full rounded-full transition-all duration-300 ${(cls.totalPlayers / (cls.capacity || 1)) >= 1
                                 ? "bg-rose-500"
                                 : (cls.totalPlayers / (cls.capacity || 1)) >= 0.8
                                   ? "bg-amber-500"
                                   : "bg-[#0047FF]"
-                            }`}
+                              }`}
                             style={{ width: `${Math.min(100, (cls.totalPlayers / (cls.capacity || 1)) * 100)}%` }}
                           />
                         </div>
@@ -359,7 +350,7 @@ export default function MyClassesListComp() {
         </div>
       </div>
 
-      {/* ── Pagination ────────────────────────────────────────────── */}
+
       {!loading && totalPages > 1 && (
         <Pagination
           page={page}

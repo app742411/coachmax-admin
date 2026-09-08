@@ -13,7 +13,6 @@ const LeagueManagement: React.FC = () => {
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
 
-  // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
@@ -38,7 +37,6 @@ const LeagueManagement: React.FC = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  // ── Helpers ─────────────────────────────────────────────────────
   const getImageUrl = (path: string | undefined | null) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
@@ -53,15 +51,11 @@ const LeagueManagement: React.FC = () => {
     return [];
   };
 
-  // ── Queries ─────────────────────────────────────────────────────
-
   const { data: leaguesData, isLoading: loading } = useQuery({
     queryKey: ["leagues"],
     queryFn: () => getAllLeagues(),
   });
   const leagues = getDataArray(leaguesData);
-
-  // ── Mutations ───────────────────────────────────────────────────
 
   const createMutation = useMutation({
     mutationFn: createLeague,
@@ -92,8 +86,6 @@ const LeagueManagement: React.FC = () => {
     },
     onError: (error: any) => toast.error(error?.response?.data?.message || "Failed to delete league"),
   });
-
-  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
     setFormData({ name: "", season: "", type: "NATIONAL", description: "", startDate: "", endDate: "" });

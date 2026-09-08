@@ -21,7 +21,7 @@ export const ENDPOINTS = {
   GET_CLASS_FULL_TABLE: "/api/admin/getClassFullTable",
   MARK_SINGLE_ATTENDANCE: "/api/admin/markSingleAttendance",
   MARK_ATTENDANCE: "/api/admin/markAttendance",
-  GET_ALL_CATEGORIES: "/api/user/getCategories", // From earlier user snippet
+  GET_ALL_CATEGORIES: "/api/user/getCategories",
   CREATE_CATEGORY: "/api/admin/createCategory",
   UPDATE_CATEGORY: "/api/admin/updateCategory",
   DELETE_CATEGORY: "/api/admin/deleteCategory",
@@ -309,7 +309,7 @@ export const getAllTeams = async (termId?: string): Promise<any> => {
 export const createTeam = async (data: any): Promise<any> => {
   const res = await apiClient.post("/api/admin/teams", data, {
     headers: {
-      'Content-Type': 'multipart/form-data' // Assuming we send FormData for logo
+      'Content-Type': 'multipart/form-data'
     }
   });
   return res.data;

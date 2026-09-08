@@ -18,7 +18,6 @@ const TeamManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -28,7 +27,6 @@ const TeamManagement: React.FC = () => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ── Header Filter States (Year & Term) ──────────────────────────
   const [selectedFilterYear, setSelectedFilterYear] = useState<string>(
     new Date().getFullYear().toString()
   );
@@ -75,7 +73,6 @@ const TeamManagement: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // ── Helpers ─────────────────────────────────────────────────────
   const getImageUrl = (path: string | undefined | null) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
@@ -89,8 +86,6 @@ const TeamManagement: React.FC = () => {
     if (res && Array.isArray(res.data)) return res.data;
     return [];
   };
-
-  // ── Queries ─────────────────────────────────────────────────────
 
   const { data: teamsData, isLoading: loading } = useQuery({
     queryKey: ["teams", selectedFilterTerm],
@@ -109,8 +104,6 @@ const TeamManagement: React.FC = () => {
     queryFn: () => getAllTerms(formData.year ? Number(formData.year) : undefined),
   });
   const terms = Array.isArray(termsData) ? termsData : (termsData?.data || termsData?.terms || []);
-
-  // ── Mutations ───────────────────────────────────────────────────
 
   const createMutation = useMutation({
     mutationFn: createTeam,
@@ -141,8 +134,6 @@ const TeamManagement: React.FC = () => {
     },
     onError: (error: any) => toast.error(error?.response?.data?.message || "Failed to delete team"),
   });
-
-  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
     setFormData({

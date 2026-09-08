@@ -15,7 +15,6 @@ const TermManagement: React.FC = () => {
     const [showList, setShowList] = useState(false);
     const [eventFilter, setEventFilter] = useState<"all" | "false" | "true">("all");
 
-    // ── UI State (Modals & Forms) ──────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -66,25 +65,18 @@ const TermManagement: React.FC = () => {
         return `${day}/${month}/${year}`;
     };
 
-    // ── Year filter ────────────────────────────────────────────────
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState<number>(currentYear);
     const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
-
-    // ── Queries ─────────────────────────────────────────────────────
 
     const { terms, isLoading: loading } = useTerms({
         year: selectedYear,
         isEvent: eventFilter,
     });
 
-    // ── Mutations ───────────────────────────────────────────────────
-
     const createMutation = useCreateTerm();
     const updateMutation = useUpdateTerm();
     const deleteMutation = useDeleteTerm();
-
-    // ── Event Handlers ─────────────────────────────────────────────
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;

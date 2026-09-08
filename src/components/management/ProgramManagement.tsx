@@ -26,8 +26,6 @@ const ProgramManagement: React.FC = () => {
     category: "",
   });
 
-  // ── Queries ─────────────────────────────────────────────────────
-
   const { categories } = useCategories();
 
   useEffect(() => {
@@ -38,13 +36,9 @@ const ProgramManagement: React.FC = () => {
 
   const { programs, isLoading: loading } = useProgramsByCategory(selectedCategoryFilter);
 
-  // ── Mutations ───────────────────────────────────────────────────
-
   const createMutation = useCreateProgram();
   const updateMutation = useUpdateProgram();
   const deleteMutation = useDeleteProgram();
-
-  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleFilterChange = (value: string) => {
     setSelectedCategoryFilter(value);

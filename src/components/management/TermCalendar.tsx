@@ -15,9 +15,8 @@ interface TermCalendarProps {
   selectedYear: number;
 }
 
-// ── Deterministic color generator ────────────────────────────────────────────
-// Seeds a hue from the term's _id so every term always gets the same
-// distinct color, regardless of how many terms exist.
+// Deterministic color generator
+// Seeds a hue from the term's _id so every term always gets the same distinct color.
 function hashString(str: string): number {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -26,16 +25,14 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-// Spreads hues using the golden-ratio increment (137.508°) to maximise
-// visual distance between consecutive terms.
+// Golden-ratio angle increment to maximize visual distance between terms
 const GOLDEN_ANGLE = 137.508;
 
 function getTermColor(id: string, index: number) {
-  // Use index * golden-angle for base hue, fine-tuned by id hash
-  const idOffset = (hashString(id) % 30) - 15; // ±15° jitter per unique id
+  const idOffset = (hashString(id) % 30) - 15;
   const hue = ((index * GOLDEN_ANGLE) + idOffset + 360) % 360;
-  const sat = 65 + (hashString(id + "s") % 20); // 65–85%
-  const lum = 42 + (hashString(id + "l") % 10); // 42–52% (dark enough for bg)
+  const sat = 65 + (hashString(id + "s") % 20);
+  const lum = 42 + (hashString(id + "l") % 10);
 
   const bg = `hsl(${hue}, ${sat}%, ${lum}%)`;
   const light = `hsl(${hue}, ${sat - 10}%, 93%)`;

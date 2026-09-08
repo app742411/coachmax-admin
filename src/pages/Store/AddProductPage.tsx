@@ -46,8 +46,6 @@ export default function AddProductPage() {
   );
 }
 
-// --- slide ---
-
 export function EditProductPage() {
   const { id } = useParams();
   const navigate = useNavigate();

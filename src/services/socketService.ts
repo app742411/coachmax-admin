@@ -28,10 +28,8 @@ export const socketService = {
     });
 
     socket.on("connect", () => {
-      console.log("⚡ Socket connected! ID:", socket?.id);
       store.dispatch(setConnected(true));
 
-      // Re-join active room if any
       const activeRoomId = store.getState().chat.activeRoomId;
       if (activeRoomId) {
         socket?.emit("join_room", { roomId: activeRoomId });
@@ -39,13 +37,11 @@ export const socketService = {
       }
     });
 
-    socket.on("disconnect", (reason) => {
-      console.log("🔌 Socket disconnected, reason:", reason);
+    socket.on("disconnect", () => {
       store.dispatch(setConnected(false));
     });
 
     socket.on("connect_error", (error) => {
-      console.error("❌ Socket connection error:", error);
       store.dispatch(setSocketError(error.message));
     });
 
@@ -53,13 +49,10 @@ export const socketService = {
       store.dispatch(setReconnecting(true));
     });
 
-    // --- Events Listeners ---
-
+    // Event listeners
     socket.on("new_message", (data: { roomId: string; message: any }) => {
-      console.log("📨 Socket event 'new_message':", data);
       store.dispatch(appendMessage(data.message));
 
-      // Auto mark read if it's the active room
       const activeRoomId = store.getState().chat.activeRoomId;
       if (data.roomId === activeRoomId) {
         socket?.emit("mark_read", { roomId: activeRoomId });
@@ -67,14 +60,12 @@ export const socketService = {
     });
 
     socket.on("messages_read", (data: { roomId: string }) => {
-      console.log("📖 Socket event 'messages_read':", data);
       store.dispatch(
         updateRoomMessagesStatus({ roomId: data.roomId, tickStatus: "READ" })
       );
     });
 
     socket.on("message_delivered", (data: { roomId: string }) => {
-      console.log("🚚 Socket event 'message_delivered':", data);
       store.dispatch(
         updateRoomMessagesStatus({ roomId: data.roomId, tickStatus: "DELIVERED" })
       );
@@ -100,15 +91,13 @@ export const socketService = {
     });
 
     socket.on("new_broadcast_alert", (data: { classId: string; className: string; text: string; sender: any }) => {
-      console.log("📢 Socket event 'new_broadcast_alert':", data);
-      toast(`📢 Announcement in ${data.className}:\n${data.text}`, {
+      toast(`Announcement in ${data.className}:\n${data.text}`, {
         duration: 5000,
-        icon: "📢",
       });
-      // Append to broadcast announcements list
+
       store.dispatch(
         addAnnouncement({
-          _id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, // secure fallback ID
+          _id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
           classId: data.classId,
           className: data.className,
           text: data.text,
@@ -128,7 +117,6 @@ export const socketService = {
 
   joinRoom: (roomId: string) => {
     if (socket) {
-      console.log(`🚪 Joining socket room: ${roomId}`);
       socket.emit("join_room", { roomId });
     }
   },

@@ -7,7 +7,6 @@ import { toast } from "react-hot-toast";
 import { Calendar as CalendarIcon, MapPin, User, Swords, ChevronDown, ChevronUp, Trophy } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
-// ── Helpers ─────────────────────────────────────────────────────
 const getImageUrl = (path: string | undefined | null) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
@@ -22,7 +21,6 @@ const getDataArray = (res: any) => {
   return [];
 };
 
-// ── Accordion Subcomponent ──────────────────────────────────────
 const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenEdit, handleDeleteClick, openDropdownId, setOpenDropdownId }: any) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -189,7 +187,6 @@ const FixtureManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const kickoffTimeRef = useRef<HTMLInputElement>(null);
 
-  // ── UI State (Modals & Forms) ──────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
@@ -219,8 +216,6 @@ const FixtureManagement: React.FC = () => {
     return [];
   };
 
-  // ── Queries ─────────────────────────────────────────────────────
-
   const { data: teamsData } = useQuery({
     queryKey: ["teams"],
     queryFn: () => getAllTeams(),
@@ -232,8 +227,6 @@ const FixtureManagement: React.FC = () => {
     queryFn: () => getAllLeagues(),
   });
   const leagues = getDataArray(leaguesData);
-
-  // ── Mutations ───────────────────────────────────────────────────
 
   const createMutation = useMutation({
     mutationFn: createFixture,
@@ -264,8 +257,6 @@ const FixtureManagement: React.FC = () => {
     },
     onError: (error: any) => toast.error(error?.response?.data?.message || "Failed to delete fixture"),
   });
-
-  // ── Event Handlers ─────────────────────────────────────────────
 
   const handleOpenAdd = () => {
     setFormData({ league: "", kickoffTime: "", venue: "", referee: "", homeTeam: "", awayTeam: "" });

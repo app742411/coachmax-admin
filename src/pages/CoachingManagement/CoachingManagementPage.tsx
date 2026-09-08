@@ -23,25 +23,21 @@ import { useProgramsByCategory } from "../../hooks/usePrograms";
 const CoachingManagementPage: React.FC = () => {
   const queryClient = useQueryClient();
 
-  // ── Selected category (left panel) ────────────────────────────
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>("");
 
-  // ── Category Modal State ───────────────────────────────────────
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [catEditing, setCatEditing] = useState(false);
   const [catEditId, setCatEditId] = useState<string | null>(null);
   const [catDeleteId, setCatDeleteId] = useState<string | null>(null);
   const [catForm, setCatForm] = useState({ name: "", isEvent: false });
 
-  // ── Program Modal State ────────────────────────────────────────
   const [progModalOpen, setProgModalOpen] = useState(false);
   const [progEditing, setProgEditing] = useState(false);
   const [progEditId, setProgEditId] = useState<string | null>(null);
   const [progDeleteId, setProgDeleteId] = useState<string | null>(null);
   const [progForm, setProgForm] = useState({ name: "", category: "" });
 
-  // ── Queries ────────────────────────────────────────────────────
   const { categories, isLoading: catLoading } = useCategories();
 
   // Auto-select first category on load
@@ -54,7 +50,6 @@ const CoachingManagementPage: React.FC = () => {
 
   const { programs, isLoading: progLoading } = useProgramsByCategory(selectedCategoryId);
 
-  // ── Category Mutations ─────────────────────────────────────────
   const createCatMutation = useMutation({
     mutationFn: createCategory,
     onSuccess: () => {
@@ -97,7 +92,6 @@ const CoachingManagementPage: React.FC = () => {
     },
   });
 
-  // ── Program Mutations ──────────────────────────────────────────
   const createProgMutation = useMutation({
     mutationFn: createProgram,
     onSuccess: () => {
@@ -138,7 +132,6 @@ const CoachingManagementPage: React.FC = () => {
     },
   });
 
-  // ── Category Handlers ──────────────────────────────────────────
   const handleCategoryClick = (cat: any) => {
     setSelectedCategoryId(cat._id);
     setSelectedCategoryName(cat.name);
@@ -182,7 +175,6 @@ const CoachingManagementPage: React.FC = () => {
     }
   };
 
-  // ── Program Handlers ───────────────────────────────────────────
   const handleProgAdd = () => {
     setProgForm({ name: "", category: selectedCategoryId });
     setProgEditing(false);
@@ -217,7 +209,7 @@ const CoachingManagementPage: React.FC = () => {
         <TermManagement />
 
         <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.05] shadow-sm overflow-hidden">
-          {/* ── Header ────────────────────────────────────────────── */}
+
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/[0.05]">
             <div>
               <h2 className="text-lg font-bold text-gray-800 dark:text-white/90">Categories Manage</h2>
@@ -225,7 +217,7 @@ const CoachingManagementPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Two-column body ───────────────────────────────────── */}
+
           <div className="flex" style={{ minHeight: "520px" }}>
 
             {/* LEFT — Academy Categories */}
@@ -273,11 +265,10 @@ const CoachingManagementPage: React.FC = () => {
                               {cat.name}
                             </span>
                             {cat.isEvent && (
-                              <span className={`text-[9px] font-bold uppercase tracking-wider rounded-none self-start truncate max-w-full ${
-                                isSelected
-                                  ? "text-white/80"
-                                  : "text-amber-600 dark:text-amber-400"
-                              }`}>
+                              <span className={`text-[9px] font-bold uppercase tracking-wider rounded-none self-start truncate max-w-full ${isSelected
+                                ? "text-white/80"
+                                : "text-amber-600 dark:text-amber-400"
+                                }`}>
                                 Holiday Program
                               </span>
                             )}
@@ -402,7 +393,7 @@ const CoachingManagementPage: React.FC = () => {
         </div>
       </div>{/* end space-y-8 */}
 
-      {/* ── Category Modal ─────────────────────────────────────────── */}
+
       <Modal isOpen={catModalOpen} onClose={() => setCatModalOpen(false)} className="max-w-[400px] p-6 lg:p-8 rounded-none shadow-2xl">
         <h4 className="text-xl font-bold mb-2">{catEditing ? "Edit Category" : "New Category"}</h4>
         <p className="text-xs text-gray-500 mb-6">Manage high-level academy groupings.</p>
@@ -447,7 +438,7 @@ const CoachingManagementPage: React.FC = () => {
         message="Are you sure you want to delete this category? This action cannot be undone."
       />
 
-      {/* ── Program Modal ──────────────────────────────────────────── */}
+
       <Modal isOpen={progModalOpen} onClose={() => setProgModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 rounded-none shadow-2xl">
         <h4 className="text-xl font-bold mb-2 tracking-tight">{progEditing ? "Modify Program" : "New Curriculum Module"}</h4>
         <p className="text-xs text-gray-500 mb-8 font-medium">Define the core objectives for this training level.</p>

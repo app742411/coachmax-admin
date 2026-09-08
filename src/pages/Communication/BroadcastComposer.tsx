@@ -108,25 +108,19 @@ export const BroadcastComposer: React.FC<BroadcastComposerProps> = ({
   const [selectedProgram, setSelectedProgram] = useState<string>(prefilledProgramId);
   const [selectedDay, setSelectedDay] = useState<string>(prefilledDayOfWeek);
 
-  // Text message
   const [text, setText] = useState<string>("");
-
-  // Raw classes list from backend
   const [classesList, setClassesList] = useState<any[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState<boolean>(true);
 
-  // Dynamic dropdown hooks
   const { categories: categoriesList } = useCategories({ isEvent: "all" });
   const { terms: allTermsList } = useTerms({ isEvent: "all" });
   const { programs: programsList } = useProgramsByCategory(selectedCategory);
 
-  // Filtered terms by year if year is selected
   const availableTerms = useMemo(() => {
     if (!selectedYear) return allTermsList;
     return allTermsList.filter((t) => t.year?.toString() === selectedYear.toString());
   }, [allTermsList, selectedYear]);
 
-  // Load initial dropdown classes data
   useEffect(() => {
     const fetchClassesData = async () => {
       setIsLoadingClasses(true);
