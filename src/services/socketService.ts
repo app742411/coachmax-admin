@@ -108,7 +108,7 @@ export const socketService = {
       // Append to broadcast announcements list
       store.dispatch(
         addAnnouncement({
-          _id: Math.random().toString(), // fallback ID if not sent by socket
+          _id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, // secure fallback ID
           classId: data.classId,
           className: data.className,
           text: data.text,

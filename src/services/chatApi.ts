@@ -6,7 +6,7 @@ export const isCoachOrAdmin = (): boolean => {
   try {
     const user = JSON.parse(userStr);
     return ["COACH", "SUPER_ADMIN", "ADMIN"].includes(user.role);
-  } catch (e) {
+  } catch {
     return false;
   }
 };

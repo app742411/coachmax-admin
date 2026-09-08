@@ -250,8 +250,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
 
   useEffect(() => {
     if (initialData) {
-      // @ts-ignore
-      setFormData(prev => ({ ...prev, ...initialData }));
+      setFormData((prev) => ({ ...prev, ...(initialData as typeof formData) }));
       if (initialData.images) {
         setExistingImages(initialData.images);
       }

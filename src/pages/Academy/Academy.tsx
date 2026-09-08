@@ -62,8 +62,8 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
       for (const slot of timeSlots) {
         if (!slot.startTime) continue;
-        const [time, modifier] = slot.startTime.split(' ');
-        let [hours, minutes] = time.split(':').map(Number);
+        const [rawHours, minutes] = time.split(':').map(Number);
+        let hours = rawHours;
         if (modifier === 'PM' && hours < 12) hours += 12;
         if (modifier === 'AM' && hours === 12) hours = 0;
 

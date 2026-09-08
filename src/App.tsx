@@ -29,7 +29,7 @@ import ProductList from "./pages/Store/ProductList";
 import AddProductPage, { EditProductPage } from "./pages/Store/AddProductPage";
 import OrdersList from "./pages/Store/OrdersList";
 import OrderDetails from "./pages/Store/OrderDetails";
-import CoachingManagementPage from "./pages/CochingManagement/CoachingManagementPage";
+import CoachingManagementPage from "./pages/CoachingManagement/CoachingManagementPage";
 import CoachesPage from "./pages/Coaches/CoachesPage";
 import AddTempPlayers from "./pages/CoachManagement/AddTempPlayers";
 import MyClassesList from "./pages/CoachManagement/MyClassesList";

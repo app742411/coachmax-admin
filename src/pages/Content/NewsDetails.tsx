@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router";
+import DOMPurify from "dompurify";
 import { getNewsById, deleteNews } from "../../api/adminApi";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
@@ -209,7 +210,7 @@ const NewsDetails: React.FC = () => {
               [&_a]:text-brand-500 [&_a]:underline [&_a]:hover:text-brand-600
               [&_img]:max-w-full [&_img]:h-auto [&_img]:my-6 [&_img]:mx-auto [&_img]:shadow-md
               [&_blockquote]:border-l-4 [&_blockquote]:border-brand-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-500 [&_blockquote]:dark:text-gray-400 [&_blockquote]:my-4"
-            dangerouslySetInnerHTML={{ __html: newsItem.description }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(newsItem.description || "") }}
           />
         </div>
       </div>
