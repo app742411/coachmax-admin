@@ -482,7 +482,13 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
                 <th className="sticky left-0 z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1.5 text-center min-w-[35px] w-[35px] max-w-[35px] border-b border-slate-100 dark:border-slate-800">#</th>
-                <th className="sticky left-[35px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">Status</th>
+                <th className="sticky left-[35px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-center">
+                    <span className="text-sm select-none" title="Payment Status">
+                      💰
+                    </span>
+                  </div>
+                </th>
                 <th className="sticky left-[75px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-100 dark:border-slate-800">Player</th>
                 <th className="sticky left-[235px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1.5 text-center min-w-[75px] w-[75px] max-w-[75px] border-b border-slate-100 dark:border-slate-800">DOB</th>
                 <th className="sticky left-[310px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[50px] w-[50px] max-w-[50px] border-b border-slate-100 dark:border-slate-800 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">Cond</th>

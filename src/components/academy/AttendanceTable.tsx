@@ -1,5 +1,5 @@
 import { ClassSchedule } from "../../types/academy";
-import { StatusIcon } from "../common/StatusColorCode";
+import { getPlayerStatusTextClass, StatusIcon } from "../common/StatusColorCode";
 
 interface AttendanceTableProps {
   schedule: ClassSchedule;
@@ -123,7 +123,13 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
               <th className="py-2.5 px-1.5 w-[35px] text-center">#</th>
-              <th className="py-2.5 px-2 w-[40px] text-center">Status</th>
+              <th className="py-2.5 px-1 w-[40px] text-center">
+                <div className="flex items-center justify-center">
+                  <span className="text-sm select-none" title="Payment Status">
+                    💰
+                  </span>
+                </div>
+              </th>
               <th className="py-2.5 px-3 min-w-[130px]">Player</th>
               <th className="py-2.5 px-3 min-w-[80px]">DOB</th>
               <th className="py-2.5 px-3 min-w-[90px] text-center">Med Cond</th>
@@ -152,7 +158,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
                   <div className="flex items-center gap-2.5">
                     <img src={row.avatar} alt={row.playerName} className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700" />
                     <div className="flex flex-col min-w-0">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs leading-tight">{row.playerName}</span>
+                      <span className={`font-bold text-xs leading-tight block truncate ${getPlayerStatusTextClass((row as any).paymentStatus || (row as any).status)}`}>{row.playerName}</span>
                       <div className="flex items-center gap-0.5 text-amber-400 mt-1">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <svg

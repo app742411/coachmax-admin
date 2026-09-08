@@ -255,35 +255,13 @@ const UserManual: React.FC = () => {
               </div>
 
               {/* APPROVED (UNPAID) */}
-              <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
-                <div className="flex items-center gap-2">
-                  <StatusIcon status="UNPAID" size="w-4 h-4" />
-                  <span className="font-bold text-xs text-amber-600 dark:text-amber-400">APPROVED (UNPAID)</span>
-                </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  Amber warning/cross icon. Player approved and allocated; fee invoice generated automatically (pending payment). Player name displays in standard text.
-                </p>
-              </div>
-
-              {/* TRIAL */}
-              <div className="p-4 bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800 space-y-2">
-                <div className="flex items-center gap-2">
-                  <StatusIcon status="TRIAL" size="w-4 h-4" />
-                  <span className="font-bold text-xs text-rose-600 dark:text-rose-400">TRIAL (RED TEXT)</span>
-                </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  Rose red clock icon & <strong className="text-rose-600 dark:text-rose-400">red player name text</strong>. Temporary trial attendee session.
-                </p>
-              </div>
-
-              {/* TBC */}
               <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 space-y-2">
                 <div className="flex items-center gap-2">
-                  <StatusIcon status="TBC" size="w-4 h-4" />
-                  <span className="font-bold text-xs text-slate-500 dark:text-slate-400">TBC (GREY TEXT)</span>
+                  <StatusIcon status="UNPAID" size="w-4 h-4" />
+                  <span className="font-bold text-xs text-slate-800 dark:text-slate-200">APPROVED (UNPAID)</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  Grey circle question mark icon & <strong className="text-slate-400 dark:text-slate-400">grey player name text</strong>. Attendance or class spot pending final confirmation.
+                  Circle minus icon ⊝. Player approved and allocated; fee invoice generated automatically (pending payment). Player name displays in standard text.
                 </p>
               </div>
 
@@ -294,18 +272,40 @@ const UserManual: React.FC = () => {
                   <span className="font-bold text-xs text-teal-700 dark:text-teal-400">HANDSHAKE</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  Teal agreement icon. Special director-approved arrangement, scholarship, or direct admission without payment. Player name displays in standard text.
+                  Handshake icon 🤝. Special director-approved arrangement, scholarship, or direct admission without payment. Player name displays in standard text.
+                </p>
+              </div>
+
+              {/* TRIAL */}
+              <div className="p-4 bg-red-50/50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                  <span className="font-bold text-xs text-red-500 dark:text-red-400">TRIAL (RED TEXT)</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  No payment icon in table column &amp; <strong className="text-red-500 dark:text-red-400">red player name text</strong>. Temporary trial attendee session.
+                </p>
+              </div>
+
+              {/* TBC */}
+              <div className="p-4 bg-[#b7a9d9]/10 dark:bg-[#b7a9d9]/20 border border-[#b7a9d9]/30 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#b7a9d9] shrink-0" />
+                  <span className="font-bold text-xs text-[#b7a9d9]">TBC (#b7a9d9 TEXT)</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                  No payment icon in table column &amp; <strong className="text-[#b7a9d9]">#b7a9d9 player name text</strong>. Attendance or class spot pending final confirmation.
                 </p>
               </div>
 
               {/* EXTRA / SUBSTITUTE */}
-              <div className="p-4 bg-[#dee08b]/10 dark:bg-amber-950/20 border border-[#dee08b] dark:border-amber-800/40 space-y-2">
+              <div className="p-4 bg-[#d6d11a]/10 dark:bg-[#d6d11a]/20 border border-[#d6d11a]/30 space-y-2">
                 <div className="flex items-center gap-2">
-                  <StatusIcon status="EXTRA" size="w-4 h-4" />
-                  <span className="font-bold text-xs text-[#8a8c23] dark:text-[#dee08b]">EXTRA / SUBSTITUTE (KHAKI TEXT)</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#d6d11a] shrink-0" />
+                  <span className="font-bold text-xs text-[#d6d11a]">EXTRA / SUBSTITUTE (#d6d11a TEXT)</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  Khaki plus (+) or swap arrows icon & <strong className="text-[#8a8c23] dark:text-[#dee08b]">khaki yellow player name text</strong>. Overflow or substitute player allocated to session.
+                  No payment icon in table column &amp; <strong className="text-[#d6d11a]">#d6d11a player name text</strong>. Overflow or substitute player allocated to session.
                 </p>
               </div>
             </div>

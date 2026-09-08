@@ -382,7 +382,11 @@ export default function TeamFullTable({
                       #
                     </th>
                     <th className="sticky left-[35px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-100 dark:border-slate-800">
-                      Status
+                      <div className="flex items-center justify-center">
+                        <span className="text-sm select-none" title="Payment Status">
+                          💰
+                        </span>
+                      </div>
                     </th>
                     <th className="sticky left-[75px] z-20 bg-[#f8fafc] dark:bg-slate-900 py-2.5 px-2 min-w-[180px] w-[180px] max-w-[180px] border-b border-slate-100 dark:border-slate-800">
                       Player
