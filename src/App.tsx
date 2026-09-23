@@ -56,6 +56,7 @@ import CommunicationPage from "./pages/Communication";
 import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
 import TeamDetailsPage from "./pages/Teams/TeamDetailsPage";
 import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
+import LeagueDetails from "./modules/leagues/pages/LeagueDetails";
 import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
 import AuditLogsPage from "./pages/AuditLogs/AuditLogsPage";
 import UserManual from "./pages/Docs/UserManual";
@@ -130,6 +131,8 @@ export default function App() {
             <Route path="/coaches" element={<CoachesPage />} />
             <Route path="/add-temporary-players" element={<AddTempPlayers />} />
             <Route path="/leagues" element={<LeaguesManagementPage />} />
+            <Route path="/leagues/:leagueId" element={<LeagueDetails />} />
+            <Route path="/admin/leagues/:leagueId" element={<LeagueDetails />} />
             <Route path="/teams" element={<TeamsManagementPage />} />
             <Route path="/teams/:teamId" element={<TeamDetailsPage />} />
             <Route path="/fixtures" element={<FixturesManagementPage />} />

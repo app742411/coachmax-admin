@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
-import { getAllLeagues, createLeague, updateLeague, deleteLeague } from "../../api/adminApi";
+import { getAllLeagues, createLeague, updateLeague, deleteLeague, getAllTeams } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
-import { Trophy, Calendar, Image as ImageIcon } from "lucide-react";
+import { Trophy, Calendar, Image as ImageIcon, Users, Search, X, Settings2 } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 const LeagueManagement: React.FC = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
+  const regStartDateRef = useRef<HTMLInputElement>(null);
+  const regEndDateRef = useRef<HTMLInputElement>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -22,14 +26,35 @@ const LeagueManagement: React.FC = () => {
 
   const [formData, setFormData] = useState({
     name: "",
-    season: "",
-    type: "NATIONAL",
+    season: "2026-2027",
     description: "",
     startDate: "",
     endDate: "",
+    registrationStartDate: "",
+    registrationEndDate: "",
+    status: "UPCOMING",
+    type: "NATIONAL",
+    visibility: "PUBLIC",
+    pointsForWin: 3,
+    pointsForDraw: 1,
+    allowDraws: true,
+    automaticLadderRecalculation: true,
   });
+
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [teamSearchQuery, setTeamSearchQuery] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Fetch academy teams for league enrollment
+  const { data: allTeamsData } = useQuery({
+    queryKey: ["allAcademyTeams"],
+    queryFn: () => getAllTeams(),
+    enabled: isModalOpen,
+  });
+  const allAcademyTeams: any[] = Array.isArray(allTeamsData)
+    ? allTeamsData
+    : allTeamsData?.data || [];
 
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdownId(null);
@@ -88,7 +113,24 @@ const LeagueManagement: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", season: "", type: "NATIONAL", description: "", startDate: "", endDate: "" });
+    setFormData({
+      name: "",
+      season: "2026-2027",
+      description: "",
+      startDate: "",
+      endDate: "",
+      registrationStartDate: "",
+      registrationEndDate: "",
+      status: "UPCOMING",
+      type: "NATIONAL",
+      visibility: "PUBLIC",
+      pointsForWin: 3,
+      pointsForDraw: 1,
+      allowDraws: true,
+      automaticLadderRecalculation: true,
+    });
+    setSelectedTeamIds([]);
+    setTeamSearchQuery("");
     setSelectedFile(null);
     setPreviewImage(null);
     setIsEditing(false);
@@ -99,12 +141,34 @@ const LeagueManagement: React.FC = () => {
   const handleOpenEdit = (league: any) => {
     setFormData({
       name: league.name || "",
-      season: league.season || "",
-      type: league.type || league.leagueType || "NATIONAL",
+      season: league.season || "2026-2027",
       description: league.description || "",
       startDate: league.startDate ? new Date(league.startDate).toISOString().split('T')[0] : "",
       endDate: league.endDate ? new Date(league.endDate).toISOString().split('T')[0] : "",
+      registrationStartDate: league.registrationStartDate
+        ? new Date(league.registrationStartDate).toISOString().split('T')[0]
+        : league.registrationOpenDate
+        ? new Date(league.registrationOpenDate).toISOString().split('T')[0]
+        : "",
+      registrationEndDate: league.registrationEndDate
+        ? new Date(league.registrationEndDate).toISOString().split('T')[0]
+        : league.registrationCloseDate
+        ? new Date(league.registrationCloseDate).toISOString().split('T')[0]
+        : "",
+      status: (league.status || "UPCOMING").toUpperCase(),
+      type: (league.type || league.leagueType || league.competitionScope || "NATIONAL").toUpperCase(),
+      visibility: (league.visibility || "PUBLIC").toUpperCase(),
+      pointsForWin: league.pointsForWin ?? 3,
+      pointsForDraw: league.pointsForDraw ?? 1,
+      allowDraws: league.allowDraws ?? true,
+      automaticLadderRecalculation: league.automaticLadderRecalculation ?? league.autoLadderCalculation ?? true,
     });
+
+    const currentTeamIds = Array.isArray(league.teams)
+      ? league.teams.map((t: any) => (typeof t === "string" ? t : t._id))
+      : [];
+    setSelectedTeamIds(currentTeamIds);
+    setTeamSearchQuery("");
     setSelectedFile(null);
     setPreviewImage(getImageUrl(league.logo));
     setIsEditing(true);
@@ -130,18 +194,53 @@ const LeagueManagement: React.FC = () => {
     }
   };
 
+  const handleRemoveImage = () => {
+    setSelectedFile(null);
+    setPreviewImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const toggleTeamSelect = (id: string) => {
+    setSelectedTeamIds((prev) =>
+      prev.includes(id) ? prev.filter((tId) => tId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllTeams = () => {
+    const allFilteredIds = filteredAcademyTeams.map((t) => t._id);
+    const allSelected = allFilteredIds.every((id) => selectedTeamIds.includes(id));
+    if (allSelected) {
+      setSelectedTeamIds((prev) => prev.filter((id) => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedTeamIds((prev) => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const payload = new FormData();
     payload.append("name", formData.name);
     payload.append("season", formData.season);
-    if (formData.type) {
-      payload.append("type", formData.type);
-      payload.append("leagueType", formData.type);
-    }
     payload.append("description", formData.description);
     if (formData.startDate) payload.append("startDate", formData.startDate);
     if (formData.endDate) payload.append("endDate", formData.endDate);
+    if (formData.registrationStartDate) payload.append("registrationStartDate", formData.registrationStartDate);
+    if (formData.registrationEndDate) payload.append("registrationEndDate", formData.registrationEndDate);
+    payload.append("status", formData.status);
+    payload.append("type", formData.type);
+    payload.append("competitionScope", formData.type);
+    payload.append("leagueType", formData.type);
+    payload.append("visibility", formData.visibility);
+    payload.append("pointsForWin", String(formData.pointsForWin));
+    payload.append("pointsForDraw", String(formData.pointsForDraw));
+    payload.append("allowDraws", String(formData.allowDraws));
+    payload.append("automaticLadderRecalculation", String(formData.automaticLadderRecalculation));
+
+    selectedTeamIds.forEach((tId) => {
+      payload.append("teams", tId);
+    });
 
     if (selectedFile) {
       payload.append("leagueLogo", selectedFile);
@@ -153,6 +252,15 @@ const LeagueManagement: React.FC = () => {
       createMutation.mutate(payload);
     }
   };
+
+  const filteredAcademyTeams = allAcademyTeams.filter((team: any) => {
+    const tName = team.teamName || team.name || "";
+    const coachStr = typeof team.coach === "object" ? team.coach?.name || "" : team.coach || "";
+    return (
+      tName.toLowerCase().includes(teamSearchQuery.toLowerCase()) ||
+      coachStr.toLowerCase().includes(teamSearchQuery.toLowerCase())
+    );
+  });
 
   const filteredLeagues = leagues.filter((league: any) =>
     league.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -203,7 +311,11 @@ const LeagueManagement: React.FC = () => {
                 <tr><td colSpan={5} className="text-center py-20 text-gray-500 font-medium italic">No leagues found.</td></tr>
               ) : (
                 filteredLeagues.map((league: any) => (
-                  <tr key={league._id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
+                  <tr
+                    key={league._id}
+                    onClick={() => navigate(`/leagues/${league._id}`)}
+                    className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-all cursor-pointer"
+                  >
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-none bg-brand-50 overflow-hidden flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm shrink-0">
@@ -214,7 +326,7 @@ const LeagueManagement: React.FC = () => {
                           )}
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{league.name}</span>
+                          <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight hover:text-brand-600 transition-colors">{league.name}</span>
                           <span className="text-[10px] font-semibold text-slate-500 max-w-[200px] truncate" title={league.description}>{league.description || "No description"}</span>
                         </div>
                       </div>
@@ -273,7 +385,17 @@ const LeagueManagement: React.FC = () => {
                       {openDropdownId === league._id && (
                         <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                           <button
-                            className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/leagues/${league._id}`);
+                              setOpenDropdownId(null);
+                            }}
+                          >
+                            View Details
+                          </button>
+                          <button
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700/60"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenEdit(league);
@@ -303,160 +425,491 @@ const LeagueManagement: React.FC = () => {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[850px] p-6 lg:p-8 rounded-lg shadow-2xl" noBackgroundBlur={true}>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        className="max-w-[920px] max-h-[92vh] overflow-y-auto p-6 lg:p-8 rounded-xl shadow-2xl"
+        noBackgroundBlur={true}
+      >
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-brand-500">
-            <Trophy size={22} />
+          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-xl text-brand-600">
+            <Trophy size={24} />
           </div>
           <div>
-            <h4 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{isEditing ? "Modify League" : "New League"}</h4>
-            <p className="text-xs text-slate-500 font-medium">Configure league details and branding.</p>
+            <h4 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
+              {isEditing ? "Modify League" : "Create New League"}
+            </h4>
+            <p className="text-xs text-slate-500 font-medium">
+              Configure competition scope, schedule timelines, teams, and ladder rules.
+            </p>
           </div>
         </div>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          <div className="md:col-span-7 space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">League Name</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
-                placeholder="e.g. Summer Championship League"
-                required
-              />
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Section 1: Basic Information */}
+          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <Trophy size={16} className="text-brand-600" />
+              <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                Basic Information
+              </h5>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Season</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  League Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                  placeholder="e.g. Premier Youth League"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Season <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.season}
                   onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
-                  placeholder="e.g. 2026"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                  placeholder="e.g. 2026-2027"
                   required
                 />
               </div>
+
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">League Type</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  League Type <span className="text-rose-500">*</span>
+                </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
                   required
                 >
-                  <option value="INTERNATIONAL">International (Global)</option>
-                  <option value="NATIONAL">National (Domestic)</option>
-                  <option value="STATE">State / Regional</option>
-                  <option value="LOCAL">Local / Internal</option>
-                  <option value="OTHER">Other</option>
-
+                  <option value="INTERNATIONAL">INTERNATIONAL</option>
+                  <option value="NATIONAL">NATIONAL</option>
+                  <option value="STATE">STATE</option>
+                  <option value="LOCAL">LOCAL</option>
+                  <option value="OTHERS">OTHERS</option>
                 </select>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all resize-none h-24"
-                placeholder="League description..."
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Start Date</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
+                >
+                  <option value="UPCOMING">UPCOMING</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                  <option value="DRAFT">DRAFT</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Visibility
+                </label>
+                <select
+                  value={formData.visibility}
+                  onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
+                >
+                  <option value="PUBLIC">PUBLIC</option>
+                  <option value="INTERNAL">INTERNAL</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-3">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-medium focus:border-brand-500 outline-none text-slate-900 dark:text-white resize-none h-20"
+                  placeholder="e.g. Youth football competition"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Schedule & Registration Timelines */}
+          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <Calendar size={16} className="text-emerald-600" />
+              <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                Tournament & Registration Schedule
+              </h5>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Start Date
+                </label>
                 <div className="relative">
                   <input
                     type="date"
                     ref={startDateRef}
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full rounded-none border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
-                    required
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   />
                   <div
-                    className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-pointer z-20"
+                    className="absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center cursor-pointer z-10"
                     onClick={() => {
                       try {
                         startDateRef.current?.showPicker();
-                      } catch (e) {
+                      } catch {
                         startDateRef.current?.focus();
                       }
                     }}
                   >
-                    <Calendar className="text-gray-400 w-4 h-4" />
+                    <Calendar className="text-slate-400 w-3.5 h-3.5" />
                   </div>
                 </div>
               </div>
+
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">End Date</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  End Date
+                </label>
                 <div className="relative">
                   <input
                     type="date"
                     ref={endDateRef}
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full rounded-none border border-gray-100 bg-gray-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
-                    required
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   />
                   <div
-                    className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-pointer z-20"
+                    className="absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center cursor-pointer z-10"
                     onClick={() => {
                       try {
                         endDateRef.current?.showPicker();
-                      } catch (e) {
+                      } catch {
                         endDateRef.current?.focus();
                       }
                     }}
                   >
-                    <Calendar className="text-gray-400 w-4 h-4" />
+                    <Calendar className="text-slate-400 w-3.5 h-3.5" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Registration Start Date
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    ref={regStartDateRef}
+                    value={formData.registrationStartDate}
+                    onChange={(e) => setFormData({ ...formData, registrationStartDate: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                  />
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center cursor-pointer z-10"
+                    onClick={() => {
+                      try {
+                        regStartDateRef.current?.showPicker();
+                      } catch {
+                        regStartDateRef.current?.focus();
+                      }
+                    }}
+                  >
+                    <Calendar className="text-slate-400 w-3.5 h-3.5" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Registration End Date
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    ref={regEndDateRef}
+                    value={formData.registrationEndDate}
+                    onChange={(e) => setFormData({ ...formData, registrationEndDate: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                  />
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center cursor-pointer z-10"
+                    onClick={() => {
+                      try {
+                        regEndDateRef.current?.showPicker();
+                      } catch {
+                        regEndDateRef.current?.focus();
+                      }
+                    }}
+                  >
+                    <Calendar className="text-slate-400 w-3.5 h-3.5" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="md:col-span-5">
-            <div className="bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-6 shadow-sm h-full flex flex-col items-center justify-center">
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-6 text-center">League Logo</label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-40 h-40 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 cursor-pointer overflow-hidden hover:border-brand-500 transition-colors group relative"
-              >
-                {previewImage ? (
-                  <>
-                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ImageIcon className="text-white w-8 h-8" />
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center text-gray-400 group-hover:text-brand-500 transition-colors">
-                    <ImageIcon className="w-8 h-8 mb-2" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Upload</span>
-                  </div>
-                )}
+          {/* Section 3: Ladder & Operational Rules */}
+          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <Settings2 size={16} className="text-amber-600" />
+              <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                Scoring & Ladder Rules
+              </h5>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Points for Win
+                </label>
+                <input
+                  type="number"
+                  value={formData.pointsForWin}
+                  onChange={(e) => setFormData({ ...formData, pointsForWin: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                />
               </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Points for Draw
+                </label>
+                <input
+                  type="number"
+                  value={formData.pointsForDraw}
+                  onChange={(e) => setFormData({ ...formData, pointsForDraw: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex flex-col justify-center gap-3">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.allowDraws}
+                    onChange={(e) => setFormData({ ...formData, allowDraws: e.target.checked })}
+                    className="w-4 h-4 rounded text-brand-600 border-slate-300 focus:ring-brand-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      Allow Draws
+                    </span>
+                    <span className="text-[10px] text-slate-400">Award points for tied matches</span>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.automaticLadderRecalculation}
+                    onChange={(e) =>
+                      setFormData({ ...formData, automaticLadderRecalculation: e.target.checked })
+                    }
+                    className="w-4 h-4 rounded text-brand-600 border-slate-300 focus:ring-brand-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      Automatic Ladder Recalculation
+                    </span>
+                    <span className="text-[10px] text-slate-400">Instant standings computation</span>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
 
-          <div className="md:col-span-12 flex justify-end gap-3 mt-4 pt-6 border-t border-gray-100 dark:border-gray-800">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
-            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
-              {createMutation.isPending || updateMutation.isPending ? "Committing..." : "Save League"}
+          {/* Section 4: Participating Teams (teams) */}
+          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Users size={16} className="text-blue-600" />
+                <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                  Participating Teams
+                </h5>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">
+                  {selectedTeamIds.length} Selected
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllTeams}
+                  className="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline"
+                >
+                  {filteredAcademyTeams.every((t) => selectedTeamIds.includes(t._id))
+                    ? "Deselect All"
+                    : "Select All"}
+                </button>
+              </div>
+            </div>
+
+            {/* Team Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+              <input
+                type="text"
+                placeholder="Search academy teams to enroll..."
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
+              />
+            </div>
+
+            {/* Scrollable Team List */}
+            <div className="max-h-48 overflow-y-auto no-scrollbar border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700/50">
+              {filteredAcademyTeams.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 text-xs italic">
+                  No academy teams found.
+                </div>
+              ) : (
+                filteredAcademyTeams.map((team: any) => {
+                  const isSelected = selectedTeamIds.includes(team._id);
+                  const tName = team.teamName || team.name || "Academy Team";
+                  const coachName =
+                    typeof team.coach === "object" && team.coach?.name
+                      ? team.coach.name
+                      : typeof team.coach === "string"
+                      ? team.coach
+                      : "Unassigned";
+
+                  return (
+                    <div
+                      key={team._id}
+                      onClick={() => toggleTeamSelect(team._id)}
+                      className={`flex items-center justify-between px-3.5 py-2.5 cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-brand-50/50 dark:bg-brand-950/20"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}} // handled by parent onClick
+                          className="w-4 h-4 rounded text-brand-600 border-slate-300 focus:ring-brand-500"
+                        />
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                            {tName}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Coach: {coachName} {team.players?.length ? `• ${team.players.length} players` : ""}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {team._id.slice(-6)}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Section 5: League Logo (leagueLogo) */}
+          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <ImageIcon size={16} className="text-indigo-600" />
+              <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                League Logo / Crest (leagueLogo)
+              </h5>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-5">
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center cursor-pointer overflow-hidden group hover:border-brand-500 transition-colors shrink-0 shadow-xs"
+              >
+                {previewImage ? (
+                  <img src={previewImage} alt="Logo preview" className="w-full h-full object-contain p-1.5" />
+                ) : (
+                  <div className="flex flex-col items-center text-slate-400 group-hover:text-brand-500 transition-colors">
+                    <ImageIcon className="w-7 h-7 mb-1" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="modal-league-logo"
+                />
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="modal-league-logo"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors shadow-xs"
+                  >
+                    <ImageIcon size={13} />
+                    <span>{previewImage ? "Change Logo" : "Select your logo"}</span>
+                  </label>
+
+                  {previewImage && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold dark:border-rose-900/40 dark:hover:bg-rose-950/20 transition-colors"
+                    >
+                      <X size={13} />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+                <span className="text-[11px] text-slate-400">
+                  PNG, JPG, or SVG recommended. Displays in header, ladder, and standings.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Discard
+            </Button>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || updateMutation.isPending}
+              className="px-8 flex items-center gap-2"
+            >
+              <Trophy size={14} />
+              <span>
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Committing..."
+                  : isEditing
+                  ? "Save Changes"
+                  : "Create League"}
+              </span>
             </Button>
           </div>
         </form>

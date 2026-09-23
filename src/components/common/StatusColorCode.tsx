@@ -16,7 +16,7 @@ export const STATUS_REGISTRY: Record<string, StatusColorInfo> = {
   PAID: {
     key: "PAID",
     label: "PAID",
-    dotColor: "bg-emerald-500",
+    dotColor: "bg-emerald-600",
     textClass: "text-emerald-600 dark:text-emerald-400",
     bgClass: "bg-emerald-50 dark:bg-emerald-950/40",
     borderClass: "border-emerald-200 dark:border-emerald-800",
@@ -27,7 +27,7 @@ export const STATUS_REGISTRY: Record<string, StatusColorInfo> = {
   ACTIVE: {
     key: "ACTIVE",
     label: "PAID",
-    dotColor: "bg-emerald-500",
+    dotColor: "bg-emerald-600",
     textClass: "text-emerald-600 dark:text-emerald-400",
     bgClass: "bg-emerald-50 dark:bg-emerald-950/40",
     borderClass: "border-emerald-200 dark:border-emerald-800",
@@ -38,7 +38,7 @@ export const STATUS_REGISTRY: Record<string, StatusColorInfo> = {
   APPROVED: {
     key: "APPROVED",
     label: "PAID",
-    dotColor: "bg-emerald-500",
+    dotColor: "bg-emerald-600",
     textClass: "text-emerald-600 dark:text-emerald-400",
     bgClass: "bg-emerald-50 dark:bg-emerald-950/40",
     borderClass: "border-emerald-200 dark:border-emerald-800",
@@ -163,7 +163,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, className = "", 
   // PAID, APPROVED, ACTIVE -> Green circle checkmark
   if (s === "PAID" || s === "APPROVED" || s === "ACTIVE") {
     return (
-      <div className={`flex items-center justify-center text-emerald-500 ${className}`} title="PAID">
+      <div className={`flex items-center justify-center text-emerald-600 ${className}`} title="PAID">
         <svg className={`${size} fill-current`} viewBox="0 0 20 20">
           <path
             fillRule="evenodd"
