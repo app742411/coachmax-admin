@@ -498,13 +498,19 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
             <select
               value={selectedAcademyTeamId}
               onChange={(e) => setSelectedAcademyTeamId(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
+              className="w-full px-3.5 py-2.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
               required
             >
-              <option value="">Select a team...</option>
+              <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
+                Select a team...
+              </option>
               {allAcademyTeams.map((t: any) => (
-                <option key={t._id} value={t._id}>
-                  {t.teamName} {t.ageGroup ? `(${t.ageGroup})` : ""}
+                <option
+                  key={t._id}
+                  value={t._id}
+                  className="text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+                >
+                  {t.teamName || t.name || "Academy Team"} {t.ageGroup ? `(${t.ageGroup})` : ""}
                 </option>
               ))}
             </select>

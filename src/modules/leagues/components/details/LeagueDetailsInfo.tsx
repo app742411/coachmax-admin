@@ -9,13 +9,30 @@ interface LeagueDetailsInfoProps {
   league: League;
 }
 
+const getImageUrl = (path?: string | null) => {
+  if (!path) return "";
+  if (
+    path.startsWith("data:") ||
+    path.startsWith("blob:") ||
+    path.startsWith("http://") ||
+    path.startsWith("https://")
+  ) {
+    return path;
+  }
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  return `${baseUrl}/${path.replace(/^\//, "")}`;
+};
+
 export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) => {
   const { canEdit } = useLeaguePermissions();
   const updateMutation = useUpdateLeague(league._id);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(league.logo || null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    league.logo ? getImageUrl(league.logo) : null
+  );
+  const [logoError, setLogoError] = useState(false);
 
   const [formData, setFormData] = useState({
     name: league.name || "",
@@ -62,7 +79,11 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
       pointsForLoss: league.pointsForLoss ?? 0,
     });
     if (league.logo) {
-      setLogoPreview(league.logo);
+      setLogoPreview(getImageUrl(league.logo));
+      setLogoError(false);
+    } else {
+      setLogoPreview(null);
+      setLogoError(false);
     }
   }, [league]);
 
@@ -70,6 +91,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
     const file = e.target.files?.[0];
     if (file) {
       setLogoFile(file);
+      setLogoError(false);
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
@@ -81,6 +103,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
   const handleRemoveLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
+    setLogoError(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -203,8 +226,13 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
               </label>
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0">
-                  {logoPreview ? (
-                    <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain p-1" />
+                  {logoPreview && !logoError ? (
+                    <img
+                      src={getImageUrl(logoPreview)}
+                      alt="Logo preview"
+                      onError={() => setLogoError(true)}
+                      className="w-full h-full object-contain p-1"
+                    />
                   ) : (
                     <ImageIcon className="w-6 h-6 text-slate-400" />
                   )}

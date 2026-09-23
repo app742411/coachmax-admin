@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   CalendarDays,
   Plus,
@@ -30,6 +31,44 @@ interface ScheduleViewProps {
   leagueId: string;
 }
 
+const getImageUrl = (path?: string | null) => {
+  if (!path) return "";
+  if (
+    path.startsWith("data:") ||
+    path.startsWith("blob:") ||
+    path.startsWith("http://") ||
+    path.startsWith("https://")
+  ) {
+    return path;
+  }
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  return `${baseUrl}/${path.replace(/^\//, "")}`;
+};
+
+const TeamLogoCrest: React.FC<{ logo?: string; name: string }> = ({ logo, name }) => {
+  const [error, setError] = useState(false);
+  const src = getImageUrl(logo);
+
+  const getInitials = (n: string) => {
+    const clean = n.replace(/Coach\s*Max/gi, "").trim();
+    const parts = clean.split(" ");
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return clean.slice(0, 2).toUpperCase() || "TM";
+  };
+
+  if (!src || error) {
+    return <span>{getInitials(name)}</span>;
+  }
+  return (
+    <img
+      src={src}
+      alt={name}
+      onError={() => setError(true)}
+      className="w-full h-full object-cover"
+    />
+  );
+};
+
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   const { data: matches = [], isLoading } = useLeagueMatches(leagueId);
   const { data: teams = [] } = useLeagueTeams(leagueId);
@@ -42,7 +81,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   // Filter & Accordion State
   const [roundFilter, setRoundFilter] = useState<string>("ALL");
   const [collapsedRounds, setCollapsedRounds] = useState<Record<number, boolean>>({});
-  const [activeActionMatchId, setActiveActionMatchId] = useState<string | null>(null);
+  const [actionMenu, setActionMenu] = useState<{
+    match: Match;
+    top: number;
+    left: number;
+  } | null>(null);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -137,6 +180,35 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     }));
   };
 
+  // Close floating menus on outside click, window resize, or scroll
+  useEffect(() => {
+    if (!actionMenu && !isDownloadOpen) return;
+
+    const handleDismiss = () => {
+      if (actionMenu) setActionMenu(null);
+      if (isDownloadOpen) setIsDownloadOpen(false);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActionMenu(null);
+        setIsDownloadOpen(false);
+      }
+    };
+
+    window.addEventListener("click", handleDismiss);
+    window.addEventListener("scroll", handleDismiss, true);
+    window.addEventListener("resize", handleDismiss);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("click", handleDismiss);
+      window.removeEventListener("scroll", handleDismiss, true);
+      window.removeEventListener("resize", handleDismiss);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [actionMenu, isDownloadOpen]);
+
   // Open Edit Match
   const handleOpenEdit = (match: Match) => {
     setSelectedMatch(match);
@@ -154,7 +226,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
       referee: match.referee || "",
       notes: match.notes || "",
     });
-    setActiveActionMatchId(null);
+    setActionMenu(null);
     setIsEditModalOpen(true);
   };
 
@@ -180,7 +252,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
       homeYellowCards: ms?.homeYellowCards ?? 0,
       awayYellowCards: ms?.awayYellowCards ?? 0,
     });
-    setActiveActionMatchId(null);
+    setActionMenu(null);
     setIsResultModalOpen(true);
   };
 
@@ -224,12 +296,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
         venue: addForm.venue || addForm.field || "Field 1",
         homeTeam: {
           _id: homeTeamObj?._id || addForm.homeTeamId,
-          name: homeTeamObj?.name || "Home Team",
+          name: homeTeamObj?.teamName || homeTeamObj?.name || "Home Team",
+          teamName: homeTeamObj?.teamName || homeTeamObj?.name || "Home Team",
           logo: homeTeamObj?.logo,
         },
         awayTeam: {
           _id: awayTeamObj?._id || addForm.awayTeamId,
-          name: awayTeamObj?.name || "Away Team",
+          name: awayTeamObj?.teamName || awayTeamObj?.name || "Away Team",
+          teamName: awayTeamObj?.teamName || awayTeamObj?.name || "Away Team",
           logo: awayTeamObj?.logo,
         },
         status: addForm.status,
@@ -300,13 +374,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
           venue: editForm.venue || editForm.field,
           homeTeam: {
             _id: homeTeamObj?._id || editForm.homeTeamId,
-            name: homeTeamObj?.name || selectedMatch.homeTeam.name,
-            logo: homeTeamObj?.logo,
+            name: homeTeamObj?.teamName || homeTeamObj?.name || selectedMatch.homeTeam.teamName || selectedMatch.homeTeam.name || "Home Team",
+            teamName: homeTeamObj?.teamName || homeTeamObj?.name || selectedMatch.homeTeam.teamName || selectedMatch.homeTeam.name || "Home Team",
+            logo: homeTeamObj?.logo || selectedMatch.homeTeam.logo,
           },
           awayTeam: {
             _id: awayTeamObj?._id || editForm.awayTeamId,
-            name: awayTeamObj?.name || selectedMatch.awayTeam.name,
-            logo: awayTeamObj?.logo,
+            name: awayTeamObj?.teamName || awayTeamObj?.name || selectedMatch.awayTeam.teamName || selectedMatch.awayTeam.name || "Away Team",
+            teamName: awayTeamObj?.teamName || awayTeamObj?.name || selectedMatch.awayTeam.teamName || selectedMatch.awayTeam.name || "Away Team",
+            logo: awayTeamObj?.logo || selectedMatch.awayTeam.logo,
           },
           homeScore: editForm.status === "Completed" ? Number(editForm.homeScore) : null,
           awayScore: editForm.status === "Completed" ? Number(editForm.awayScore) : null,
@@ -397,13 +473,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     } else {
       window.print();
     }
-  };
-
-  const getTeamInitials = (name: string) => {
-    const clean = name.replace(/Coach\s*Max/gi, "").trim();
-    const parts = clean.split(" ");
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return clean.slice(0, 2).toUpperCase() || "TM";
   };
 
   const getStatusBadge = (status: MatchStatus) => {
@@ -623,15 +692,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                               <td className="py-4 px-4">
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden text-[9px] font-bold text-slate-700 dark:text-slate-200">
-                                    {homeLogo ? (
-                                      <img
-                                        src={homeLogo}
-                                        alt={homeName}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <span>{getTeamInitials(homeName)}</span>
-                                    )}
+                                    <TeamLogoCrest logo={homeLogo} name={homeName} />
                                   </div>
                                   <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
                                     {homeName}
@@ -660,15 +721,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                               <td className="py-4 px-4">
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden text-[9px] font-bold text-slate-700 dark:text-slate-200">
-                                    {awayLogo ? (
-                                      <img
-                                        src={awayLogo}
-                                        alt={awayName}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <span>{getTeamInitials(awayName)}</span>
-                                    )}
+                                    <TeamLogoCrest logo={awayLogo} name={awayName} />
                                   </div>
                                   <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
                                     {awayName}
@@ -682,58 +735,30 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                               </td>
 
                             {/* Actions Dropdown */}
-                            <td className="py-4 px-4 text-right relative">
+                            <td className="py-4 px-4 text-right">
                               <button
-                                onClick={() =>
-                                  setActiveActionMatchId(
-                                    activeActionMatchId === match._id ? null : match._id
-                                  )
-                                }
-                                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (actionMenu?.match._id === match._id) {
+                                    setActionMenu(null);
+                                    return;
+                                  }
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const menuHeight = 135;
+                                  const menuWidth = 160;
+                                  // Open upwards if not enough space below
+                                  const openUpwards =
+                                    window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
+                                  const top = openUpwards ? rect.top - menuHeight : rect.bottom + 4;
+                                  const left = Math.max(12, rect.right - menuWidth);
+
+                                  setActionMenu({ match, top, left });
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                title="Match Actions"
                               >
                                 <MoreVertical size={16} />
                               </button>
-
-                              {activeActionMatchId === match._id && (
-                                <div className="absolute right-4 top-10 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 py-1 text-xs text-left animate-in fade-in zoom-in-95 duration-75">
-                                  {canEnterResults && (
-                                    <button
-                                      onClick={() => handleOpenResult(match)}
-                                      className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 text-emerald-600 font-semibold"
-                                    >
-                                      <CheckCircle2 size={13} />
-                                      <span>Enter Result</span>
-                                    </button>
-                                  )}
-
-                                  {canManageMatches && (
-                                    <>
-                                      <button
-                                        onClick={() => handleOpenEdit(match)}
-                                        className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 text-slate-700 dark:text-slate-200 font-semibold"
-                                      >
-                                        <Edit2 size={13} className="text-blue-500" />
-                                        <span>Edit Match</span>
-                                      </button>
-
-                                      <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
-                                        <button
-                                          onClick={() => {
-                                            setActiveActionMatchId(null);
-                                            if (confirm("Are you sure you want to delete this match?")) {
-                                              deleteMatchMutation.mutate(match._id);
-                                            }
-                                          }}
-                                          className="w-full text-left px-3 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2 text-rose-600 font-semibold"
-                                        >
-                                          <Trash2 size={13} />
-                                          <span>Delete Match</span>
-                                        </button>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              )}
                             </td>
                           </tr>
                         );
@@ -747,6 +772,68 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
           })
         )}
       </div>
+
+      {/* ================= FLOATING ACTION MENU PORTAL ================= */}
+      {actionMenu &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: `${actionMenu.top}px`,
+              left: `${actionMenu.left}px`,
+              zIndex: 99999,
+            }}
+            className="w-40 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 py-1.5 text-xs text-left animate-in fade-in zoom-in-95 duration-100 select-none ring-1 ring-black/5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {canEnterResults && (
+              <button
+                onClick={() => {
+                  const m = actionMenu.match;
+                  setActionMenu(null);
+                  handleOpenResult(m);
+                }}
+                className="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2.5 text-emerald-600 font-semibold cursor-pointer transition-colors"
+              >
+                <CheckCircle2 size={14} />
+                <span>Enter Result</span>
+              </button>
+            )}
+
+            {canManageMatches && (
+              <>
+                <button
+                  onClick={() => {
+                    const m = actionMenu.match;
+                    setActionMenu(null);
+                    handleOpenEdit(m);
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 font-semibold cursor-pointer transition-colors"
+                >
+                  <Edit2 size={14} className="text-blue-500" />
+                  <span>Edit Match</span>
+                </button>
+
+                <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+                  <button
+                    onClick={() => {
+                      const m = actionMenu.match;
+                      setActionMenu(null);
+                      if (confirm("Are you sure you want to delete this match?")) {
+                        deleteMatchMutation.mutate(m._id);
+                      }
+                    }}
+                    className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2.5 text-rose-600 font-semibold cursor-pointer transition-colors"
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete Match</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>,
+          document.body
+        )}
 
       {/* ================= ADD MATCH MODAL ================= */}
       <Modal
@@ -775,7 +862,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 min={1}
                 value={addForm.round}
                 onChange={(e) => setAddForm({ ...addForm, round: Number(e.target.value) })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -788,7 +875,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 type="date"
                 value={addForm.matchDate}
                 onChange={(e) => setAddForm({ ...addForm, matchDate: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -804,7 +891,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 placeholder="e.g. 2:00 pm"
                 value={addForm.time}
                 onChange={(e) => setAddForm({ ...addForm, time: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -818,7 +905,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 placeholder="e.g. Field 1"
                 value={addForm.field}
                 onChange={(e) => setAddForm({ ...addForm, field: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
               />
             </div>
           </div>
@@ -831,15 +918,24 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <select
                 value={addForm.homeTeamId}
                 onChange={(e) => setAddForm({ ...addForm, homeTeamId: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
                 required
               >
-                <option value="">Select Home Team</option>
-                {teams.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name}
-                  </option>
-                ))}
+                <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
+                  Select Home Team
+                </option>
+                {teams.map((t) => {
+                  const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
+                  return (
+                    <option
+                      key={t._id}
+                      value={t._id}
+                      className="text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+                    >
+                      {teamName}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -850,15 +946,24 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <select
                 value={addForm.awayTeamId}
                 onChange={(e) => setAddForm({ ...addForm, awayTeamId: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
                 required
               >
-                <option value="">Select Away Team</option>
-                {teams.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name}
-                  </option>
-                ))}
+                <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
+                  Select Away Team
+                </option>
+                {teams.map((t) => {
+                  const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
+                  return (
+                    <option
+                      key={t._id}
+                      value={t._id}
+                      className="text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+                    >
+                      {teamName}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
@@ -873,7 +978,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 placeholder="Referee name"
                 value={addForm.referee}
                 onChange={(e) => setAddForm({ ...addForm, referee: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
               />
             </div>
 
@@ -884,11 +989,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <select
                 value={addForm.status}
                 onChange={(e) => setAddForm({ ...addForm, status: e.target.value as MatchStatus })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
               >
-                <option value="Scheduled">Scheduled</option>
-                <option value="Live">Live</option>
-                <option value="Completed">Completed</option>
+                <option value="Scheduled" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Scheduled</option>
+                <option value="Live" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Live</option>
+                <option value="Completed" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Completed</option>
               </select>
             </div>
           </div>
@@ -902,7 +1007,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               placeholder="e.g. Ground rules, weather check"
               value={addForm.notes}
               onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
-              className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+              className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
             />
           </div>
 
@@ -947,7 +1052,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 type="number"
                 value={editForm.round}
                 onChange={(e) => setEditForm({ ...editForm, round: Number(e.target.value) })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -959,13 +1064,71 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <select
                 value={editForm.status}
                 onChange={(e) => setEditForm({ ...editForm, status: e.target.value as MatchStatus })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
               >
-                <option value="Scheduled">Scheduled</option>
-                <option value="Live">Live</option>
-                <option value="Completed">Completed</option>
-                <option value="Postponed">Postponed</option>
-                <option value="Cancelled">Cancelled</option>
+                <option value="Scheduled" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Scheduled</option>
+                <option value="Live" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Live</option>
+                <option value="Completed" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Completed</option>
+                <option value="Postponed" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Postponed</option>
+                <option value="Cancelled" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Home Team *
+              </label>
+              <select
+                value={editForm.homeTeamId}
+                onChange={(e) => setEditForm({ ...editForm, homeTeamId: e.target.value })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
+                required
+              >
+                <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
+                  Select Home Team
+                </option>
+                {teams.map((t) => {
+                  const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
+                  return (
+                    <option
+                      key={t._id}
+                      value={t._id}
+                      className="text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+                    >
+                      {teamName}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Away Team *
+              </label>
+              <select
+                value={editForm.awayTeamId}
+                onChange={(e) => setEditForm({ ...editForm, awayTeamId: e.target.value })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
+                required
+              >
+                <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
+                  Select Away Team
+                </option>
+                {teams.map((t) => {
+                  const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
+                  return (
+                    <option
+                      key={t._id}
+                      value={t._id}
+                      className="text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+                    >
+                      {teamName}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
@@ -979,7 +1142,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 type="date"
                 value={editForm.matchDate}
                 onChange={(e) => setEditForm({ ...editForm, matchDate: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -992,7 +1155,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 type="text"
                 value={editForm.time}
                 onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
                 required
               />
             </div>
@@ -1007,7 +1170,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 type="text"
                 value={editForm.field}
                 onChange={(e) => setEditForm({ ...editForm, field: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
               />
             </div>
 
@@ -1019,7 +1182,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 type="text"
                 value={editForm.referee}
                 onChange={(e) => setEditForm({ ...editForm, referee: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
               />
             </div>
           </div>
@@ -1101,12 +1264,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <select
                 value={resultForm.status}
                 onChange={(e) => setResultForm({ ...resultForm, status: e.target.value as MatchStatus })}
-                className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-emerald-500 cursor-pointer"
               >
-                <option value="COMPLETED">Completed</option>
-                <option value="LIVE">Live</option>
-                <option value="POSTPONED">Postponed</option>
-                <option value="SCHEDULED">Scheduled</option>
+                <option value="COMPLETED" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Completed</option>
+                <option value="LIVE" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Live</option>
+                <option value="POSTPONED" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Postponed</option>
+                <option value="SCHEDULED" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Scheduled</option>
               </select>
             </div>
 
@@ -1122,7 +1285,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                   min={0}
                   value={resultForm.homeScore}
                   onChange={(e) => setResultForm({ ...resultForm, homeScore: Number(e.target.value) })}
-                  className="w-16 h-12 text-center text-xl font-black rounded-lg border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white outline-none focus:border-emerald-500"
+                  className="w-16 h-12 text-center text-xl font-black rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-emerald-500"
                   required
                 />
                 <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Home</span>
@@ -1140,7 +1303,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                   min={0}
                   value={resultForm.awayScore}
                   onChange={(e) => setResultForm({ ...resultForm, awayScore: Number(e.target.value) })}
-                  className="w-16 h-12 text-center text-xl font-black rounded-lg border-2 border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white outline-none focus:border-emerald-500"
+                  className="w-16 h-12 text-center text-xl font-black rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-emerald-500"
                   required
                 />
                 <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Away</span>
