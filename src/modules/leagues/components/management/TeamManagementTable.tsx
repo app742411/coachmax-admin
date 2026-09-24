@@ -7,6 +7,8 @@ import {
   UserCheck,
   Users,
   Sliders,
+  ChevronRight,
+  Calendar,
 } from "lucide-react";
 import {
   useLeagueTeams,
@@ -22,6 +24,7 @@ import Button from "../../../../components/ui/button/Button";
 import { useQuery } from "@tanstack/react-query";
 import { getAllTeams } from "../../../../api/adminApi";
 import { toast } from "react-hot-toast";
+import TeamFullTable from "../../../../components/teams/TeamFullTable";
 
 interface TeamManagementTableProps {
   leagueId: string;
@@ -38,6 +41,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [expandedTeamIds, setExpandedTeamIds] = useState<Record<string, boolean>>({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [selectedTeamForStats, setSelectedTeamForStats] = useState<LeagueTeam | null>(null);
@@ -85,6 +89,13 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
     } else {
       setSelectedTeamIds([...selectedTeamIds, id]);
     }
+  };
+
+  const toggleTeamAccordion = (teamId: string) => {
+    setExpandedTeamIds((prev) => ({
+      ...prev,
+      [teamId]: !prev[teamId],
+    }));
   };
 
   // Bulk Actions
@@ -345,130 +356,203 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                     : typeof team.coach === "string"
                     ? team.coach
                     : "Unassigned";
+                const isExpanded = !!expandedTeamIds[team._id];
 
                 return (
-                  <tr
-                    key={team._id}
-                    className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
-                  >
-                    {canManageTeams && (
-                      <td className="py-3.5 px-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedTeamIds.includes(team._id)}
-                          onChange={() => toggleSelectTeam(team._id)}
-                          className="w-4 h-4 rounded border-slate-300 text-brand-600"
-                        />
-                      </td>
-                    )}
-
-                    {/* Team */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden font-bold text-[10px] text-slate-700 dark:text-slate-200">
-                          {team.logo ? (
-                            <img
-                              src={
-                                team.logo.startsWith("http")
-                                  ? team.logo
-                                  : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")}/${team.logo.replace(/^\//, "")}`
-                              }
-                              alt={tName}
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = "none";
-                                const fallback = (e.target as HTMLElement).parentElement?.querySelector(".fallback-initials");
-                                if (fallback) (fallback as HTMLElement).style.display = "inline";
-                              }}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : null}
-                          <span
-                            className="fallback-initials"
-                            style={{ display: team.logo ? "none" : "inline" }}
-                          >
-                            {getTeamInitials(tName)}
-                          </span>
-                        </div>
-                        <span className="font-bold text-slate-900 dark:text-white">
-                          {tName}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Coach */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
-                        <UserCheck size={13} className="text-slate-400" />
-                        <span>{coachStr}</span>
-                      </div>
-                    </td>
-
-                    {/* Players Count */}
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-700 dark:text-slate-300">
-                      {team.playersCount}
-                    </td>
-
-                  {/* Status */}
-                  <td className="py-3.5 px-4 text-center">
-                    <span
-                      className={`px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
-                        team.status === "ACTIVE"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400"
-                          : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400"
+                  <React.Fragment key={team._id}>
+                    <tr
+                      className={`transition-colors ${
+                        isExpanded
+                          ? "bg-blue-50/40 dark:bg-slate-800/50"
+                          : "hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
                       }`}
                     >
-                      {team.status || "ACTIVE"}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
                       {canManageTeams && (
-                        <>
-                          <button
-                            onClick={() => handleOpenStatsModal(team)}
-                            className="px-2 py-1 text-[11px] font-bold rounded border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400 flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Edit Team League Statistics"
-                          >
-                            <Sliders size={12} />
-                            <span>Stats</span>
-                          </button>
-
-                          <button
-                            onClick={() =>
-                              toggleStatusMutation.mutate({
-                                teamId: team._id,
-                                status: team.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
-                              })
-                            }
-                            className={`px-2 py-1 text-[11px] font-bold rounded border transition-colors ${
-                              team.status === "ACTIVE"
-                                ? "text-amber-600 hover:bg-amber-50 border-amber-200"
-                                : "text-emerald-600 hover:bg-emerald-50 border-emerald-200"
-                            }`}
-                          >
-                            {team.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              if (confirm(`Remove ${tName} from this league?`)) {
-                                removeTeamMutation.mutate(team._id);
-                              }
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded transition-colors"
-                            title="Remove Team"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
+                        <td className="py-3.5 px-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedTeamIds.includes(team._id)}
+                            onChange={() => toggleSelectTeam(team._id)}
+                            className="w-4 h-4 rounded border-slate-300 text-brand-600"
+                          />
+                        </td>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })
+
+                      {/* Team with Accordion Toggle */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleTeamAccordion(team._id)}
+                            className={`p-1 rounded text-slate-400 hover:text-[#0047FF] hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer ${
+                              isExpanded ? "text-[#0047FF]" : ""
+                            }`}
+                            title={isExpanded ? "Collapse team attendance" : "Expand team attendance"}
+                          >
+                            <ChevronRight
+                              size={15}
+                              className={`transition-transform duration-200 ${
+                                isExpanded ? "rotate-90 text-[#0047FF]" : ""
+                              }`}
+                            />
+                          </button>
+
+                          <div
+                            onClick={() => toggleTeamAccordion(team._id)}
+                            className="flex items-center gap-2.5 cursor-pointer select-none"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden font-bold text-[10px] text-slate-700 dark:text-slate-200">
+                              {team.logo ? (
+                                <img
+                                  src={
+                                    team.logo.startsWith("http")
+                                      ? team.logo
+                                      : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")}/${team.logo.replace(/^\//, "")}`
+                                  }
+                                  alt={tName}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = "none";
+                                    const fallback = (e.target as HTMLElement).parentElement?.querySelector(".fallback-initials");
+                                    if (fallback) (fallback as HTMLElement).style.display = "inline";
+                                  }}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : null}
+                              <span
+                                className="fallback-initials"
+                                style={{ display: team.logo ? "none" : "inline" }}
+                              >
+                                {getTeamInitials(tName)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 dark:text-white block hover:text-[#0047FF] transition-colors">
+                                {tName}
+                              </span>
+                              {isExpanded && (
+                                <span className="text-[10px] text-[#0047FF] font-semibold">
+                                  Attendance Active
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Coach */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                          <UserCheck size={13} className="text-slate-400" />
+                          <span>{coachStr}</span>
+                        </div>
+                      </td>
+
+                      {/* Players Count (Clickable to view/manage attendance) */}
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleTeamAccordion(team._id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-blue-50 hover:text-[#0047FF] dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                          title="Click to view player attendance roster"
+                        >
+                          <Users size={12} className="text-slate-400" />
+                          <span>{team.playersCount}</span>
+                        </button>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4 text-center">
+                        <span
+                          className={`px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
+                            team.status === "ACTIVE"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400"
+                          }`}
+                        >
+                          {team.status || "ACTIVE"}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* Attendance Accordion Toggle Button */}
+                          <button
+                            type="button"
+                            onClick={() => toggleTeamAccordion(team._id)}
+                            className={`px-2 py-1 text-[11px] font-bold rounded border flex items-center gap-1 transition-colors cursor-pointer ${
+                              isExpanded
+                                ? "bg-[#0047FF] text-white border-[#0047FF] shadow-xs"
+                                : "bg-blue-50 text-[#0047FF] border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
+                            }`}
+                            title={isExpanded ? "Hide Attendance" : "View & Manage Attendance Matrix"}
+                          >
+                            <Calendar size={12} />
+                            <span>{isExpanded ? "Close" : "Attendance"}</span>
+                          </button>
+
+                          {canManageTeams && (
+                            <>
+                              <button
+                                onClick={() => handleOpenStatsModal(team)}
+                                className="px-2 py-1 text-[11px] font-bold rounded border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400 flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Edit Team League Statistics"
+                              >
+                                <Sliders size={12} />
+                                <span>Stats</span>
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  toggleStatusMutation.mutate({
+                                    teamId: team._id,
+                                    status: team.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+                                  })
+                                }
+                                className={`px-2 py-1 text-[11px] font-bold rounded border transition-colors ${
+                                  team.status === "ACTIVE"
+                                    ? "text-amber-600 hover:bg-amber-50 border-amber-200"
+                                    : "text-emerald-600 hover:bg-emerald-50 border-emerald-200"
+                                }`}
+                              >
+                                {team.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Remove ${tName} from this league?`)) {
+                                    removeTeamMutation.mutate(team._id);
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded transition-colors"
+                                title="Remove Team"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Accordion Row: Team Attendance Matrix & Roster Management */}
+                    {isExpanded && (
+                      <tr className="bg-white dark:bg-slate-900">
+                        <td
+                          colSpan={canManageTeams ? 6 : 5}
+                          className="p-0 border-b border-slate-200 dark:border-slate-800 w-full"
+                        >
+                          <TeamFullTable
+                            teamId={team._id}
+                            teamName={tName}
+                            className="w-full mb-0 border-0 shadow-none rounded-none bg-white dark:bg-slate-900"
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })
           )}
           </tbody>
         </table>

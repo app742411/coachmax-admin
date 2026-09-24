@@ -8,7 +8,7 @@ import { getAllTerms } from "../../api/terms";
 import { useTerms } from "../../hooks/useTerms";
 import { findCurrentTerm } from "../../hooks/useCurrentTerm";
 import { toast } from "react-hot-toast";
-import { User, Shield, Image as ImageIcon, Clock } from "lucide-react";
+import { User, Shield, Image as ImageIcon, Clock, Calendar, Plus, Trash2, Info } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "./AssignPlayerToTeamModal";
 import AddTemporaryPlayersModal from "./AddTemporaryPlayersModal";
@@ -69,9 +69,70 @@ const TeamManagement: React.FC = () => {
     captain: "",
     viceCaptain: "",
   });
+  const [scheduleMode, setScheduleMode] = useState<"ROUNDS" | "TERM">("ROUNDS");
+  const [roundCount, setRoundCount] = useState<number | string>(1);
+  const [sessionDates, setSessionDates] = useState<string[]>([
+    new Date().toISOString().split("T")[0],
+  ]);
   const [customSchedules, setCustomSchedules] = useState<{ dayOfWeek: string; startTime: string; endTime: string }[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const handleAddSessionDate = () => {
+    const lastDate = sessionDates[sessionDates.length - 1];
+    let nextDateStr = new Date().toISOString().split("T")[0];
+    if (lastDate) {
+      try {
+        const nextD = new Date(lastDate);
+        nextD.setDate(nextD.getDate() + 7);
+        nextDateStr = nextD.toISOString().split("T")[0];
+      } catch { }
+    }
+    const updated = [...sessionDates, nextDateStr];
+    setSessionDates(updated);
+    setRoundCount(updated.length);
+  };
+
+  const handleRemoveSessionDate = (idx: number) => {
+    if (sessionDates.length <= 1) {
+      setSessionDates([""]);
+      setRoundCount(1);
+      return;
+    }
+    const updated = sessionDates.filter((_, i) => i !== idx);
+    setSessionDates(updated);
+    setRoundCount(updated.length);
+  };
+
+  const handleSessionDateChange = (idx: number, val: string) => {
+    const updated = [...sessionDates];
+    updated[idx] = val;
+    setSessionDates(updated);
+  };
+
+  const handleRoundCountChange = (val: string | number) => {
+    setRoundCount(val);
+    const count = Number(val);
+    if (!isNaN(count) && count > 0 && count <= 50) {
+      if (count > sessionDates.length) {
+        const toAdd = count - sessionDates.length;
+        const newDates = [...sessionDates];
+        for (let i = 0; i < toAdd; i++) {
+          try {
+            const lastD = newDates[newDates.length - 1] || new Date().toISOString().split("T")[0];
+            const nextD = new Date(lastD);
+            nextD.setDate(nextD.getDate() + 7);
+            newDates.push(nextD.toISOString().split("T")[0]);
+          } catch {
+            newDates.push("");
+          }
+        }
+        setSessionDates(newDates);
+      } else if (count < sessionDates.length) {
+        setSessionDates(sessionDates.slice(0, count));
+      }
+    }
+  };
 
   const getImageUrl = (path: string | undefined | null) => {
     if (!path) return null;
@@ -156,6 +217,9 @@ const TeamManagement: React.FC = () => {
       viceCaptain: "",
     });
     setCustomSchedules([{ dayOfWeek: "Monday", startTime: "17:00", endTime: "18:30" }]);
+    setScheduleMode("ROUNDS");
+    setRoundCount(1);
+    setSessionDates([new Date().toISOString().split("T")[0]]);
     setSelectedFile(null);
     setPreviewImage(null);
     setIsEditing(false);
@@ -190,6 +254,26 @@ const TeamManagement: React.FC = () => {
     } else {
       setCustomSchedules([{ dayOfWeek: "Monday", startTime: "17:00", endTime: "18:30" }]);
     }
+
+    const hasRounds = (team.round !== undefined && team.round !== null) || (Array.isArray(team.sessionDates) && team.sessionDates.length > 0);
+    if (hasRounds) {
+      setScheduleMode("ROUNDS");
+      const formattedDates = (team.sessionDates || []).map((d: string) => {
+        try {
+          return d.includes("T") ? d.split("T")[0] : d;
+        } catch {
+          return d;
+        }
+      });
+      const validDates = formattedDates.length > 0 ? formattedDates : [new Date().toISOString().split("T")[0]];
+      setSessionDates(validDates);
+      setRoundCount(team.round || validDates.length || 1);
+    } else {
+      setScheduleMode("TERM");
+      setRoundCount(1);
+      setSessionDates([new Date().toISOString().split("T")[0]]);
+    }
+
     setSelectedFile(null);
     setPreviewImage(team.teamLogo ? getImageUrl(team.teamLogo) : (team.logo ? getImageUrl(team.logo) : null));
     setIsEditing(true);
@@ -240,16 +324,29 @@ const TeamManagement: React.FC = () => {
       payload.append("term", formData.term);
     }
 
-    payload.append("scheduleType", formData.scheduleType);
-    if (formData.scheduleType === "SINGLE_DAY") {
+    if (scheduleMode === "ROUNDS") {
+      const validDates = sessionDates.filter(Boolean);
+      const effectiveRound = Number(roundCount) || (validDates.length > 0 ? validDates.length : 1);
+      payload.append("round", String(effectiveRound));
+      // As documented in FRONTEND_INTEGRATION_TEAM_ATTENDANCE_AND_STATS.md:
+      payload.append("date", JSON.stringify(validDates));
+      payload.append("sessionDates", JSON.stringify(validDates));
+      payload.append("scheduleType", "SINGLE_DAY");
       if (formData.dayOfWeek) payload.append("dayOfWeek", formData.dayOfWeek);
       if (formData.startTime) payload.append("startTime", formData.startTime);
       if (formData.endTime) payload.append("endTime", formData.endTime);
-    } else if (formData.scheduleType === "WEEKDAYS") {
-      if (formData.startTime) payload.append("startTime", formData.startTime);
-      if (formData.endTime) payload.append("endTime", formData.endTime);
-    } else if (formData.scheduleType === "CUSTOM") {
-      payload.append("schedule", JSON.stringify(customSchedules));
+    } else {
+      payload.append("scheduleType", formData.scheduleType);
+      if (formData.scheduleType === "SINGLE_DAY") {
+        if (formData.dayOfWeek) payload.append("dayOfWeek", formData.dayOfWeek);
+        if (formData.startTime) payload.append("startTime", formData.startTime);
+        if (formData.endTime) payload.append("endTime", formData.endTime);
+      } else if (formData.scheduleType === "WEEKDAYS") {
+        if (formData.startTime) payload.append("startTime", formData.startTime);
+        if (formData.endTime) payload.append("endTime", formData.endTime);
+      } else if (formData.scheduleType === "CUSTOM") {
+        payload.append("schedule", JSON.stringify(customSchedules));
+      }
     }
 
     if (formData.venue) payload.append("venue", formData.venue);
@@ -382,6 +479,18 @@ const TeamManagement: React.FC = () => {
                           <span className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight group-hover:text-[#0047FF] transition-colors flex items-center gap-1.5">
                             {team.teamName}
                           </span>
+                          {team.round ? (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-50 text-[#0047FF] dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
+                                Round {team.round}
+                              </span>
+                              {team.sessionDates?.length > 0 && (
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  {team.sessionDates.length} {team.sessionDates.length === 1 ? "session" : "sessions"}
+                                </span>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -721,30 +830,250 @@ const TeamManagement: React.FC = () => {
 
           {/* Schedule & Location Section */}
           <div className="border-t border-gray-100 dark:border-gray-800 pt-5 space-y-4">
-            <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-              <Clock size={15} className="text-[#0047FF]" />
-              {formData.teamType === "EXTERNAL" ? "Venue & Location Details" : "Team Schedule & Venue Details"}
-            </h5>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <Clock size={15} className="text-[#0047FF]" />
+                {formData.teamType === "EXTERNAL" ? "Venue & Location Details" : "Session Schedule & Round Configuration"}
+              </h5>
+              {formData.teamType !== "EXTERNAL" && (
+                <div className="flex items-center bg-gray-100 dark:bg-slate-800 p-0.5 rounded-none border border-gray-200 dark:border-gray-700 text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleMode("ROUNDS")}
+                    className={`px-3 py-1 transition-all ${
+                      scheduleMode === "ROUNDS"
+                        ? "bg-[#0047FF] text-white shadow-xs"
+                        : "text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
+                    }`}
+                  >
+                    By Round & Dates (Dynamic)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleMode("TERM")}
+                    className={`px-3 py-1 transition-all ${
+                      scheduleMode === "TERM"
+                        ? "bg-[#0047FF] text-white shadow-xs"
+                        : "text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
+                    }`}
+                  >
+                    Term Schedule (Recurring)
+                  </button>
+                </div>
+              )}
+            </div>
 
-            {formData.teamType !== "EXTERNAL" && (
+            {formData.teamType !== "EXTERNAL" && scheduleMode === "ROUNDS" && (
+              <div className="bg-blue-50/40 dark:bg-slate-800/60 p-4 border border-blue-100 dark:border-slate-700 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-100/80 dark:border-slate-700">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                      <Calendar size={14} className="text-[#0047FF]" />
+                      Configured Rounds & Session Dates
+                    </span>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Backend generates exactly these session dates for attendance tracking and player statistics.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                      Rounds:
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={roundCount}
+                      onChange={(e) => handleRoundCountChange(e.target.value)}
+                      className="w-16 rounded-none border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 px-2 py-1 text-xs font-bold text-center dark:text-white focus:border-[#0047FF] outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Preset Pills */}
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="text-[11px] font-bold text-slate-400">Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRoundCountChange(1)}
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${
+                      Number(roundCount) === 1
+                        ? "bg-[#0047FF] text-white border-[#0047FF]"
+                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+                    }`}
+                  >
+                    Single Round (1 Date)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRoundCountChange(3)}
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${
+                      Number(roundCount) === 3
+                        ? "bg-[#0047FF] text-white border-[#0047FF]"
+                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+                    }`}
+                  >
+                    3 Rounds (3 Dates)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRoundCountChange(5)}
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${
+                      Number(roundCount) === 5
+                        ? "bg-[#0047FF] text-white border-[#0047FF]"
+                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+                    }`}
+                  >
+                    5 Rounds (5 Dates)
+                  </button>
+                </div>
+
+                {/* Dynamic Date Inputs for each Round */}
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                  {sessionDates.map((dateVal, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 bg-white dark:bg-slate-900 p-2.5 border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-[90px]">
+                        <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-950 text-[#0047FF] dark:text-blue-300 text-[10px] font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                          Round {idx + 1}
+                        </span>
+                      </div>
+
+                      <div className="relative flex-1 flex items-center">
+                        <input
+                          id={`team-mgmt-round-date-${idx}`}
+                          type="date"
+                          value={dateVal}
+                          onChange={(e) => handleSessionDateChange(idx, e.target.value)}
+                          onClick={(e) => {
+                            try {
+                              if (typeof (e.currentTarget as any).showPicker === 'function') {
+                                (e.currentTarget as any).showPicker();
+                              }
+                            } catch { }
+                          }}
+                          className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 pl-3 pr-10 py-1.5 text-xs font-bold dark:text-white focus:bg-white focus:border-[#0047FF] outline-none cursor-pointer"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById(`team-mgmt-round-date-${idx}`) as HTMLInputElement;
+                            if (el) {
+                              try {
+                                if (typeof el.showPicker === 'function') {
+                                  el.showPicker();
+                                } else {
+                                  el.focus();
+                                }
+                              } catch {
+                                el.focus();
+                              }
+                            }
+                          }}
+                          className="absolute right-2 text-slate-400 hover:text-[#0047FF] transition-colors p-1"
+                          title="Choose Date"
+                        >
+                          <Calendar size={15} />
+                        </button>
+                      </div>
+
+                      {sessionDates.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSessionDate(idx)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
+                          title="Remove date"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center pt-1">
+                  <button
+                    type="button"
+                    onClick={handleAddSessionDate}
+                    className="text-xs font-bold text-[#0047FF] hover:underline flex items-center gap-1.5"
+                  >
+                    <Plus size={14} /> Add Another Session Date
+                  </button>
+                  <span className="text-[11px] text-slate-400 font-semibold">
+                    Total: {sessionDates.filter(Boolean).length} Session {sessionDates.filter(Boolean).length === 1 ? "Date" : "Dates"}
+                  </span>
+                </div>
+
+                {/* Time slots for the sessions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-blue-100/80 dark:border-slate-700">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                      Session Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={formData.startTime}
+                      onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                      className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                      Session End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={formData.endTime}
+                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                      className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.teamType !== "EXTERNAL" && scheduleMode === "TERM" && (
               <>
                 {/* Schedule Type Selector */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schedule Type</label>
-                  <div className="flex items-center gap-3">
-                    {(["SINGLE_DAY"/*, "WEEKDAYS", "CUSTOM"*/] as const).map((st) => (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, scheduleType: st })}
-                        className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border transition-all ${formData.scheduleType === st
-                            ? "bg-[#0047FF] text-white border-[#0047FF] shadow-xs"
-                            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-[#0047FF]"
-                          }`}
-                      >
-                        {st.replace("_", " ")}
-                      </button>
-                    ))}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
+                      {(["SINGLE_DAY"] as const).map((st) => (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, scheduleType: st })}
+                          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border transition-all ${formData.scheduleType === st
+                              ? "bg-[#0047FF] text-white border-[#0047FF] shadow-xs"
+                              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-[#0047FF]"
+                            }`}
+                        >
+                          {st.replace("_", " ")}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Single Day Term Note */}
+                    <div className="flex-1 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 px-3 py-2 flex items-start gap-2.5">
+                      <div className="p-1 bg-[#0047FF]/10 text-[#0047FF] dark:text-blue-400 shrink-0">
+                        <Info size={14} />
+                      </div>
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300 leading-normal">
+                        <span className="font-bold text-slate-800 dark:text-white uppercase tracking-wider mr-1.5 text-[10px]">Note:</span>
+                        This day applies across the selected term.
+                        <span className="text-slate-500 dark:text-slate-400 ml-1">
+                          (Example: If you choose <strong className="text-slate-800 dark:text-white font-bold">Monday</strong> for <strong className="text-slate-800 dark:text-white font-bold">Term 1</strong> and Term 1 has 8 Mondays, then 8 rounds will be scheduled on Mondays).
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

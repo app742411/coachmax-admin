@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { Modal } from "../ui/modal";
-import { useUpdatePlayerStatistics } from "../../hooks/usePlayers";
+import { useUpdatePlayerStatistics, useUpdateTeamPlayerStatistics } from "../../hooks/usePlayers";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
@@ -11,6 +11,7 @@ interface EditPlayerStatsModalProps {
   onClose: () => void;
   playerId: string;
   playerName: string;
+  teamId?: string;
   initialStats: {
     appearances?: number;
     goals?: number;
@@ -37,9 +38,12 @@ export default function EditPlayerStatsModal({
   onClose,
   playerId,
   playerName,
+  teamId,
   initialStats,
 }: EditPlayerStatsModalProps) {
-  const { mutateAsync: updateStats, isPending } = useUpdatePlayerStatistics();
+  const { mutateAsync: updateStats, isPending: isUpdatingGeneralStats } = useUpdatePlayerStatistics();
+  const { mutateAsync: updateTeamStats, isPending: isUpdatingTeamStats } = useUpdateTeamPlayerStatistics(teamId || "");
+  const isPending = teamId ? isUpdatingTeamStats : isUpdatingGeneralStats;
 
   const {
     register,
@@ -86,7 +90,11 @@ export default function EditPlayerStatsModal({
         minutesPlayed: Number(values.minutesPlayed),
       };
 
-      await updateStats({ playerId, data: payload });
+      if (teamId) {
+        await updateTeamStats({ playerId, data: payload });
+      } else {
+        await updateStats({ playerId, data: payload });
+      }
       onClose();
     } catch (error) {
       console.error("Failed to save statistics:", error);

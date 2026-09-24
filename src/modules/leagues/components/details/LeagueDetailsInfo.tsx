@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Info, Calendar, Settings, Save, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Info, Calendar, Settings, Save, Upload, Image as ImageIcon, X, Zap } from "lucide-react";
 import { League, LeagueType } from "../../types/league";
 import { useUpdateLeague } from "../../hooks/useLeague";
 import { useLeaguePermissions } from "../../hooks/useLeaguePermissions";
@@ -54,6 +54,14 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
     pointsForWin: league.pointsForWin ?? 3,
     pointsForDraw: league.pointsForDraw ?? 1,
     pointsForLoss: league.pointsForLoss ?? 0,
+    // Fixture configuration
+    fixtureFormat: (league.fixtureFormat || "ROUND_ROBIN") as "ROUND_ROBIN" | "KNOCKOUT",
+    numberOfRounds: league.numberOfRounds ?? 1,
+    matchDuration: league.matchDuration ?? 90,
+    breakBetweenMatches: league.breakBetweenMatches ?? 15,
+    numberOfFields: league.numberOfFields ?? 1,
+    startTime: league.startTime || "09:00",
+    groupCount: league.groupCount ?? 1,
   });
 
   useEffect(() => {
@@ -77,6 +85,14 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
       pointsForWin: league.pointsForWin ?? 3,
       pointsForDraw: league.pointsForDraw ?? 1,
       pointsForLoss: league.pointsForLoss ?? 0,
+      // Fixture configuration
+      fixtureFormat: (league.fixtureFormat || "ROUND_ROBIN") as "ROUND_ROBIN" | "KNOCKOUT",
+      numberOfRounds: league.numberOfRounds ?? 1,
+      matchDuration: league.matchDuration ?? 90,
+      breakBetweenMatches: league.breakBetweenMatches ?? 15,
+      numberOfFields: league.numberOfFields ?? 1,
+      startTime: league.startTime || "09:00",
+      groupCount: league.groupCount ?? 1,
     });
     if (league.logo) {
       setLogoPreview(getImageUrl(league.logo));
@@ -337,6 +353,154 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
                 className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Section 2b: Fixture Configuration */}
+        <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/40 dark:bg-slate-800/20">
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <Zap size={16} className="text-violet-500" />
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+              Fixture Configuration
+            </h3>
+            {league.fixtureGenerated && (
+              <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                Fixtures Generated
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {/* Fixture Format */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Fixture Format
+              </label>
+              <select
+                disabled={!canEdit}
+                value={formData.fixtureFormat}
+                onChange={(e) => setFormData({ ...formData, fixtureFormat: e.target.value as "ROUND_ROBIN" | "KNOCKOUT" })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
+              >
+                <option value="ROUND_ROBIN">Round Robin</option>
+                <option value="KNOCKOUT">Knockout</option>
+              </select>
+            </div>
+
+            {/* Number of Rounds */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Number of Rounds
+              </label>
+              <select
+                disabled={!canEdit}
+                value={formData.numberOfRounds}
+                onChange={(e) => setFormData({ ...formData, numberOfRounds: Number(e.target.value) })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
+              >
+                <option value={1}>1 — Single Round Robin</option>
+                <option value={2}>2 — Double Round Robin</option>
+              </select>
+            </div>
+
+            {/* Number of Fields */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Number of Fields / Pitches
+              </label>
+              <input
+                type="number"
+                min={1}
+                disabled={!canEdit}
+                value={formData.numberOfFields}
+                onChange={(e) => setFormData({ ...formData, numberOfFields: Number(e.target.value) })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
+              />
+            </div>
+
+            {/* Match Duration */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Match Duration (min)
+              </label>
+              <input
+                type="number"
+                min={1}
+                disabled={!canEdit}
+                value={formData.matchDuration}
+                onChange={(e) => setFormData({ ...formData, matchDuration: Number(e.target.value) })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
+              />
+            </div>
+
+            {/* Break Between Matches */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Break Between Matches (min)
+              </label>
+              <input
+                type="number"
+                min={0}
+                disabled={!canEdit}
+                value={formData.breakBetweenMatches}
+                onChange={(e) => setFormData({ ...formData, breakBetweenMatches: Number(e.target.value) })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
+              />
+            </div>
+
+            {/* Start Time */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Default Start Time
+              </label>
+              <input
+                type="time"
+                disabled={!canEdit}
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
+              />
+            </div>
+
+            {/* Group Count */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Number of Groups
+              </label>
+              <input
+                type="number"
+                min={1}
+                disabled={!canEdit}
+                value={formData.groupCount}
+                onChange={(e) => setFormData({ ...formData, groupCount: Number(e.target.value) })}
+                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 disabled:opacity-60"
+              />
+            </div>
+          </div>
+
+          {/* Read-only summary chips */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 text-[10px] font-bold border border-violet-200 dark:border-violet-800">
+              Format: {formData.fixtureFormat === "ROUND_ROBIN" ? "Round Robin" : "Knockout"}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+              {formData.numberOfRounds === 2 ? "Double" : "Single"} Round Robin
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+              ⏱ {formData.matchDuration}min matches · {formData.breakBetweenMatches}min break
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+              🏟 {formData.numberOfFields} Field{formData.numberOfFields !== 1 ? "s" : ""}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+              🕘 Start: {formData.startTime}
+            </span>
+            {formData.groupCount > 1 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+                {formData.groupCount} Groups
+              </span>
+            )}
           </div>
         </div>
 

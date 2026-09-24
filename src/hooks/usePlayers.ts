@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile, getAdminPlayerDetails, updatePlayerStatistics } from "../api/players";
-import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer, getTeamFullTable, markSingleTeamAttendance, markTeamAttendance } from "../api/adminApi";
+import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer, getTeamFullTable, markSingleTeamAttendance, markTeamAttendance, updateTeamPlayerStatistics } from "../api/adminApi";
 import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
 
@@ -378,5 +378,22 @@ export const useUpdatePlayerStatistics = () => {
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || error.message || "Failed to update statistics");
     }
+  });
+};
+
+export const useUpdateTeamPlayerStatistics = (teamId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ playerId, data }: { playerId: string; data: any }) =>
+      updateTeamPlayerStatistics(teamId, playerId, data),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      toast.success(data?.message || "Team player statistics updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to update statistics");
+    },
   });
 };

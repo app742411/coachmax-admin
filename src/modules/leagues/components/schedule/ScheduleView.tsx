@@ -13,13 +13,19 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   FileText,
+  Zap,
+  AlertTriangle,
+  X,
+  Info,
+  ShieldCheck,
 } from "lucide-react";
-import { Match, MatchStatus } from "../../types/league";
+import { Match, MatchStatus, GenerateFixturesResponse } from "../../types/league";
 import {
   useLeagueMatches,
   useCreateMatch,
   useUpdateMatch,
   useDeleteMatch,
+  useGenerateFixtures,
 } from "../../hooks/useLeagueMatches";
 import { useLeagueTeams } from "../../hooks/useLeagueTeams";
 import { useLeaguePermissions } from "../../hooks/useLeaguePermissions";
@@ -77,6 +83,43 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   const createMatchMutation = useCreateMatch(leagueId);
   const updateMatchMutation = useUpdateMatch(leagueId);
   const deleteMatchMutation = useDeleteMatch(leagueId);
+  const generateFixturesMutation = useGenerateFixtures(leagueId);
+
+  // Generation Audit Summary & Force Overwrite State
+  const [generationSummary, setGenerationSummary] = useState<GenerateFixturesResponse["data"] | null>(null);
+  const [isConfirmForceOpen, setIsConfirmForceOpen] = useState(false);
+  const [protectedCount, setProtectedCount] = useState<number>(0);
+
+  const handleGenerateFixtures = (force = false) => {
+    generateFixturesMutation.mutate(force, {
+      onSuccess: (res) => {
+        if (res?.data) {
+          setGenerationSummary(res.data);
+        }
+        setIsConfirmForceOpen(false);
+        const updatedCount = res?.data?.updated ?? 0;
+        if (updatedCount > 0) {
+          toast.success(
+            `Fixtures regenerated in-place! ${res.data.fixtures} matches reconciled without duplicates.`
+          );
+        } else {
+          toast.success(
+            `Fixtures generated successfully! ${res.data?.fixtures || 0} matches created.`
+          );
+        }
+      },
+      onError: (err: any) => {
+        const protectedFixtures = err?.response?.data?.protectedFixtures;
+        const msg = err?.response?.data?.message || err?.message || "Failed to generate fixtures";
+        if (protectedFixtures) {
+          setProtectedCount(protectedFixtures);
+          setIsConfirmForceOpen(true);
+        } else {
+          toast.error(msg);
+        }
+      },
+    });
+  };
 
   // Filter & Accordion State
   const [roundFilter, setRoundFilter] = useState<string>("ALL");
@@ -172,6 +215,18 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     if (roundFilter === "ALL") return groupedRounds;
     return groupedRounds.filter((r) => r.round.toString() === roundFilter);
   }, [groupedRounds, roundFilter]);
+
+  const selectedRoundNum = roundFilter !== "ALL" ? Number(roundFilter) : null;
+  const byeTeams = useMemo(() => {
+    if (!selectedRoundNum) return [];
+    const currentRoundMatches = matches.filter((m) => m.round === selectedRoundNum);
+    const playingIds = new Set<string>();
+    currentRoundMatches.forEach((m) => {
+      if (m.homeTeam?._id) playingIds.add(m.homeTeam._id.toString());
+      if (m.awayTeam?._id) playingIds.add(m.awayTeam._id.toString());
+    });
+    return teams.filter((t) => !playingIds.has(t._id.toString()));
+  }, [matches, teams, selectedRoundNum]);
 
   const toggleRoundCollapse = (round: number) => {
     setCollapsedRounds((prev) => ({
@@ -311,10 +366,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
         notes: addForm.notes,
         homeScore: addForm.status === "Completed" ? 0 : null,
         awayScore: addForm.status === "Completed" ? 0 : null,
+        fixtureSource: "MANUAL",
+        isManuallyModified: true,
       },
       {
         onSuccess: () => {
           setIsAddModalOpen(false);
+          toast.success("Match created manually (Protected from random regeneration)");
           setAddForm({
             round: 1,
             matchDate: new Date().toISOString().split("T")[0],
@@ -389,10 +447,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
           status: editForm.status,
           referee: editForm.referee,
           notes: editForm.notes,
+          fixtureSource: "MANUAL",
+          isManuallyModified: true,
         },
       },
       {
-        onSuccess: () => setIsEditModalOpen(false),
+        onSuccess: () => {
+          setIsEditModalOpen(false);
+          toast.success("Match fixture updated manually (Protected from random regeneration)");
+        },
       }
     );
   };
@@ -579,6 +642,34 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
             )}
           </div>
 
+          {/* Generate / Regenerate Random Fixtures Button */}
+          {canManageMatches && (
+            <button
+              onClick={() => handleGenerateFixtures(false)}
+              disabled={generateFixturesMutation.isPending}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg shadow-sm cursor-pointer transition-all disabled:opacity-50"
+              title={
+                matches.length > 0
+                  ? "Regenerate fixtures in-place while preserving manual modifications"
+                  : "Generate random round-robin fixtures"
+              }
+            >
+              {generateFixturesMutation.isPending ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={14} className="fill-amber-300 text-amber-300" />
+                  <span>
+                    {matches.length > 0 ? "⚡ Regenerate Random Fixtures" : "⚡ Generate Random Fixtures"}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* Add Match Button */}
           {canManageMatches && (
             <button
@@ -592,6 +683,101 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
         </div>
       </div>
 
+      {/* Generation Audit KPI Banner */}
+      {generationSummary && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:px-4 bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl mb-4 text-xs animate-in fade-in slide-in-from-top-2 duration-200 shadow-xs">
+          <div className="flex flex-wrap items-center gap-2 text-slate-700 dark:text-slate-200">
+            <span className="inline-flex items-center gap-1 font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">
+              <CheckCircle2 size={13} />
+              Schedule Generated In-Place
+            </span>
+            <span className="text-slate-400 font-bold">•</span>
+            <span className="font-bold">{generationSummary.rounds} Rounds</span>
+            <span className="text-slate-400 font-bold">•</span>
+            <span className="font-bold">{generationSummary.fixtures} Fixtures</span>
+            <span className="text-slate-400 font-bold">•</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+              Updated in-place: {generationSummary.updated}
+            </span>
+            {generationSummary.created > 0 && (
+              <>
+                <span className="text-slate-400 font-bold">•</span>
+                <span className="text-blue-700 dark:text-blue-400 font-bold">
+                  Created: {generationSummary.created}
+                </span>
+              </>
+            )}
+            {generationSummary.manualFixturesPreserved > 0 && (
+              <span className="font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/50">
+                🛡️ {generationSummary.manualFixturesPreserved} Manual Fixtures Protected
+              </span>
+            )}
+            {generationSummary.byes > 0 && (
+              <span className="font-bold text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800/50">
+                {generationSummary.byes} BYEs
+              </span>
+            )}
+          </div>
+
+          <button
+            onClick={() => setGenerationSummary(null)}
+            className="self-end sm:self-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md transition-colors cursor-pointer"
+            title="Dismiss"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Round Quick Navigation Tabs */}
+      {roundsList.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2.5 mb-4 border-b border-slate-100 dark:border-slate-800/80">
+          <button
+            onClick={() => setRoundFilter("ALL")}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              roundFilter === "ALL"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+            }`}
+          >
+            All Rounds ({matches.length})
+          </button>
+          {roundsList.map((r) => {
+            const count = matches.filter((m) => m.round === r).length;
+            const isSelected = roundFilter === r.toString();
+            return (
+              <button
+                key={r}
+                onClick={() => setRoundFilter(r.toString())}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  isSelected
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                Round {r} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Virtual BYE Notification for Selected Round */}
+      {selectedRoundNum && byeTeams.length > 0 && (
+        <div className="flex items-center gap-2.5 px-4 py-2.5 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl mb-4 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in shadow-xs">
+          <Info size={16} className="text-amber-600 shrink-0" />
+          <div>
+            <span className="font-extrabold mr-1.5">BYE this round:</span>
+            <span className="font-semibold underline decoration-amber-400 decoration-2">
+              {byeTeams.map((t) => t.teamName || t.name || (t as any).title).join(", ")}
+            </span>
+            <span className="text-[11px] text-amber-700 dark:text-amber-400 ml-1.5">
+              (Odd number of participating teams; no match scheduled for this team in Round {selectedRoundNum})
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Rounds Grouping Accordions */}
       <div className="space-y-4">
         {isLoading ? (
@@ -603,11 +789,20 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
           <div className="py-16 text-center text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
             <CalendarDays size={32} className="mx-auto text-slate-300 mb-2" />
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No matches found</p>
-            <p className="text-xs text-slate-400">Add fixtures to get started with the league schedule.</p>
+            <p className="text-xs text-slate-400">Add fixtures or click "Generate Random Fixtures" to get started.</p>
           </div>
         ) : (
           filteredRounds.map((roundGroup) => {
             const isCollapsed = !!collapsedRounds[roundGroup.round];
+
+            // Round BYE calculation for this round group
+            const roundMatchList = roundGroup.matches;
+            const pIds = new Set<string>();
+            roundMatchList.forEach((m) => {
+              if (m.homeTeam?._id) pIds.add(m.homeTeam._id.toString());
+              if (m.awayTeam?._id) pIds.add(m.awayTeam._id.toString());
+            });
+            const rByes = teams.filter((t) => !pIds.has(t._id.toString()));
 
             return (
               <div
@@ -619,7 +814,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                   onClick={() => toggleRoundCollapse(roundGroup.round)}
                   className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/70 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-extrabold text-sm text-slate-900 dark:text-white">
                       {roundGroup.roundName}
                     </span>
@@ -627,6 +822,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                       {roundGroup.dateFormatted}
                     </span>
+                    {rByes.length > 0 && (
+                      <span className="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-md bg-amber-100/80 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">
+                        BYE: {rByes.map((t) => t.teamName || t.name).join(", ")}
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-slate-400 hover:text-slate-600">
@@ -645,6 +845,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                           <th className="py-3 px-4 min-w-[200px]">Home Team</th>
                           <th className="py-3 px-4 min-w-[90px] text-center">Score</th>
                           <th className="py-3 px-4 min-w-[200px]">Away Team</th>
+                          <th className="py-3 px-4 min-w-[100px]">Source</th>
                           <th className="py-3 px-4 min-w-[110px]">Status</th>
                           <th className="py-3 px-4 w-12 text-right">Actions</th>
                         </tr>
@@ -727,6 +928,26 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                                     {awayName}
                                   </span>
                                 </div>
+                              </td>
+
+                              {/* Source */}
+                              <td className="py-4 px-4 whitespace-nowrap">
+                                {match.fixtureSource === "MANUAL" || match.isManuallyModified ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 shadow-xs"
+                                    title="Manually modified: Protected from random fixture overwrites"
+                                  >
+                                    <ShieldCheck size={11} className="text-amber-600 dark:text-amber-400" />
+                                    <span>MANUAL</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800 shadow-xs"
+                                    title="Generated via random round-robin scheduler"
+                                  >
+                                    <span>GENERATED</span>
+                                  </span>
+                                )}
                               </td>
 
                               {/* Status */}
@@ -1040,6 +1261,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Edit Match Details</h3>
             <p className="text-xs text-slate-500">Update match timings, teams, venue, and score.</p>
           </div>
+        </div>
+
+        {/* Notice of Manual Protection */}
+        <div className="mb-4 p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+          <Info size={16} className="text-amber-600 shrink-0 mt-0.5" />
+          <p>
+            Editing this fixture manually tags it as <strong>MANUAL</strong> and automatically protects it from being overwritten during future random fixture regenerations.
+          </p>
         </div>
 
         <form onSubmit={handleEditSubmit} className="space-y-4">
@@ -1488,6 +1717,50 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* ================= CONFIRM FORCE REGENERATION MODAL ================= */}
+      <Modal
+        isOpen={isConfirmForceOpen}
+        onClose={() => setIsConfirmForceOpen(false)}
+        className="max-w-[460px] p-6 rounded-xl shadow-2xl"
+      >
+        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+          <div className="p-2.5 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-600">
+            <AlertTriangle size={22} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Protected Matches Detected</h3>
+            <p className="text-xs text-slate-500">Completed or scored matches require confirmation</p>
+          </div>
+        </div>
+
+        <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 mb-6">
+          <p>
+            The system detected <strong>{protectedCount} match(es)</strong> that already have recorded scores or are marked as <strong>COMPLETED</strong>.
+          </p>
+          <p className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-lg text-rose-700 dark:text-rose-400 font-medium">
+            ⚠️ Force regenerating will overwrite pairings, times, or score records for these fixtures. Are you sure you want to proceed?
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsConfirmForceOpen(false)}
+            className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => handleGenerateFixtures(true)}
+            disabled={generateFixturesMutation.isPending}
+            className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {generateFixturesMutation.isPending ? "Regenerating..." : "Force Overwrite & Regenerate"}
+          </button>
+        </div>
       </Modal>
     </div>
   );

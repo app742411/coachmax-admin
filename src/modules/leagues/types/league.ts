@@ -1,5 +1,11 @@
 export type LeagueType = "NATIONAL" | "STATE" | "LOCAL" | "INTERNAL" | "INTERNATIONAL";
 
+export interface TeamSummary {
+  _id: string;
+  teamName: string;
+  logo?: string;
+}
+
 export type MatchStatus =
   | "Scheduled"
   | "SCHEDULED"
@@ -34,6 +40,17 @@ export interface League {
   pointsForWin?: number;
   pointsForDraw?: number;
   pointsForLoss?: number;
+  // Fixture configuration fields
+  generationType?: "AUTOMATIC" | "MANUAL";
+  fixtureFormat?: "ROUND_ROBIN" | "KNOCKOUT";
+  numberOfRounds?: number;        // 1 = Single Round Robin, 2 = Double Round Robin
+  matchDuration?: number;         // Minutes (e.g. 90)
+  breakBetweenMatches?: number;   // Minutes (e.g. 15)
+  numberOfFields?: number;        // e.g. 2
+  startTime?: string;             // e.g. "10:00"
+  fixtureGenerated?: boolean;
+  groupCount?: number;
+  teams?: TeamSummary[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -101,6 +118,26 @@ export interface MatchStatistics {
   awayYellowCards?: number;
 }
 
+export type FixtureStatus = "SCHEDULED" | "LIVE" | "COMPLETED" | "POSTPONED" | "CANCELLED";
+export type FixtureSource = "GENERATED" | "MANUAL";
+
+export interface GenerateFixturesResponse {
+  success: boolean;
+  message: string;
+  data: {
+    leagueId: string;
+    teams: number;
+    rounds: number;
+    fixtures: number;
+    created: number;             // Count of newly inserted records (first generation)
+    updated: number;             // Count of in-place updated records (subsequent generations)
+    deleted?: number;
+    manualFixturesPreserved: number; // Count of manual fixtures left untouched
+    byes: number;                // Virtual BYEs (odd teams)
+    daysUsed?: number;
+  };
+}
+
 export interface Match {
   _id: string;
   leagueId?: string;
@@ -108,11 +145,13 @@ export interface Match {
   round: number;
   roundName?: string;
   kickoffTime?: string;
+  endTime?: string;
   matchDate?: string;
   matchDateFormatted?: string;
   time?: string;
   field?: string;
   venue?: string;
+  group?: string;
   referee?: string;
   homeTeam: MatchTeamRef;
   awayTeam: MatchTeamRef;
@@ -122,6 +161,8 @@ export interface Match {
   status: MatchStatus;
   matchStatistics?: MatchStatistics;
   notes?: string;
+  fixtureSource?: FixtureSource | string;
+  isManuallyModified?: boolean;
 }
 
 export interface RoundSchedule {

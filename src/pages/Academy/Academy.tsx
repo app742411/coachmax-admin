@@ -35,7 +35,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   const [programName, setProgramName] = useState("");
   const [, setYear] = useState("");
   const [termId, setTermId] = useState("");
-  const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
+  const [expandedClassIds, setExpandedClassIds] = useState<Record<string, boolean>>({});
   const assignClassesMutation = useAssignClassesToPlayer();
 
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
@@ -49,7 +49,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   useEffect(() => {
     if (timeSlots && timeSlots.length > 0) {
       if (state?.classId && !hasInitializedFromState.current) {
-        setExpandedClassId(state.classId);
+        setExpandedClassIds({ [state.classId]: true });
         hasInitializedFromState.current = true;
         return;
       }
@@ -77,7 +77,11 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         }
       }
 
-      setExpandedClassId(closestSlot.classId);
+      setExpandedClassIds(prev => {
+        const hasAnyExpandedThisDay = timeSlots.some((slot: any) => prev[slot.classId]);
+        if (hasAnyExpandedThisDay) return prev;
+        return { ...prev, [closestSlot.classId]: true };
+      });
     }
   }, [timeSlots, activeDay]);
 
@@ -87,9 +91,9 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
   useEffect(() => {
     if (pendingAssignPlayer) {
-      const matchesExpanded = timeSlots.some((slot: any) => slot.classId === expandedClassId);
-      if (matchesExpanded && expandedClassId) {
-        setSelectedAssignClassId(expandedClassId);
+      const expandedSlot = timeSlots.find((slot: any) => expandedClassIds[slot.classId]);
+      if (expandedSlot) {
+        setSelectedAssignClassId(expandedSlot.classId);
       } else if (timeSlots.length > 0) {
         setSelectedAssignClassId(timeSlots[0].classId);
       } else {
@@ -97,7 +101,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
       }
       setSelectedAssignStatus(pendingAssignPlayer.paymentStatus || "TRIAL");
     }
-  }, [pendingAssignPlayer, timeSlots, expandedClassId]);
+  }, [pendingAssignPlayer, timeSlots, expandedClassIds]);
 
   const [sidebarCategory, setSidebarCategory] = useState("");
   const [sidebarProgram, setSidebarProgram] = useState("");
@@ -217,20 +221,28 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         <div className="flex-1 w-full min-w-0">
           {timeSlots.length > 0 ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm flex flex-col gap-3">
-              {timeSlots.map((slot: any, idx: number) => (
-                <ClassFullTable
-                  key={slot.classId}
-                  classId={slot.classId}
-                  index={idx + 1}
-                  categoryId={categoryId}
-                  categoryName={categoryName}
-                  programId={programId}
-                  programName={programName}
-                  timeSlotStr={`${slot.startTime} - ${slot.endTime}`}
-                  isExpanded={expandedClassId === slot.classId}
-                  onToggle={() => setExpandedClassId(expandedClassId === slot.classId ? null : slot.classId)}
-                />
-              ))}
+              {timeSlots.map((slot: any, idx: number) => {
+                const isExpanded = !!expandedClassIds[slot.classId];
+                return (
+                  <ClassFullTable
+                    key={slot.classId}
+                    classId={slot.classId}
+                    index={idx + 1}
+                    categoryId={categoryId}
+                    categoryName={categoryName}
+                    programId={programId}
+                    programName={programName}
+                    timeSlotStr={`${slot.startTime} - ${slot.endTime}`}
+                    isExpanded={isExpanded}
+                    onToggle={() =>
+                      setExpandedClassIds(prev => ({
+                        ...prev,
+                        [slot.classId]: !prev[slot.classId],
+                      }))
+                    }
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm">

@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getLeagueMatches,
+  getLeagueSchedule,
   createLeagueMatch,
   updateLeagueMatch,
   deleteLeagueMatch,
+  generateRandomFixtures,
 } from "../api/leagueApi";
-import { Match } from "../types/league";
+import { Match, RoundSchedule } from "../types/league";
 import { toast } from "react-hot-toast";
 
 export const useLeagueMatches = (leagueId: string) => {
@@ -13,6 +15,31 @@ export const useLeagueMatches = (leagueId: string) => {
     queryKey: ["leagueMatches", leagueId],
     queryFn: () => getLeagueMatches(leagueId),
     enabled: !!leagueId,
+  });
+};
+
+export const useLeagueSchedule = (leagueId: string, round?: number) => {
+  return useQuery<RoundSchedule[]>({
+    queryKey: ["leagueSchedule", leagueId, round],
+    queryFn: () => getLeagueSchedule(leagueId, round),
+    enabled: !!leagueId,
+  });
+};
+
+export const useGenerateFixtures = (leagueId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (forceRegenerate?: boolean) =>
+      generateRandomFixtures(leagueId, forceRegenerate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leagueMatches", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueSchedule", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["league", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueGraphs", leagueId] });
+    },
   });
 };
 

@@ -334,17 +334,47 @@ export const deleteTeam = async (id: string): Promise<any> => {
   return res.data;
 };
 
+export const getTeamSessions = async (teamId: string): Promise<any> => {
+  let isAdmin = false;
+  try {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    isAdmin = ["SUPER_ADMIN", "ADMIN", "COACH"].includes(user?.role);
+  } catch { }
+  const endpoint = isAdmin ? `/api/admin/getTeamSessions/${teamId}` : `/api/user/getTeamSessions/${teamId}`;
+  const res = await apiClient.get(endpoint);
+  return res.data;
+};
+
+export const getTeamPlayerStatistics = async (teamId: string, playerId: string): Promise<any> => {
+  const res = await apiClient.get(`/api/admin/teams/${teamId}/players/${playerId}/statistics`);
+  return res.data;
+};
+
+export const updateTeamPlayerStatistics = async (teamId: string, playerId: string, statistics: any): Promise<any> => {
+  const res = await apiClient.put(`/api/admin/teams/${teamId}/players/${playerId}/statistics`, statistics);
+  return res.data;
+};
+
 export const getAvailablePlayers = async (): Promise<any> => {
   const res = await apiClient.get('/api/admin/available-players');
   return res.data;
 };
 
-export const assignPlayerToTeam = async (teamId: string, playerIds: string | string[]): Promise<any> => {
+export const assignPlayerToTeam = async (
+  teamId: string,
+  playerIds: string | string[],
+  paymentStatus: string = "UNPAID",
+  playerStatuses?: Record<string, string>
+): Promise<any> => {
   const ids = Array.isArray(playerIds) ? playerIds : [playerIds];
+  const players = ids.map((id) => ({
+    playerId: id,
+    paymentStatus: (playerStatuses && playerStatuses[id]) || paymentStatus || "UNPAID",
+  }));
+
   const payload = {
-    playerIds: ids,
-    players: ids,
-    playerId: ids.length === 1 ? ids[0] : ids,
+    players,
   };
   const res = await apiClient.post(`/api/admin/teams/${teamId}/assign`, payload);
   return res.data;

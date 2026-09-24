@@ -9,6 +9,7 @@ import {
   BackendLeagueData,
   RoundSchedule,
   TeamRecord,
+  GenerateFixturesResponse,
 } from "../types/league";
 
 // Sample initial data matching screenshots for EJL 9
@@ -572,10 +573,14 @@ export const getLeagueLadder = async (leagueId: string): Promise<TeamStanding[]>
   return [];
 };
 
-export const getLeagueSchedule = async (leagueId: string): Promise<RoundSchedule[]> => {
+export const getLeagueSchedule = async (leagueId: string, round?: number): Promise<RoundSchedule[]> => {
   const master = await getLeagueMasterData(leagueId);
-  if (Array.isArray(master.schedule) && master.schedule.length > 0) {
-    return master.schedule;
+  let sched = master.schedule || [];
+  if (Array.isArray(sched) && sched.length > 0) {
+    if (round) {
+      sched = sched.filter((s) => s.round === round);
+    }
+    return sched;
   }
 
   // Check if fixtures are returned at top level
@@ -625,6 +630,108 @@ export const getLeagueMatches = async (leagueId: string): Promise<Match[]> => {
   return [];
 };
 
+export const generateRandomFixtures = async (
+  leagueId: string,
+  forceRegenerate = false
+): Promise<GenerateFixturesResponse> => {
+  try {
+    const res = await leagueService.generateRandomFixtures(leagueId, forceRegenerate);
+    return res;
+  } catch (err: any) {
+    if (err?.response?.data) {
+      throw err;
+    }
+    // Local state fallback for demo / offline
+    const state = initLeagueState(leagueId);
+    const teams = state.teams || [];
+    if (teams.length >= 2) {
+      const numRounds = 9;
+      const roundsMap: { [r: number]: Match[] } = {};
+      for (let r = 1; r <= numRounds; r++) {
+        roundsMap[r] = [];
+        const shuffled = [...teams].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < shuffled.length - 1; i += 2) {
+          roundsMap[r].push({
+            _id: `m_rnd_${r}_${i}_${Date.now()}`,
+            leagueId,
+            round: r,
+            roundName: `Round ${r}`,
+            homeTeam: { _id: shuffled[i]._id, teamName: shuffled[i].teamName, logo: shuffled[i].logo },
+            awayTeam: { _id: shuffled[i + 1]._id, teamName: shuffled[i + 1].teamName, logo: shuffled[i + 1].logo },
+            matchDate: new Date(Date.now() + (r - 1) * 7 * 86400000).toISOString().split("T")[0],
+            time: "10:00 am",
+            field: `Field ${Math.floor(i / 2) + 1}`,
+            venue: "Main Stadium",
+            status: "Scheduled",
+            fixtureSource: "GENERATED",
+            isManuallyModified: false,
+          });
+        }
+      }
+      state.schedule = Object.keys(roundsMap).map((rKey) => ({
+        round: Number(rKey),
+        roundName: `Round ${rKey}`,
+        matches: roundsMap[Number(rKey)],
+      }));
+      saveLocalLeagueData(leagueId, state);
+      return {
+        success: true,
+        message: "Fixtures generated locally",
+        data: {
+          leagueId,
+          teams: teams.length,
+          rounds: numRounds,
+          fixtures: Math.floor(teams.length / 2) * numRounds,
+          created: 0,
+          updated: Math.floor(teams.length / 2) * numRounds,
+          manualFixturesPreserved: 0,
+          byes: teams.length % 2 === 1 ? numRounds : 0,
+        },
+      };
+    }
+    throw err;
+  }
+};
+
+export const createManualFixture = async (
+  leagueId: string,
+  matchData: any
+): Promise<any> => {
+  return createLeagueMatch(leagueId, {
+    ...matchData,
+    fixtureSource: "MANUAL",
+    isManuallyModified: true,
+  });
+};
+
+export const updateFixtureManually = async (
+  leagueId: string,
+  fixtureId: string,
+  payload: any
+): Promise<any> => {
+  try {
+    const res = await leagueService.updateFixtureManually(leagueId, fixtureId, {
+      ...payload,
+      fixtureSource: "MANUAL",
+      isManuallyModified: true,
+    });
+    return res;
+  } catch (e) {
+    return updateLeagueMatch(leagueId, fixtureId, {
+      ...payload,
+      fixtureSource: "MANUAL",
+      isManuallyModified: true,
+    });
+  }
+};
+
+export const deleteFixture = async (
+  leagueId: string,
+  fixtureId: string
+): Promise<any> => {
+  return deleteLeagueMatch(leagueId, fixtureId);
+};
+
 export const createLeagueMatch = async (
   leagueId: string,
   matchData: Partial<Match>
@@ -662,6 +769,8 @@ export const createLeagueMatch = async (
       awayScore: matchData.awayScore ?? null,
       status: matchData.status || "SCHEDULED",
       referee: matchData.referee,
+      fixtureSource: matchData.fixtureSource || "MANUAL",
+      isManuallyModified: matchData.isManuallyModified ?? true,
     };
 
     let targetRound = state.schedule.find((r) => r.round === newMatch.round);
@@ -681,7 +790,7 @@ export const updateLeagueMatch = async (
   matchData: Partial<Match>
 ): Promise<any> => {
   try {
-    return await leagueService.updateFixture(matchId, matchData);
+    return await leagueService.updateFixtureManually(leagueId, matchId, matchData);
   } catch (e) {
     const state = initLeagueState(leagueId);
     state.schedule.forEach((round) => {
@@ -699,7 +808,7 @@ export const updateLeagueMatch = async (
 
 export const deleteLeagueMatch = async (leagueId: string, matchId: string): Promise<any> => {
   try {
-    return await leagueService.deleteFixture(matchId);
+    return await leagueService.deleteLeagueFixture(leagueId, matchId);
   } catch (e) {
     const state = initLeagueState(leagueId);
     state.schedule.forEach((round) => {

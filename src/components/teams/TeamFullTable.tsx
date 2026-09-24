@@ -15,14 +15,17 @@ import {
 import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
 import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
+import EditPlayerStatsModal from "../players/EditPlayerStatsModal";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import { getPlayerStatusTextClass, StatusIcon, StatusUpdateMenuList } from "../common/StatusColorCode";
+import { Activity } from "lucide-react";
 
 interface TeamFullTableProps {
   teamId: string;
   teamName?: string;
   isExpanded?: boolean;
   onToggle?: () => void;
+  className?: string;
 }
 
 export default function TeamFullTable({
@@ -30,6 +33,7 @@ export default function TeamFullTable({
   teamName = "Team",
   isExpanded = true,
   onToggle,
+  className,
 }: TeamFullTableProps) {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -51,6 +55,7 @@ export default function TeamFullTable({
   } | null>(null);
 
   const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
+  const [statsPlayer, setStatsPlayer] = useState<any | null>(null);
   const [invoicePlayer, setInvoicePlayer] = useState<any | null>(null);
   const [coachNotePlayer, setCoachNotePlayer] = useState<{
     playerId: string;
@@ -315,7 +320,7 @@ export default function TeamFullTable({
   };
 
   return (
-    <div className="relative border overflow-hidden shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mb-6">
+    <div className={`relative overflow-hidden w-full ${className ? className : "border shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mb-6"}`}>
       {/* Header Controls & Filter Bar */}
       <div className="bg-[#031549] text-white px-5 py-3.5 flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-4 text-xs font-semibold flex-1">
@@ -336,6 +341,11 @@ export default function TeamFullTable({
             <span className="font-bold text-white uppercase tracking-wider">
               {teamName} Attendance Matrix
             </span>
+            {schedule.round && (
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-[#0047FF] text-white uppercase tracking-wider ml-1">
+                Round {schedule.round} ({schedule.totalSessions || sessions.length} {((schedule.totalSessions || sessions.length) === 1) ? "Session" : "Sessions"})
+              </span>
+            )}
           </div>
 
         </div>
@@ -682,6 +692,17 @@ export default function TeamFullTable({
                                 <button
                                   onClick={() => {
                                     setOpenMenuId(null);
+                                    setStatsPlayer(row);
+                                  }}
+                                  className="w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                >
+                                  <Activity className="w-3.5 h-3.5 text-indigo-500" />
+                                  Edit Team Statistics
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
                                     setInvoicePlayer(row);
                                   }}
                                   className="w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700"
@@ -771,6 +792,23 @@ export default function TeamFullTable({
           onClose={() => setCoachNotePlayer(null)}
           playerId={coachNotePlayer.playerId}
           playerName={coachNotePlayer.name}
+        />
+      )}
+
+      {/* Edit Player Stats Modal */}
+      {statsPlayer && (
+        <EditPlayerStatsModal
+          isOpen={!!statsPlayer}
+          onClose={() => setStatsPlayer(null)}
+          playerId={statsPlayer.playerId || statsPlayer._id}
+          playerName={
+            statsPlayer.playerName ||
+            statsPlayer.name ||
+            `${statsPlayer.firstName || ""} ${statsPlayer.lastName || ""}`.trim() ||
+            "Player"
+          }
+          teamId={teamId}
+          initialStats={statsPlayer.statistics || {}}
         />
       )}
 

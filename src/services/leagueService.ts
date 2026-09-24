@@ -44,8 +44,52 @@ export const leagueService = {
 
   // Schedule a new fixture (Tab 2)
   createFixture: async (fixtureData: CreateFixturePayload) => {
+    try {
+      if (fixtureData.league) {
+        const res = await apiClient.post(`/api/admin/leagues/${fixtureData.league}/fixtures`, fixtureData);
+        return res.data;
+      }
+    } catch (e) {
+      // fallback to global fixtures endpoint
+    }
     const response = await apiClient.post("/api/admin/fixtures", fixtureData);
     return response.data;
+  },
+
+  // Generate or Regenerate Random Fixtures in-place
+  generateRandomFixtures: async (leagueId: string, forceRegenerate = false) => {
+    const response = await apiClient.post(
+      `/api/admin/leagues/${leagueId}/generate-random-fixtures`,
+      {
+        randomize: true,
+        forceRegenerate,
+      }
+    );
+    return response.data;
+  },
+
+  // Manual fixture creation under league
+  createManualFixture: async (leagueId: string, payload: any) => {
+    const response = await apiClient.post(
+      `/api/admin/leagues/${leagueId}/fixtures`,
+      payload
+    );
+    return response.data;
+  },
+
+  // Manual fixture edit under league (marks fixtureSource: "MANUAL")
+  updateFixtureManually: async (leagueId: string, fixtureId: string, payload: any) => {
+    try {
+      const response = await apiClient.put(
+        `/api/admin/leagues/${leagueId}/fixtures/${fixtureId}`,
+        payload
+      );
+      return response.data?.data || response.data;
+    } catch (e) {
+      // fallback to global fixtures endpoint
+      const response = await apiClient.put(`/api/admin/fixtures/${fixtureId}`, payload);
+      return response.data?.data || response.data;
+    }
   },
 
   // Update fixture or enter result with statistics
@@ -75,6 +119,19 @@ export const leagueService = {
   completeFixture: async (matchId: string, data: any) => {
     const response = await apiClient.post(`/api/admin/fixtures/${matchId}/complete`, data);
     return response.data?.data || response.data;
+  },
+
+  // Delete fixture under league
+  deleteLeagueFixture: async (leagueId: string, fixtureId: string) => {
+    try {
+      const response = await apiClient.delete(
+        `/api/admin/leagues/${leagueId}/fixtures/${fixtureId}`
+      );
+      return response.data?.data || response.data;
+    } catch (e) {
+      const response = await apiClient.delete(`/api/admin/fixtures/${fixtureId}`);
+      return response.data?.data || response.data;
+    }
   },
 
   // Delete fixture
