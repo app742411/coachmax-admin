@@ -265,11 +265,10 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
                   />
                   <label
                     htmlFor="league-logo-upload"
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer ${
-                      canEdit
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer ${canEdit
                         ? "border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                         : "opacity-50 cursor-not-allowed border-slate-200"
-                    }`}
+                      }`}
                   >
                     <Upload size={13} />
                     <span>{logoPreview ? "Change Logo" : "Upload Logo"}</span>

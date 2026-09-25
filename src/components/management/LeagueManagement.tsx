@@ -48,12 +48,49 @@ const LeagueManagement: React.FC = () => {
     startTime: "09:00",
     groupCount: 1,
     generationType: "MANUAL" as "AUTOMATIC" | "MANUAL",
+    // Integration guide required fields
+    fee: 0,
+    venue: "",
   });
+
+  // sessionDates: one date per round — synced to formData.numberOfRounds
+  const [sessionDates, setSessionDates] = useState<string[]>([
+    new Date().toISOString().split("T")[0],
+  ]);
 
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Sync sessionDates array length whenever numberOfRounds changes
+  const handleRoundsChange = (val: number) => {
+    const rounds = Math.max(1, Math.min(50, val || 1));
+    setFormData((prev) => ({ ...prev, numberOfRounds: rounds }));
+    setSessionDates((prev) => {
+      const next = [...prev];
+      if (rounds > next.length) {
+        while (next.length < rounds) {
+          try {
+            const lastD = new Date(next[next.length - 1] || new Date().toISOString().split("T")[0]);
+            lastD.setDate(lastD.getDate() + 7);
+            next.push(lastD.toISOString().split("T")[0]);
+          } catch {
+            next.push("");
+          }
+        }
+      } else {
+        return next.slice(0, rounds);
+      }
+      return next;
+    });
+  };
+
+  const handleSessionDateChange = (idx: number, val: string) => {
+    const updated = [...sessionDates];
+    updated[idx] = val;
+    setSessionDates(updated);
+  };
 
   // Fetch academy teams for league enrollment
   const { data: allTeamsData } = useQuery({
@@ -145,7 +182,10 @@ const LeagueManagement: React.FC = () => {
       startTime: "09:00",
       groupCount: 1,
       generationType: "MANUAL" as "AUTOMATIC" | "MANUAL",
+      fee: 0,
+      venue: "",
     });
+    setSessionDates([new Date().toISOString().split("T")[0]]);
     setSelectedTeamIds([]);
     setTeamSearchQuery("");
     setSelectedFile(null);
@@ -156,6 +196,7 @@ const LeagueManagement: React.FC = () => {
   };
 
   const handleOpenEdit = (league: any) => {
+    const rounds = league.numberOfRounds ?? 1;
     setFormData({
       name: league.name || "",
       season: league.season || "2026-2027",
@@ -165,13 +206,13 @@ const LeagueManagement: React.FC = () => {
       registrationStartDate: league.registrationStartDate
         ? new Date(league.registrationStartDate).toISOString().split('T')[0]
         : league.registrationOpenDate
-        ? new Date(league.registrationOpenDate).toISOString().split('T')[0]
-        : "",
+          ? new Date(league.registrationOpenDate).toISOString().split('T')[0]
+          : "",
       registrationEndDate: league.registrationEndDate
         ? new Date(league.registrationEndDate).toISOString().split('T')[0]
         : league.registrationCloseDate
-        ? new Date(league.registrationCloseDate).toISOString().split('T')[0]
-        : "",
+          ? new Date(league.registrationCloseDate).toISOString().split('T')[0]
+          : "",
       status: (league.status || "UPCOMING").toUpperCase(),
       type: (league.type || league.leagueType || league.competitionScope || "NATIONAL").toUpperCase(),
       visibility: (league.visibility || "PUBLIC").toUpperCase(),
@@ -180,14 +221,35 @@ const LeagueManagement: React.FC = () => {
       allowDraws: league.allowDraws ?? true,
       automaticLadderRecalculation: league.automaticLadderRecalculation ?? league.autoLadderCalculation ?? true,
       fixtureFormat: (league.fixtureFormat || "ROUND_ROBIN") as "ROUND_ROBIN" | "KNOCKOUT",
-      numberOfRounds: league.numberOfRounds ?? 1,
+      numberOfRounds: rounds,
       matchDuration: league.matchDuration ?? 90,
       breakBetweenMatches: league.breakBetweenMatches ?? 15,
       numberOfFields: league.numberOfFields ?? 1,
       startTime: league.startTime || "09:00",
       groupCount: league.groupCount ?? 1,
       generationType: (league.generationType || "MANUAL") as "AUTOMATIC" | "MANUAL",
+      fee: league.fee ?? 0,
+      venue: league.venue || "",
     });
+
+    // Restore sessionDates from league, formatted as YYYY-MM-DD
+    if (Array.isArray(league.sessionDates) && league.sessionDates.length > 0) {
+      const formatted = league.sessionDates.map((d: string) => {
+        try { return d.includes("T") ? d.split("T")[0] : d; } catch { return d; }
+      });
+      setSessionDates(formatted);
+    } else {
+      const today = new Date().toISOString().split("T")[0];
+      const arr: string[] = [];
+      for (let i = 0; i < rounds; i++) {
+        try {
+          const d = new Date(today);
+          d.setDate(d.getDate() + i * 7);
+          arr.push(d.toISOString().split("T")[0]);
+        } catch { arr.push(""); }
+      }
+      setSessionDates(arr);
+    }
 
     const currentTeamIds = Array.isArray(league.teams)
       ? league.teams.map((t: any) => (typeof t === "string" ? t : t._id))
@@ -245,12 +307,35 @@ const LeagueManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate sessionDates — must match numberOfRounds
+    const validDates = sessionDates.filter(Boolean);
+    if (validDates.length < formData.numberOfRounds) {
+      toast.error(`Please select a session date for all ${formData.numberOfRounds} round(s).`);
+      return;
+    }
+
+    // Validate AUTOMATIC mode requires at least 2 teams
+    if (formData.generationType === "AUTOMATIC" && selectedTeamIds.length < 2) {
+      toast.error("AUTOMATIC mode requires at least 2 participating teams.");
+      return;
+    }
+
+    // Derive startDate / endDate from sessionDates if not manually set
+    let effectiveStart = formData.startDate;
+    let effectiveEnd = formData.endDate;
+    if (!effectiveStart || !effectiveEnd) {
+      const sorted = [...validDates].sort();
+      if (!effectiveStart) effectiveStart = sorted[0];
+      if (!effectiveEnd) effectiveEnd = sorted[sorted.length - 1];
+    }
+
     const payload = new FormData();
     payload.append("name", formData.name);
     payload.append("season", formData.season);
     payload.append("description", formData.description);
-    if (formData.startDate) payload.append("startDate", formData.startDate);
-    if (formData.endDate) payload.append("endDate", formData.endDate);
+    if (effectiveStart) payload.append("startDate", effectiveStart);
+    if (effectiveEnd) payload.append("endDate", effectiveEnd);
     if (formData.registrationStartDate) payload.append("registrationStartDate", formData.registrationStartDate);
     if (formData.registrationEndDate) payload.append("registrationEndDate", formData.registrationEndDate);
     payload.append("status", formData.status);
@@ -271,10 +356,13 @@ const LeagueManagement: React.FC = () => {
     payload.append("startTime", formData.startTime);
     payload.append("groupCount", String(formData.groupCount));
     payload.append("generationType", formData.generationType);
+    // Integration guide required fields
+    payload.append("fee", String(formData.fee));
+    payload.append("sessionDates", JSON.stringify(validDates));
+    if (formData.venue) payload.append("venue", formData.venue);
 
-    selectedTeamIds.forEach((tId) => {
-      payload.append("teams", tId);
-    });
+    // Send teams as JSON array (more reliable than multiple appends)
+    payload.append("teams", JSON.stringify(selectedTeamIds));
 
     if (selectedFile) {
       payload.append("leagueLogo", selectedFile);
@@ -765,16 +853,18 @@ const LeagueManagement: React.FC = () => {
               {/* Number of Rounds */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Number of Rounds
+                  Number of Rounds <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
                   value={formData.numberOfRounds}
-                  onChange={(e) => setFormData({ ...formData, numberOfRounds: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
-                >
-                  <option value={1}>1 — Single Round Robin</option>
-                  <option value={2}>2 — Double Round Robin</option>
-                </select>
+                  onChange={(e) => handleRoundsChange(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                  placeholder="e.g. 3"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Session dates below are auto-synced to this count.</p>
               </div>
 
               {/* Number of Fields */}
@@ -851,13 +941,81 @@ const LeagueManagement: React.FC = () => {
               </div>
             </div>
 
+            {/* League Fee & Venue */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  League Fee Per Player ($)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={formData.fee}
+                  onChange={(e) => setFormData({ ...formData, fee: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                  placeholder="e.g. 150 (0 = free)"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">If &gt; 0, invoices are auto-generated for UNPAID players.</p>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Venue / Facility Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.venue}
+                  onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
+                  placeholder="e.g. Olympic Park Arena"
+                />
+              </div>
+            </div>
+
+            {/* Dynamic Session Dates — one per round */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                    <Calendar size={14} className="text-brand-600" />
+                    Round Session Dates
+                  </span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Assign one date per round. Backend maps Round 1 → Date[0], Round 2 → Date[1], etc.
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold text-brand-600 bg-brand-50 dark:bg-brand-950/30 px-2 py-1 rounded-full border border-brand-200 dark:border-brand-900">
+                  {sessionDates.filter(Boolean).length} / {formData.numberOfRounds} set
+                </span>
+              </div>
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                {sessionDates.map((dateVal, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-1.5 min-w-[90px]">
+                      <span className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-300 text-[10px] font-bold flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Round {idx + 1}</span>
+                    </div>
+                    <input
+                      type="date"
+                      value={dateVal}
+                      onChange={(e) => handleSessionDateChange(idx, e.target.value)}
+                      className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold dark:text-white focus:border-brand-500 outline-none cursor-pointer"
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Live config chips */}
             <div className="flex flex-wrap gap-2 pt-1">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 text-[10px] font-bold border border-violet-200 dark:border-violet-800">
                 {formData.fixtureFormat === "ROUND_ROBIN" ? "Round Robin" : "Knockout"}
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
-                {formData.numberOfRounds === 2 ? "Double" : "Single"} Round Robin
+                {formData.numberOfRounds} Round{formData.numberOfRounds !== 1 ? "s" : ""}
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
                 ⏱ {formData.matchDuration}min · {formData.breakBetweenMatches}min break
@@ -868,6 +1026,11 @@ const LeagueManagement: React.FC = () => {
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
                 🕘 {formData.startTime}
               </span>
+              {formData.fee > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
+                  💰 ${formData.fee}/player
+                </span>
+              )}
               {formData.groupCount > 1 && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
                   {formData.groupCount} Groups
@@ -998,24 +1161,23 @@ const LeagueManagement: React.FC = () => {
                     typeof team.coach === "object" && team.coach?.name
                       ? team.coach.name
                       : typeof team.coach === "string"
-                      ? team.coach
-                      : "Unassigned";
+                        ? team.coach
+                        : "Unassigned";
 
                   return (
                     <div
                       key={team._id}
                       onClick={() => toggleTeamSelect(team._id)}
-                      className={`flex items-center justify-between px-3.5 py-2.5 cursor-pointer transition-colors ${
-                        isSelected
+                      className={`flex items-center justify-between px-3.5 py-2.5 cursor-pointer transition-colors ${isSelected
                           ? "bg-brand-50/50 dark:bg-brand-950/20"
                           : "hover:bg-slate-50 dark:hover:bg-slate-700/30"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => {}} // handled by parent onClick
+                          onChange={() => { }} // handled by parent onClick
                           className="w-4 h-4 rounded text-brand-600 border-slate-300 focus:ring-brand-500"
                         />
                         <div>
@@ -1117,8 +1279,8 @@ const LeagueManagement: React.FC = () => {
                 {createMutation.isPending || updateMutation.isPending
                   ? "Committing..."
                   : isEditing
-                  ? "Save Changes"
-                  : "Create League"}
+                    ? "Save Changes"
+                    : "Create League"}
               </span>
             </Button>
           </div>

@@ -43,9 +43,9 @@ export default function InvoiceDetails() {
     <>
       <PageMeta title={`Invoice ${inv.invoiceNumber}`} description="Invoice details" />
       <div className="space-y-6">
-        <PageBreadcrumb 
-          pageTitle={`Invoice ${inv.invoiceNumber || inv._id.substring(inv._id.length - 8)}`} 
-          items={[{ name: "Finance", path: "/finance" }, { name: "Invoices", path: "/invoices" }]} 
+        <PageBreadcrumb
+          pageTitle={`Invoice ${inv.invoiceNumber || inv._id.substring(inv._id.length - 8)}`}
+          items={[{ name: "Finance", path: "/finance" }, { name: "Invoices", path: "/invoices" }]}
         />
 
         <div className="bg-white dark:bg-gray-800 rounded-none border border-gray-200 dark:border-gray-700 p-8 shadow-sm">
@@ -57,11 +57,10 @@ export default function InvoiceDetails() {
             </div>
             <div className="text-left md:text-right space-y-1">
               <p className="text-sm text-gray-500">Status</p>
-              <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                inv.paymentStatus === "PAID" ? "bg-emerald-100 text-emerald-700" :
-                inv.paymentStatus === "OVERDUE" ? "bg-rose-100 text-rose-700" :
-                "bg-amber-100 text-amber-700"
-              }`}>
+              <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${inv.paymentStatus === "PAID" ? "bg-emerald-100 text-emerald-700" :
+                  inv.paymentStatus === "OVERDUE" ? "bg-rose-100 text-rose-700" :
+                    "bg-amber-100 text-amber-700"
+                }`}>
                 {inv.paymentStatus || "UNPAID"}
               </div>
               <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">Issued: {formatDate(inv.createdAt)}</p>
@@ -75,7 +74,7 @@ export default function InvoiceDetails() {
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Bill To</p>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                {inv.parent?.fullName || "N/A"} 
+                {inv.parent?.fullName || "N/A"}
                 {inv.parent?.relationship && <span className="text-xs font-normal text-gray-500 ml-2">({inv.parent.relationship})</span>}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">{inv.parent?.email}</p>
@@ -107,8 +106,8 @@ export default function InvoiceDetails() {
                   <span className="text-gray-500 block">Payment Method</span>
                   <span className="font-semibold text-gray-800 dark:text-white/90">
                     {inv.paymentMethod === "COD" ? "Cash on Delivery (COD)" :
-                     inv.paymentMethod === "ONLINE" ? "Online Payment" : 
-                     inv.paymentMethod || "N/A"}
+                      inv.paymentMethod === "ONLINE" ? "Online Payment" :
+                        inv.paymentMethod || "N/A"}
                   </span>
                 </div>
 
@@ -116,11 +115,11 @@ export default function InvoiceDetails() {
                   <div>
                     <span className="text-gray-500 block">Transaction Reference</span>
                     <span className="font-semibold text-[#0047FF]">
-                      {inv.transactionId || 
-                       inv.transaction?.transactionId || 
-                       inv.transaction?._id || 
-                       inv.transactionRef || 
-                       inv.paymentDetails}
+                      {inv.transactionId ||
+                        inv.transaction?.transactionId ||
+                        inv.transaction?._id ||
+                        inv.transactionRef ||
+                        inv.paymentDetails}
                     </span>
                   </div>
                 )}
@@ -133,7 +132,7 @@ export default function InvoiceDetails() {
                     </span>
                   </div>
                 )}
-                
+
                 {inv.verifiedAt && (
                   <div>
                     <span className="text-gray-500 block">Verified Date</span>

@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  getTeamById, 
-  deleteTeam, 
-  updateTeam, 
-  getAllCoaches, 
+import {
+  getTeamById,
+  deleteTeam,
+  updateTeam,
+  getAllCoaches,
   unassignPlayersFromTeam,
   getTemporaryPlayersForTeam,
-  deleteTemporaryPlayerFromTeam 
+  deleteTemporaryPlayerFromTeam
 } from "../../api/adminApi";
 import { getAllTerms } from "../../api/terms";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
@@ -63,7 +63,6 @@ export default function TeamDetailsPage() {
     teamFee: "",
     year: new Date().getFullYear().toString(),
     term: "",
-    scheduleType: "SINGLE_DAY" as "SINGLE_DAY" | "WEEKDAYS" | "CUSTOM",
     dayOfWeek: "Monday",
     startTime: "17:00",
     endTime: "18:30",
@@ -78,7 +77,7 @@ export default function TeamDetailsPage() {
   const [sessionDates, setSessionDates] = useState<string[]>([
     new Date().toISOString().split("T")[0],
   ]);
-  const [customSchedules, setCustomSchedules] = useState<{ dayOfWeek: string; startTime: string; endTime: string }[]>([]);
+  const [, setCustomSchedules] = useState<{ dayOfWeek: string; startTime: string; endTime: string }[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -230,7 +229,6 @@ export default function TeamDetailsPage() {
       teamFee: feeVal,
       year: yearVal ? yearVal.toString() : "",
       term: team.term?._id || team.term || "",
-      scheduleType: team.scheduleType || "SINGLE_DAY",
       dayOfWeek: team.dayOfWeek || "Monday",
       startTime: team.startTime || "17:00",
       endTime: team.endTime || "18:30",
@@ -316,25 +314,15 @@ export default function TeamDetailsPage() {
       const validDates = sessionDates.filter(Boolean);
       const effectiveRound = Number(roundCount) || (validDates.length > 0 ? validDates.length : 1);
       payload.append("round", String(effectiveRound));
-      // As documented in FRONTEND_INTEGRATION_TEAM_ATTENDANCE_AND_STATS.md:
       payload.append("date", JSON.stringify(validDates));
       payload.append("sessionDates", JSON.stringify(validDates));
-      payload.append("scheduleType", "SINGLE_DAY");
       if (formData.dayOfWeek) payload.append("dayOfWeek", formData.dayOfWeek);
       if (formData.startTime) payload.append("startTime", formData.startTime);
       if (formData.endTime) payload.append("endTime", formData.endTime);
     } else {
-      payload.append("scheduleType", formData.scheduleType);
-      if (formData.scheduleType === "SINGLE_DAY") {
-        if (formData.dayOfWeek) payload.append("dayOfWeek", formData.dayOfWeek);
-        if (formData.startTime) payload.append("startTime", formData.startTime);
-        if (formData.endTime) payload.append("endTime", formData.endTime);
-      } else if (formData.scheduleType === "WEEKDAYS") {
-        if (formData.startTime) payload.append("startTime", formData.startTime);
-        if (formData.endTime) payload.append("endTime", formData.endTime);
-      } else if (formData.scheduleType === "CUSTOM") {
-        payload.append("schedule", JSON.stringify(customSchedules));
-      }
+      if (formData.dayOfWeek) payload.append("dayOfWeek", formData.dayOfWeek);
+      if (formData.startTime) payload.append("startTime", formData.startTime);
+      if (formData.endTime) payload.append("endTime", formData.endTime);
     }
 
     if (formData.venue) payload.append("venue", formData.venue);
@@ -521,9 +509,8 @@ export default function TeamDetailsPage() {
                   {(() => {
                     const isExt = team.teamType === "EXTERNAL" || team.isExternal === true;
                     return (
-                      <span className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
-                        isExt ? "bg-amber-600 text-white" : "bg-blue-600 text-white"
-                      }`}>
+                      <span className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${isExt ? "bg-amber-600 text-white" : "bg-blue-600 text-white"
+                        }`}>
                         {isExt ? "External Team" : "Our Team"}
                       </span>
                     );
@@ -575,6 +562,12 @@ export default function TeamDetailsPage() {
                     </span>
                   )}
 
+                  {(team.teamFee || team.fee) && (
+                    <span className="flex items-center gap-1.5 text-emerald-300 font-medium">
+                      <span>Fee: ${team.teamFee || team.fee}</span>
+                    </span>
+                  )}
+
                   {team.sessionDates?.length > 0 ? (
                     <span className="flex items-center gap-1.5 text-blue-300 font-medium">
                       <Clock className="w-3.5 h-3.5" />
@@ -583,13 +576,11 @@ export default function TeamDetailsPage() {
                         {team.startTime ? ` (${team.startTime}-${team.endTime || ""})` : ""}
                       </span>
                     </span>
-                  ) : team.scheduleType ? (
+                  ) : (team.dayOfWeek || team.startTime) ? (
                     <span className="flex items-center gap-1.5 text-blue-300 font-medium">
                       <Clock className="w-3.5 h-3.5" />
                       <span>
-                        {team.scheduleType === "SINGLE_DAY" ? `${team.dayOfWeek || ""} ${team.startTime || ""}-${team.endTime || ""}`.trim() :
-                         team.scheduleType === "WEEKDAYS" ? `Mon-Fri ${team.startTime || ""}-${team.endTime || ""}`.trim() :
-                         "Custom Schedule"}
+                        {[team.dayOfWeek, team.startTime && team.endTime ? `${team.startTime}-${team.endTime}` : team.startTime].filter(Boolean).join(" • ")}
                       </span>
                     </span>
                   ) : null}
@@ -866,7 +857,7 @@ export default function TeamDetailsPage() {
                   </select>
                 </div>
               </div>
-              
+
               {/* Coaches & Leadership */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -947,7 +938,7 @@ export default function TeamDetailsPage() {
             {/* Logo Upload Panel */}
             <div className="md:col-span-4 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 p-6 border border-gray-200 dark:border-gray-700">
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4 text-center">Team Logo</label>
-              <div 
+              <div
                 onClick={() => {
                   const input = document.getElementById("team-details-logo-input");
                   if (input) input.click();
@@ -991,22 +982,20 @@ export default function TeamDetailsPage() {
                   <button
                     type="button"
                     onClick={() => setScheduleMode("ROUNDS")}
-                    className={`px-3 py-1 transition-all ${
-                      scheduleMode === "ROUNDS"
+                    className={`px-3 py-1 transition-all ${scheduleMode === "ROUNDS"
                         ? "bg-[#0047FF] text-white shadow-xs"
                         : "text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                    }`}
+                      }`}
                   >
                     By Round & Dates (Dynamic)
                   </button>
                   <button
                     type="button"
                     onClick={() => setScheduleMode("TERM")}
-                    className={`px-3 py-1 transition-all ${
-                      scheduleMode === "TERM"
+                    className={`px-3 py-1 transition-all ${scheduleMode === "TERM"
                         ? "bg-[#0047FF] text-white shadow-xs"
                         : "text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                    }`}
+                      }`}
                   >
                     Term Schedule (Recurring)
                   </button>
@@ -1048,33 +1037,30 @@ export default function TeamDetailsPage() {
                   <button
                     type="button"
                     onClick={() => handleRoundCountChange(1)}
-                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${
-                      Number(roundCount) === 1
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${Number(roundCount) === 1
                         ? "bg-[#0047FF] text-white border-[#0047FF]"
                         : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-                    }`}
+                      }`}
                   >
                     Single Round (1 Date)
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRoundCountChange(3)}
-                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${
-                      Number(roundCount) === 3
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${Number(roundCount) === 3
                         ? "bg-[#0047FF] text-white border-[#0047FF]"
                         : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-                    }`}
+                      }`}
                   >
                     3 Rounds (3 Dates)
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRoundCountChange(5)}
-                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${
-                      Number(roundCount) === 5
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${Number(roundCount) === 5
                         ? "bg-[#0047FF] text-white border-[#0047FF]"
                         : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-                    }`}
+                      }`}
                   >
                     5 Rounds (5 Dates)
                   </button>
@@ -1191,156 +1177,51 @@ export default function TeamDetailsPage() {
             )}
 
             {formData.teamType !== "EXTERNAL" && scheduleMode === "TERM" && (
-              <>
-                {/* Schedule Type Selector */}
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Schedule Type</label>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <div className="flex items-center gap-2 shrink-0">
-                      {(["SINGLE_DAY"] as const).map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, scheduleType: st })}
-                          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-none border transition-all ${
-                            formData.scheduleType === st
-                              ? "bg-[#0047FF] text-white border-[#0047FF] shadow-xs"
-                              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-gray-200 dark:border-gray-700 hover:border-[#0047FF]"
-                          }`}
-                        >
-                          {st.replace("_", " ")}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Single Day Term Note */}
-                    <div className="flex-1 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 px-3 py-2 flex items-start gap-2.5">
-                      <div className="p-1 bg-[#0047FF]/10 text-[#0047FF] dark:text-blue-400 shrink-0">
-                        <Info size={14} />
-                      </div>
-                      <div className="text-[11px] text-slate-600 dark:text-slate-300 leading-normal">
-                        <span className="font-bold text-slate-800 dark:text-white uppercase tracking-wider mr-1.5 text-[10px]">Note:</span>
-                        This day applies across the selected term.
-                        <span className="text-slate-500 dark:text-slate-400 ml-1">
-                          (Example: If you choose <strong className="text-slate-800 dark:text-white font-bold">Monday</strong> for <strong className="text-slate-800 dark:text-white font-bold">Term 1</strong> and Term 1 has 8 Mondays, then 8 rounds will be scheduled on Mondays).
-                        </span>
-                      </div>
-                    </div>
+              <div className="space-y-4">
+                <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 px-3 py-2 flex items-start gap-2.5">
+                  <div className="p-1 bg-[#0047FF]/10 text-[#0047FF] dark:text-blue-400 shrink-0">
+                    <Info size={14} />
+                  </div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-300 leading-normal">
+                    <span className="font-bold text-slate-800 dark:text-white uppercase tracking-wider mr-1.5 text-[10px]">Term Schedule:</span>
+                    Select the weekly recurring training day and session times for the active term.
                   </div>
                 </div>
 
-                {/* Schedule Fields */}
-                {formData.scheduleType === "SINGLE_DAY" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Day of Week</label>
-                      <select
-                        value={formData.dayOfWeek}
-                        onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
-                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                      >
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Start Time</label>
-                      <input
-                        type="time"
-                        value={formData.startTime}
-                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">End Time</label>
-                      <input
-                        type="time"
-                        value={formData.endTime}
-                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                      />
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* WEEKDAYS AND CUSTOM SCHEDULE TYPES COMMENTED OUT
-            {formData.scheduleType === "WEEKDAYS" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Start Time (Mon - Fri)</label>
-                  <input
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">End Time (Mon - Fri)</label>
-                  <input
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
-                  />
-                </div>
-              </div>
-            )}
-
-            {formData.scheduleType === "CUSTOM" && (
-              <div className="space-y-3 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Custom Schedule Slots</span>
-                  <button
-                    type="button"
-                    onClick={addCustomScheduleSlot}
-                    className="text-xs font-bold text-[#0047FF] hover:underline flex items-center gap-1"
-                  >
-                    <Plus size={14} /> Add Slot
-                  </button>
-                </div>
-                {customSchedules.map((slot, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-slate-800/40 p-4 border border-gray-200 dark:border-gray-700">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Day of Week</label>
                     <select
-                      value={slot.dayOfWeek}
-                      onChange={(e) => updateCustomScheduleSlot(idx, "dayOfWeek", e.target.value)}
-                      className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold dark:text-white"
+                      value={formData.dayOfWeek}
+                      onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
+                      className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
                     >
                       {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
                         <option key={d} value={d}>{d}</option>
                       ))}
                     </select>
-                    <input
-                      type="time"
-                      value={slot.startTime}
-                      onChange={(e) => updateCustomScheduleSlot(idx, "startTime", e.target.value)}
-                      className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold dark:text-white"
-                    />
-                    <span className="text-xs text-gray-400">to</span>
-                    <input
-                      type="time"
-                      value={slot.endTime}
-                      onChange={(e) => updateCustomScheduleSlot(idx, "endTime", e.target.value)}
-                      className="rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold dark:text-white"
-                    />
-                    {customSchedules.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeCustomScheduleSlot(idx)}
-                        className="text-rose-500 hover:text-rose-700 p-1"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
                   </div>
-                ))}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Start Time</label>
+                    <input
+                      type="time"
+                      value={formData.startTime}
+                      onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                      className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">End Time</label>
+                    <input
+                      type="time"
+                      value={formData.endTime}
+                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                      className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold outline-none dark:text-white"
+                    />
+                  </div>
+                </div>
               </div>
             )}
-            */}
 
             {/* Venue & Location */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1444,9 +1325,8 @@ export default function TeamDetailsPage() {
         }}
         loading={deleteTempPlayerMutation.isPending}
         title="Delete Temporary Player"
-        message={`Are you sure you want to permanently delete ${
-          tempPlayerToDelete?.name || tempPlayerToDelete?.fullName || "this temporary player"
-        } from ${team.teamName}?`}
+        message={`Are you sure you want to permanently delete ${tempPlayerToDelete?.name || tempPlayerToDelete?.fullName || "this temporary player"
+          } from ${team.teamName}?`}
       />
     </>
   );

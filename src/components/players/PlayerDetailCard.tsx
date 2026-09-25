@@ -41,7 +41,7 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
   const { data: adminDetailsRes } = useAdminPlayerDetails(playerId);
   const { data: profileRes } = usePlayerProfile(playerId);
   const playerEnvelope = adminDetailsRes?.data || profileRes?.data;
-  
+
   // Map clean player and parent data based on the backend response JSON envelope
   const fetchedPlayer = playerEnvelope?.player || playerEnvelope;
   const player: any = {
@@ -61,14 +61,14 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
   const statistics = player.statistics || {};
 
   // Extract assigned classes with per-class payment status
-  const assignedClassesInfo: any[] = 
-    playerEnvelope?.assignedClassesPaymentInfo || 
-    playerEnvelope?.classPaymentSummary?.assignedClassesWithPaymentStatus || 
+  const assignedClassesInfo: any[] =
+    playerEnvelope?.assignedClassesPaymentInfo ||
+    playerEnvelope?.classPaymentSummary?.assignedClassesWithPaymentStatus ||
     player?.classPaymentStatuses?.map((cps: any) => ({
       classId: cps.class?._id || cps.class,
       className: cps.class?.name || "Class",
       paymentStatus: cps.paymentStatus
-    })) || 
+    })) ||
     player?.assignedClasses?.map((c: any) => ({
       classId: c._id || c.id,
       className: c.name || c.className || "Class",
@@ -80,8 +80,8 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
     })) || [];
 
   // Extract assigned teams with team payment status
-  const assignedTeamsInfo: any[] = 
-    playerEnvelope?.assignedTeamsPaymentInfo || 
+  const assignedTeamsInfo: any[] =
+    playerEnvelope?.assignedTeamsPaymentInfo ||
     playerEnvelope?.teamPaymentSummary?.assignedTeamsWithPaymentStatus || [];
 
   const { data: notesRes } = useCoachNotes(playerId);
@@ -91,12 +91,12 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
   const avatar = player.profileImage ? `${baseUrl}/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
-  
+
   // Safe date parsing to avoid "Invalid Date" values
   const dob = player.dob ? new Date(player.dob) : null;
   const age = dob && !isNaN(dob.getTime()) ? new Date().getFullYear() - dob.getFullYear() : null;
   const dobString = dob && !isNaN(dob.getTime()) ? dob.toLocaleDateString() : null;
-  
+
   const registrationDate = player.createdAt ? new Date(player.createdAt) : null;
   const registrationDateString = registrationDate && !isNaN(registrationDate.getTime()) ? registrationDate.toLocaleDateString() : null;
 
@@ -122,10 +122,10 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
         className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Drawer */}
       <div className="fixed top-0 right-0 z-50 h-screen w-full sm:w-[420px] bg-white border-l border-slate-100 shadow-2xl dark:bg-slate-900 dark:border-slate-800 p-6 overflow-y-auto transform transition-transform duration-300 flex flex-col justify-between">
-        
+
         {/* Scrollable Container */}
         <div className="flex-1 space-y-6 pb-6 custom-scrollbar overflow-y-auto pr-1">
           {/* Header */}
@@ -143,26 +143,24 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                   </h3>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {activeStatus && (
-                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-full ${
-                        activeStatus === "ACTIVE" || activeStatus === "APPROVED"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-full ${activeStatus === "ACTIVE" || activeStatus === "APPROVED"
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
                           : "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
-                      }`}>
+                        }`}>
                         {activeStatus}
                       </span>
                     )}
                     {paymentStatus && (
-                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-full ${
-                        paymentStatus === "PAID"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-full ${paymentStatus === "PAID"
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
                           : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
-                      }`}>
+                        }`}>
                         {paymentStatus.replace("_", " ")}
                       </span>
                     )}
                   </div>
                 </div>
-                
+
                 <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mt-1">
                   {player.jerseyNumber ? `Jersey #${player.jerseyNumber}` : "No Jersey"}
                   {player.prefferedFoot && ` • Preferred Foot: ${player.prefferedFoot}`}
@@ -174,7 +172,7 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                 </div>
               </div>
             </div>
-            
+
             <button
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               onClick={onClose}
@@ -267,7 +265,7 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                 {parent.email && (
                   <div className="col-span-2">
                     <span className="text-slate-400 block mb-0.5">Email</span>
-                    <a 
+                    <a
                       href={`mailto:${parent.email}`}
                       className="font-semibold text-[#0047FF] hover:underline truncate block max-w-full"
                     >
@@ -312,8 +310,8 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
                     <span className="text-brand-500">{overallAttendance.percentage || 0}%</span>
                   </div>
                   <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5">
-                    <div 
-                      className="bg-brand-500 h-1.5 transition-all duration-300" 
+                    <div
+                      className="bg-brand-500 h-1.5 transition-all duration-300"
                       style={{ width: `${overallAttendance.percentage || 0}%` }}
                     />
                   </div>

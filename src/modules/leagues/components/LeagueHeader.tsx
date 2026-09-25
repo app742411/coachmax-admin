@@ -102,13 +102,13 @@ export const LeagueHeader: React.FC<LeagueHeaderProps> = ({ league, onRefresh })
                 <span className="text-[9px] uppercase tracking-wider font-extrabold -mt-0.5">
                   {league.name
                     ? league.name
-                        .trim()
-                        .split(/\s+/)
-                        .filter(Boolean)
-                        .slice(0, 3)
-                        .map((w) => w[0])
-                        .join("")
-                        .toUpperCase()
+                      .trim()
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 3)
+                      .map((w) => w[0])
+                      .join("")
+                      .toUpperCase()
                     : "LGE"}
                 </span>
               </div>

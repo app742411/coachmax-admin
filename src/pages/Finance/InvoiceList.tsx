@@ -15,9 +15,9 @@ const formatDate = (dateString: string) => {
 };
 
 const STATUS_STYLES: Record<string, { dot: string; text: string }> = {
-  PAID:    { dot: "bg-emerald-500", text: "text-emerald-600" },
-  UNPAID:  { dot: "bg-amber-500",   text: "text-amber-500"   },
-  OVERDUE: { dot: "bg-rose-500",    text: "text-rose-600"    },
+  PAID: { dot: "bg-emerald-500", text: "text-emerald-600" },
+  UNPAID: { dot: "bg-amber-500", text: "text-amber-500" },
+  OVERDUE: { dot: "bg-rose-500", text: "text-rose-600" },
 };
 
 export default function InvoiceList() {
@@ -33,12 +33,12 @@ export default function InvoiceList() {
   const invoices: any[] = Array.isArray(data?.data)
     ? data.data
     : Array.isArray(data?.data?.invoices)
-    ? data.data.invoices
-    : Array.isArray(data?.invoices)
-    ? data.invoices
-    : Array.isArray(data)
-    ? data
-    : [];
+      ? data.data.invoices
+      : Array.isArray(data?.invoices)
+        ? data.invoices
+        : Array.isArray(data)
+          ? data
+          : [];
   const total = data?.pagination?.total || data?.data?.pagination?.total || invoices.length;
   const totalPages = data?.pagination?.pages || data?.data?.pagination?.pages || 1;
 

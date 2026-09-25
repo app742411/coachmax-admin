@@ -43,7 +43,10 @@ export interface League {
   // Fixture configuration fields
   generationType?: "AUTOMATIC" | "MANUAL";
   fixtureFormat?: "ROUND_ROBIN" | "KNOCKOUT";
-  numberOfRounds?: number;        // 1 = Single Round Robin, 2 = Double Round Robin
+  numberOfRounds?: number;        // Total rounds in schedule
+  sessionDates?: string[];        // Dates assigned to each round (length matches numberOfRounds)
+  fee?: number;                   // League tournament fee per player
+  venue?: string;                 // Venue facility name
   matchDuration?: number;         // Minutes (e.g. 90)
   breakBetweenMatches?: number;   // Minutes (e.g. 15)
   numberOfFields?: number;        // e.g. 2
@@ -145,6 +148,7 @@ export interface Match {
   round: number;
   roundName?: string;
   kickoffTime?: string;
+  sessionDate?: string;
   endTime?: string;
   matchDate?: string;
   matchDateFormatted?: string;

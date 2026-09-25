@@ -4,7 +4,9 @@ export interface CreateFixturePayload {
   league: string;
   round: number;
   kickoffTime: string;
+  sessionDate?: string;
   venue: string;
+  field?: string;
   referee?: string;
   homeTeam: string;
   awayTeam: string;

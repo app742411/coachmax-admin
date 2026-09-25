@@ -467,19 +467,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
 
     const matchStatisticsPayload = resultForm.showStats
       ? {
-          homePossession: Number(resultForm.homePossession),
-          awayPossession: Number(resultForm.awayPossession),
-          homeShots: Number(resultForm.homeShots),
-          awayShots: Number(resultForm.awayShots),
-          homeShotsOnTarget: Number(resultForm.homeShotsOnTarget),
-          awayShotsOnTarget: Number(resultForm.awayShotsOnTarget),
-          homeCorners: Number(resultForm.homeCorners),
-          awayCorners: Number(resultForm.awayCorners),
-          homeFouls: Number(resultForm.homeFouls),
-          awayFouls: Number(resultForm.awayFouls),
-          homeYellowCards: Number(resultForm.homeYellowCards),
-          awayYellowCards: Number(resultForm.awayYellowCards),
-        }
+        homePossession: Number(resultForm.homePossession),
+        awayPossession: Number(resultForm.awayPossession),
+        homeShots: Number(resultForm.homeShots),
+        awayShots: Number(resultForm.awayShots),
+        homeShotsOnTarget: Number(resultForm.homeShotsOnTarget),
+        awayShotsOnTarget: Number(resultForm.awayShotsOnTarget),
+        homeCorners: Number(resultForm.homeCorners),
+        awayCorners: Number(resultForm.awayCorners),
+        homeFouls: Number(resultForm.homeFouls),
+        awayFouls: Number(resultForm.awayFouls),
+        homeYellowCards: Number(resultForm.homeYellowCards),
+        awayYellowCards: Number(resultForm.awayYellowCards),
+      }
       : undefined;
 
     updateMatchMutation.mutate(
@@ -734,11 +734,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2.5 mb-4 border-b border-slate-100 dark:border-slate-800/80">
           <button
             onClick={() => setRoundFilter("ALL")}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              roundFilter === "ALL"
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${roundFilter === "ALL"
                 ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-            }`}
+              }`}
           >
             All Rounds ({matches.length})
           </button>
@@ -749,11 +748,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <button
                 key={r}
                 onClick={() => setRoundFilter(r.toString())}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  isSelected
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${isSelected
                     ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
                     : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                }`}
+                  }`}
               >
                 Round {r} ({count})
               </button>
@@ -862,10 +860,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                             match.time ||
                             (match.kickoffTime
                               ? new Date(match.kickoffTime).toLocaleTimeString([], {
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                })
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })
                               : "2:00 pm");
                           const homeScore = match.score?.homeScore ?? match.homeScore;
                           const awayScore = match.score?.awayScore ?? match.awayScore;
@@ -904,10 +902,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                               {/* Score (Matches Screenshot 2: e.g. "4 - 1" or "- - -") */}
                               <td className="py-4 px-4 text-center">
                                 {isCompleted &&
-                                homeScore !== null &&
-                                awayScore !== null &&
-                                homeScore !== undefined &&
-                                awayScore !== undefined ? (
+                                  homeScore !== null &&
+                                  awayScore !== null &&
+                                  homeScore !== undefined &&
+                                  awayScore !== undefined ? (
                                   <span className="font-black text-sm text-slate-900 dark:text-white px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
                                     {homeScore} - {awayScore}
                                   </span>
@@ -955,36 +953,36 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                                 {getStatusBadge(match.status)}
                               </td>
 
-                            {/* Actions Dropdown */}
-                            <td className="py-4 px-4 text-right">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (actionMenu?.match._id === match._id) {
-                                    setActionMenu(null);
-                                    return;
-                                  }
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  const menuHeight = 135;
-                                  const menuWidth = 160;
-                                  // Open upwards if not enough space below
-                                  const openUpwards =
-                                    window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
-                                  const top = openUpwards ? rect.top - menuHeight : rect.bottom + 4;
-                                  const left = Math.max(12, rect.right - menuWidth);
+                              {/* Actions Dropdown */}
+                              <td className="py-4 px-4 text-right">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (actionMenu?.match._id === match._id) {
+                                      setActionMenu(null);
+                                      return;
+                                    }
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const menuHeight = 135;
+                                    const menuWidth = 160;
+                                    // Open upwards if not enough space below
+                                    const openUpwards =
+                                      window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
+                                    const top = openUpwards ? rect.top - menuHeight : rect.bottom + 4;
+                                    const left = Math.max(12, rect.right - menuWidth);
 
-                                  setActionMenu({ match, top, left });
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                                title="Match Actions"
-                              >
-                                <MoreVertical size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+                                    setActionMenu({ match, top, left });
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                  title="Match Actions"
+                                >
+                                  <MoreVertical size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
                     </table>
                   </div>
                 )}

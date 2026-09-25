@@ -8,13 +8,13 @@ import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
 import toast from "react-hot-toast";
 import RatingEditor from "../../components/players/RatingEditor";
-import { 
+import {
   ArrowLeft,
-  ShieldAlert, 
-  Award, 
-  Activity, 
-  Heart, 
-  Clock, 
+  ShieldAlert,
+  Award,
+  Activity,
+  Heart,
+  Clock,
   MessageSquare
 } from "lucide-react";
 
@@ -57,14 +57,14 @@ export default function PlayerProfilePage() {
   const notes = notesRes?.data || [];
 
   // Extract assigned classes with per-class payment status
-  const assignedClassesInfo: any[] = 
-    responseData?.assignedClassesPaymentInfo || 
-    responseData?.classPaymentSummary?.assignedClassesWithPaymentStatus || 
+  const assignedClassesInfo: any[] =
+    responseData?.assignedClassesPaymentInfo ||
+    responseData?.classPaymentSummary?.assignedClassesWithPaymentStatus ||
     player?.classPaymentStatuses?.map((cps: any) => ({
       classId: cps.class?._id || cps.class,
       className: cps.class?.name || "Class",
       paymentStatus: cps.paymentStatus
-    })) || 
+    })) ||
     player?.assignedClasses?.map((c: any) => ({
       classId: c._id || c.id,
       className: c.name || c.className || "Class",
@@ -76,8 +76,8 @@ export default function PlayerProfilePage() {
     })) || [];
 
   // Extract assigned teams with team payment status
-  const assignedTeamsInfo: any[] = 
-    responseData?.assignedTeamsPaymentInfo || 
+  const assignedTeamsInfo: any[] =
+    responseData?.assignedTeamsPaymentInfo ||
     responseData?.teamPaymentSummary?.assignedTeamsWithPaymentStatus || [];
 
   if (loadingDetails) {
@@ -213,26 +213,24 @@ export default function PlayerProfilePage() {
               </h2>
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 {activeStatus && (
-                  <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    activeStatus === "ACTIVE" || activeStatus === "APPROVED"
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
+                  <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${activeStatus === "ACTIVE" || activeStatus === "APPROVED"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
                       : "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
-                  }`}>
+                    }`}>
                     {activeStatus}
                   </span>
                 )}
                 {paymentStatus && (
-                  <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    paymentStatus === "PAID"
+                  <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${paymentStatus === "PAID"
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
                       : "bg-red-50 text-red-750 dark:bg-red-950/20 dark:text-red-400"
-                  }`}>
+                    }`}>
                     {paymentStatus.replace("_", " ")}
                   </span>
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
               <span className="text-slate-400 text-xs font-semibold">Rating:</span>
               <RatingEditor playerId={player._id} initialRating={player.rating || 0} />
@@ -334,7 +332,7 @@ export default function PlayerProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column: Personal and Contact Details */}
           <div className="space-y-6">
-            
+
             {/* Personal Information */}
             <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-6 shadow-theme-xs space-y-4">
               <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pb-2 border-b border-slate-50 dark:border-slate-800/40">
@@ -406,7 +404,7 @@ export default function PlayerProfilePage() {
                   {parent.email && (
                     <div className="col-span-2">
                       <span className="text-slate-400 block mb-0.5">Email Address</span>
-                      <a 
+                      <a
                         href={`mailto:${parent.email}`}
                         className="text-[#0047FF] hover:underline block truncate"
                       >
@@ -459,8 +457,8 @@ export default function PlayerProfilePage() {
                       if (match) day = match[1];
                     }
                     return (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         onClick={() => navigate('/program/academy', { state: { classId, day } })}
                         className="py-3 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
                       >
@@ -519,8 +517,8 @@ export default function PlayerProfilePage() {
                     const teamName = team.teamName || team.name || "Team";
                     const status = team.paymentStatus || "PAID";
                     return (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         onClick={() => navigate(`/teams/${teamId}`)}
                         className="py-3 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
                       >
@@ -568,7 +566,7 @@ export default function PlayerProfilePage() {
 
           {/* Right Column: Skill Ratings and Notes */}
           <div className="space-y-6">
-            
+
             {/* Attendance overview metrics */}
             {overallAttendance && (
               <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-6 shadow-theme-xs space-y-4">
@@ -582,8 +580,8 @@ export default function PlayerProfilePage() {
                       <span className="text-brand-500">{overallAttendance.percentage || 0}%</span>
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-slate-800 h-2">
-                      <div 
-                        className="bg-brand-500 h-2 transition-all duration-500" 
+                      <div
+                        className="bg-brand-500 h-2 transition-all duration-500"
                         style={{ width: `${overallAttendance.percentage || 0}%` }}
                       />
                     </div>
