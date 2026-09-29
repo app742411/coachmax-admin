@@ -97,18 +97,18 @@ export const useClassFullTable = (classId: string) => {
   });
 };
 
-export const useTeamFullTable = (teamId: string) => {
+export const useTeamFullTable = (teamId: string, leagueId?: string) => {
   return useQuery({
-    queryKey: ["teamFullTable", teamId],
-    queryFn: () => getTeamFullTable(teamId),
+    queryKey: ["teamFullTable", teamId, leagueId],
+    queryFn: () => getTeamFullTable(teamId, leagueId),
     enabled: !!teamId,
   });
 };
 
-export const useMarkSingleTeamAttendance = (teamId: string) => {
+export const useMarkSingleTeamAttendance = (teamId: string, leagueId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => markSingleTeamAttendance(teamId, data),
+    mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => markSingleTeamAttendance(teamId, { ...data, leagueId }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
@@ -121,10 +121,10 @@ export const useMarkSingleTeamAttendance = (teamId: string) => {
   });
 };
 
-export const useMarkTeamAttendance = (teamId: string) => {
+export const useMarkTeamAttendance = (teamId: string, leagueId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { sessionDate: string; records: { player: string; status: string }[] }) => markTeamAttendance(teamId, data),
+    mutationFn: (data: { sessionDate: string; records: { player: string; status: string }[] }) => markTeamAttendance(teamId, { ...data, leagueId }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });

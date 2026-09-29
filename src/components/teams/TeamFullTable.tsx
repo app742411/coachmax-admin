@@ -22,29 +22,33 @@ import { Activity } from "lucide-react";
 
 interface TeamFullTableProps {
   teamId: string;
+  leagueId?: string;
   teamName?: string;
   isExpanded?: boolean;
   onToggle?: () => void;
   className?: string;
+  hideHeader?: boolean;
 }
 
 export default function TeamFullTable({
   teamId,
+  leagueId,
   teamName = "Team",
   isExpanded = true,
   onToggle,
   className,
+  hideHeader = false,
 }: TeamFullTableProps) {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
 
   // Fetch Team Full Table Matrix
-  const { data: scheduleData, isLoading } = useTeamFullTable(teamId);
+  const { data: scheduleData, isLoading } = useTeamFullTable(teamId, leagueId);
 
   // Attendance Mutations
-  const markSingleMutation = useMarkSingleTeamAttendance(teamId);
-  const markBulkMutation = useMarkTeamAttendance(teamId);
+  const markSingleMutation = useMarkSingleTeamAttendance(teamId, leagueId);
+  const markBulkMutation = useMarkTeamAttendance(teamId, leagueId);
 
   // UI state for menus & modals
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -63,6 +67,10 @@ export default function TeamFullTable({
     teamId?: string;
   } | null>(null);
   const [unassignPlayer, setUnassignPlayer] = useState<any | null>(null);
+
+  // Attendance menu states
+  const [openAttendanceMenu, setOpenAttendanceMenu] = useState<{ playerId: string; sessionDate: string; currentStatus: string } | null>(null);
+  const [attendanceMenuPos, setAttendanceMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   // Unassign Player Mutation
   const unassignMutation = useMutation({
@@ -157,6 +165,25 @@ export default function TeamFullTable({
     };
   }, [openMenuId]);
 
+  useEffect(() => {
+    if (!openAttendanceMenu) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const menu = document.getElementById("portal-attendance-menu");
+      if (menu && !menu.contains(e.target as Node)) {
+        setOpenAttendanceMenu(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenAttendanceMenu(null);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openAttendanceMenu]);
+
   const handleChatWithParent = async (row: any) => {
     const parentId = row.parent?.id || row.parent?._id || row.parentId;
     if (!parentId) {
@@ -245,18 +272,35 @@ export default function TeamFullTable({
   const handleToggleAttendance = (
     playerId: string,
     sessionDate: string,
-    currentStatus: string
+    currentStatus: string,
+    e: React.MouseEvent
   ) => {
-    let newStatus = "PRESENT";
-    if (currentStatus === "PRESENT") newStatus = "LATE";
-    else if (currentStatus === "LATE") newStatus = "ABSENT";
-    else if (currentStatus === "ABSENT") newStatus = "PRESENT";
+    e.stopPropagation();
+    if (!currentStatus || currentStatus === "NOT_MARKED") {
+      markSingleMutation.mutate({
+        sessionDate,
+        playerId,
+        status: "PRESENT",
+      });
+      return;
+    }
 
-    markSingleMutation.mutate({
-      sessionDate,
-      playerId,
-      status: newStatus,
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setAttendanceMenuPos({
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX,
     });
+    setOpenAttendanceMenu({ playerId, sessionDate, currentStatus });
+  };
+
+  const handleSetAttendanceStatus = (status: string) => {
+    if (!openAttendanceMenu) return;
+    markSingleMutation.mutate({
+      sessionDate: openAttendanceMenu.sessionDate,
+      playerId: openAttendanceMenu.playerId,
+      status,
+    });
+    setOpenAttendanceMenu(null);
   };
 
   const handleMarkAllPresent = (sessionDate: string) => {
@@ -299,6 +343,9 @@ export default function TeamFullTable({
       if (teamId) {
         payload.teamId = teamId;
       }
+      if (leagueId) {
+        payload.leagueId = leagueId;
+      }
       await apiClient.put(`/api/admin/updatePaymentStatus/${userId}`, payload);
       toast.success("Status updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
@@ -322,6 +369,7 @@ export default function TeamFullTable({
   return (
     <div className={`relative overflow-hidden w-full ${className ? className : "border shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mb-6"}`}>
       {/* Header Controls & Filter Bar */}
+      {!hideHeader && (
       <div className="bg-[#031549] text-white px-5 py-3.5 flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-4 text-xs font-semibold flex-1">
           <div className="flex items-center gap-2">
@@ -372,6 +420,7 @@ export default function TeamFullTable({
           </button>
         )}
       </div>
+      )}
 
       {/* Attendance Grid Table */}
       {isExpanded && (
@@ -549,11 +598,12 @@ export default function TeamFullTable({
                           return (
                             <td
                               key={sessionDate}
-                              onClick={() =>
+                              onClick={(e) =>
                                 handleToggleAttendance(
                                   row.playerId,
                                   sessionDate,
-                                  currentStatus
+                                  currentStatus,
+                                  e
                                 )
                               }
                               className="py-2 px-1.5 text-center border-l border-slate-50 dark:border-slate-800/40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -822,6 +872,31 @@ export default function TeamFullTable({
           message={`Are you sure you want to unassign ${unassignPlayer.playerName || `${unassignPlayer.firstName || ""} ${unassignPlayer.lastName || ""}`.trim() || "this player"} from ${teamName}?`}
           loading={unassignMutation.isPending}
         />
+      )}
+
+      {/* Attendance Dropdown Portal */}
+      {openAttendanceMenu && attendanceMenuPos && createPortal(
+        <div
+          id="portal-attendance-menu"
+          style={{ position: "absolute", top: attendanceMenuPos.top, left: attendanceMenuPos.left }}
+          className="z-[10000] w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-xs font-bold rounded overflow-hidden"
+        >
+          {[
+            { value: "PRESENT", label: "Present", color: "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" },
+            { value: "LATE", label: "Late", color: "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30" },
+            { value: "ABSENT", label: "Absent", color: "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" },
+            { value: "NOT_MARKED", label: "Clear", color: "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" }
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => handleSetAttendanceStatus(opt.value)}
+              className={`w-full text-left px-3 py-2 transition-colors ${opt.color} ${openAttendanceMenu.currentStatus === opt.value ? "bg-slate-50 dark:bg-slate-700" : ""}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>,
+        document.body
       )}
     </div>
   );

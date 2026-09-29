@@ -3,10 +3,45 @@ import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
-import { getAllLeagues, createLeague, updateLeague, deleteLeague, getAllTeams } from "../../api/adminApi";
+import { getAllLeagues, createLeague, updateLeague, deleteLeague, getAllTeams, getAllTerms } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { Trophy, Calendar, Image as ImageIcon, Users, Search, X, Settings2, Zap } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+
+const WEEKDAYS = [
+  { label: "Mon", full: "Monday", dayIndex: 1 },
+  { label: "Tue", full: "Tuesday", dayIndex: 2 },
+  { label: "Wed", full: "Wednesday", dayIndex: 3 },
+  { label: "Thu", full: "Thursday", dayIndex: 4 },
+  { label: "Fri", full: "Friday", dayIndex: 5 },
+  { label: "Sat", full: "Saturday", dayIndex: 6 },
+  { label: "Sun", full: "Sunday", dayIndex: 0 },
+];
+
+const getDatesForWeekday = (startDateStr: string, endDateStr: string, targetDayIndex: number): string[] => {
+  if (!startDateStr || !endDateStr) return [];
+  const [sYear, sMonth, sDay] = startDateStr.split("-").map(Number);
+  const [eYear, eMonth, eDay] = endDateStr.split("-").map(Number);
+  if (!sYear || !sMonth || !sDay || !eYear || !eMonth || !eDay) return [];
+
+  const start = new Date(sYear, sMonth - 1, sDay);
+  const end = new Date(eYear, eMonth - 1, eDay);
+  if (start > end) return [];
+
+  const result: string[] = [];
+  const current = new Date(start);
+
+  while (current <= end) {
+    if (current.getDay() === targetDayIndex) {
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, "0");
+      const d = String(current.getDate()).padStart(2, "0");
+      result.push(`${y}-${m}-${d}`);
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return result;
+};
 
 const LeagueManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -14,8 +49,6 @@ const LeagueManagement: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
-  const regStartDateRef = useRef<HTMLInputElement>(null);
-  const regEndDateRef = useRef<HTMLInputElement>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -23,15 +56,17 @@ const LeagueManagement: React.FC = () => {
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number | null>(null);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   const [formData, setFormData] = useState({
     name: "",
-    season: "2026-2027",
+    year: new Date().getFullYear().toString(),
+    term: "",
+    season: "",
     description: "",
     startDate: "",
     endDate: "",
-    registrationStartDate: "",
-    registrationEndDate: "",
     status: "UPCOMING",
     type: "NATIONAL",
     visibility: "PUBLIC",
@@ -46,10 +81,8 @@ const LeagueManagement: React.FC = () => {
     breakBetweenMatches: 15,
     numberOfFields: 1,
     startTime: "09:00",
-    groupCount: 1,
     generationType: "MANUAL" as "AUTOMATIC" | "MANUAL",
-    // Integration guide required fields
-    fee: 0,
+    fee: 0 as number | string,
     venue: "",
   });
 
@@ -92,15 +125,108 @@ const LeagueManagement: React.FC = () => {
     setSessionDates(updated);
   };
 
-  // Fetch academy teams for league enrollment
-  const { data: allTeamsData } = useQuery({
-    queryKey: ["allAcademyTeams"],
-    queryFn: () => getAllTeams(),
+  const getDataArray = (res: any) => {
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.data)) return res.data;
+    if (res && Array.isArray(res.terms)) return res.terms;
+    if (res && Array.isArray(res.teams)) return res.teams;
+    return [];
+  };
+
+  // Fetch academic terms for year filter
+  const { data: termsData } = useQuery({
+    queryKey: ["terms", formData.year],
+    queryFn: () => getAllTerms(formData.year ? Number(formData.year) : undefined),
     enabled: isModalOpen,
   });
-  const allAcademyTeams: any[] = Array.isArray(allTeamsData)
-    ? allTeamsData
-    : allTeamsData?.data || [];
+  const terms: any[] = getDataArray(termsData);
+
+  // Fetch academy teams for league enrollment (filtered by selected term)
+  const { data: allTeamsData, isLoading: teamsLoading } = useQuery({
+    queryKey: ["allAcademyTeams", formData.term],
+    queryFn: () => getAllTeams(formData.term || undefined),
+    enabled: isModalOpen,
+  });
+  const allAcademyTeams: any[] = getDataArray(allTeamsData);
+
+  const formatDateForInput = (d: any): string => {
+    if (!d) return "";
+    if (typeof d === "string") {
+      const match = d.match(/^\d{4}-\d{2}-\d{2}/);
+      if (match) return match[0];
+    }
+    try {
+      const dateObj = new Date(d);
+      if (!isNaN(dateObj.getTime())) {
+        return dateObj.toISOString().split("T")[0];
+      }
+    } catch {
+      return "";
+    }
+    return "";
+  };
+
+  const handleTermChange = (termId: string) => {
+    const selectedTermObj = terms.find((t: any) => String(t._id || t.id) === String(termId));
+    const termStart = selectedTermObj?.startDate ? formatDateForInput(selectedTermObj.startDate) : "";
+    const termEnd = selectedTermObj?.endDate ? formatDateForInput(selectedTermObj.endDate) : "";
+
+    setFormData((prev) => ({
+      ...prev,
+      term: termId,
+      season: selectedTermObj ? (selectedTermObj.name || selectedTermObj.termName || `${prev.year}`) : prev.season,
+      startDate: termStart || (termId ? "" : prev.startDate),
+      endDate: termEnd || (termId ? "" : prev.endDate),
+    }));
+    setSelectedTeamIds([]);
+
+    if (termStart && termEnd && selectedDayOfWeek !== null) {
+      const dates = getDatesForWeekday(termStart, termEnd, selectedDayOfWeek);
+      if (dates.length > 0) {
+        setFormData((prev) => ({ ...prev, numberOfRounds: dates.length }));
+        setSessionDates(dates);
+        return;
+      }
+    }
+
+    if (termStart) {
+      setSessionDates(() => {
+        const rounds = formData.numberOfRounds || 1;
+        const arr: string[] = [];
+        for (let i = 0; i < rounds; i++) {
+          try {
+            const d = new Date(termStart);
+            d.setDate(d.getDate() + i * 7);
+            arr.push(d.toISOString().split("T")[0]);
+          } catch {
+            arr.push(termStart);
+          }
+        }
+        return arr;
+      });
+    }
+  };
+
+  const handleSelectWeekday = (dayIndex: number) => {
+    if (!formData.startDate || !formData.endDate) {
+      toast.error("Please set both Start Date and End Date first.");
+      return;
+    }
+
+    const dates = getDatesForWeekday(formData.startDate, formData.endDate, dayIndex);
+    if (dates.length === 0) {
+      const dayName = WEEKDAYS.find((w) => w.dayIndex === dayIndex)?.full || "selected day";
+      toast.error(`No ${dayName}s found between ${formData.startDate} and ${formData.endDate}.`);
+      return;
+    }
+
+    setSelectedDayOfWeek(dayIndex);
+    setFormData((prev) => ({ ...prev, numberOfRounds: dates.length }));
+    setSessionDates(dates);
+
+    const dayName = WEEKDAYS.find((w) => w.dayIndex === dayIndex)?.full || "selected day";
+    toast.success(`Found ${dates.length} ${dayName}s! Automatically configured ${dates.length} rounds.`);
+  };
 
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdownId(null);
@@ -114,12 +240,6 @@ const LeagueManagement: React.FC = () => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${baseUrl}${cleanPath}`;
-  };
-
-  const getDataArray = (res: any) => {
-    if (Array.isArray(res)) return res;
-    if (res && Array.isArray(res.data)) return res.data;
-    return [];
   };
 
   const { data: leaguesData, isLoading: loading } = useQuery({
@@ -159,14 +279,15 @@ const LeagueManagement: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
+    const currentYear = new Date().getFullYear().toString();
     setFormData({
       name: "",
-      season: "2026-2027",
+      year: currentYear,
+      term: "",
+      season: "",
       description: "",
       startDate: "",
       endDate: "",
-      registrationStartDate: "",
-      registrationEndDate: "",
       status: "UPCOMING",
       type: "NATIONAL",
       visibility: "PUBLIC",
@@ -180,7 +301,6 @@ const LeagueManagement: React.FC = () => {
       breakBetweenMatches: 15,
       numberOfFields: 1,
       startTime: "09:00",
-      groupCount: 1,
       generationType: "MANUAL" as "AUTOMATIC" | "MANUAL",
       fee: 0,
       venue: "",
@@ -192,27 +312,24 @@ const LeagueManagement: React.FC = () => {
     setPreviewImage(null);
     setIsEditing(false);
     setSelectedLeagueId(null);
+    setSelectedDayOfWeek(null);
+    setCurrentStep(1);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (league: any) => {
     const rounds = league.numberOfRounds ?? 1;
+    const termId = typeof league.term === "object" ? league.term?._id : (league.term || league.termId || "");
+    const yearVal = league.year || league.term?.year || (league.term?.startDate ? new Date(league.term.startDate).getFullYear().toString() : new Date().getFullYear().toString());
+
     setFormData({
       name: league.name || "",
-      season: league.season || "2026-2027",
+      year: yearVal ? yearVal.toString() : new Date().getFullYear().toString(),
+      term: termId || "",
+      season: league.season || "",
       description: league.description || "",
-      startDate: league.startDate ? new Date(league.startDate).toISOString().split('T')[0] : "",
-      endDate: league.endDate ? new Date(league.endDate).toISOString().split('T')[0] : "",
-      registrationStartDate: league.registrationStartDate
-        ? new Date(league.registrationStartDate).toISOString().split('T')[0]
-        : league.registrationOpenDate
-          ? new Date(league.registrationOpenDate).toISOString().split('T')[0]
-          : "",
-      registrationEndDate: league.registrationEndDate
-        ? new Date(league.registrationEndDate).toISOString().split('T')[0]
-        : league.registrationCloseDate
-          ? new Date(league.registrationCloseDate).toISOString().split('T')[0]
-          : "",
+      startDate: league.startDate ? formatDateForInput(league.startDate) : (league.term?.startDate ? formatDateForInput(league.term.startDate) : ""),
+      endDate: league.endDate ? formatDateForInput(league.endDate) : (league.term?.endDate ? formatDateForInput(league.term.endDate) : ""),
       status: (league.status || "UPCOMING").toUpperCase(),
       type: (league.type || league.leagueType || league.competitionScope || "NATIONAL").toUpperCase(),
       visibility: (league.visibility || "PUBLIC").toUpperCase(),
@@ -226,7 +343,6 @@ const LeagueManagement: React.FC = () => {
       breakBetweenMatches: league.breakBetweenMatches ?? 15,
       numberOfFields: league.numberOfFields ?? 1,
       startTime: league.startTime || "09:00",
-      groupCount: league.groupCount ?? 1,
       generationType: (league.generationType || "MANUAL") as "AUTOMATIC" | "MANUAL",
       fee: league.fee ?? 0,
       venue: league.venue || "",
@@ -260,6 +376,8 @@ const LeagueManagement: React.FC = () => {
     setPreviewImage(getImageUrl(league.logo));
     setIsEditing(true);
     setSelectedLeagueId(league._id);
+    setSelectedDayOfWeek(null);
+    setCurrentStep(1);
     setIsModalOpen(true);
   };
 
@@ -297,6 +415,7 @@ const LeagueManagement: React.FC = () => {
 
   const handleSelectAllTeams = () => {
     const allFilteredIds = filteredAcademyTeams.map((t) => t._id);
+    if (allFilteredIds.length === 0) return;
     const allSelected = allFilteredIds.every((id) => selectedTeamIds.includes(id));
     if (allSelected) {
       setSelectedTeamIds((prev) => prev.filter((id) => !allFilteredIds.includes(id)));
@@ -305,21 +424,61 @@ const LeagueManagement: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateStep1 = () => {
+    if (!formData.name.trim()) {
+      toast.error("Please enter a League Name");
+      return false;
+    }
+    if (!formData.term) {
+      toast.error("Please select an Academic Term");
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep2 = () => {
+    const validDates = sessionDates.filter(Boolean);
+    if (validDates.length < formData.numberOfRounds) {
+      toast.error(`Please select a session date for all ${formData.numberOfRounds} round(s).`);
+      return false;
+    }
+    if (formData.fee === "" || isNaN(Number(formData.fee)) || Number(formData.fee) < 0) {
+      toast.error("Please enter a valid numeric value for the League Fee.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+
+    if (currentStep === 1) {
+      if (validateStep1()) setCurrentStep(2);
+      return;
+    }
+    if (currentStep === 2) {
+      if (validateStep2()) setCurrentStep(3);
+      return;
+    }
+
+    if (!validateStep1()) {
+      setCurrentStep(1);
+      return;
+    }
+    if (!validateStep2()) {
+      setCurrentStep(2);
+      return;
+    }
 
     // Validate sessionDates — must match numberOfRounds
     const validDates = sessionDates.filter(Boolean);
     if (validDates.length < formData.numberOfRounds) {
       toast.error(`Please select a session date for all ${formData.numberOfRounds} round(s).`);
+      setCurrentStep(2);
       return;
     }
 
-    // Validate AUTOMATIC mode requires at least 2 teams
-    if (formData.generationType === "AUTOMATIC" && selectedTeamIds.length < 2) {
-      toast.error("AUTOMATIC mode requires at least 2 participating teams.");
-      return;
-    }
+
 
     // Derive startDate / endDate from sessionDates if not manually set
     let effectiveStart = formData.startDate;
@@ -332,12 +491,19 @@ const LeagueManagement: React.FC = () => {
 
     const payload = new FormData();
     payload.append("name", formData.name);
-    payload.append("season", formData.season);
+    if (formData.year) payload.append("year", formData.year);
+    if (formData.term) {
+      payload.append("term", formData.term);
+      payload.append("termId", formData.term);
+    }
+    const selectedTermObj = terms.find((t: any) => (t._id || t.id) === formData.term);
+    const seasonVal = selectedTermObj?.name || formData.season || (formData.year ? `${formData.year}` : "");
+    if (seasonVal) {
+      payload.append("season", seasonVal);
+    }
     payload.append("description", formData.description);
     if (effectiveStart) payload.append("startDate", effectiveStart);
     if (effectiveEnd) payload.append("endDate", effectiveEnd);
-    if (formData.registrationStartDate) payload.append("registrationStartDate", formData.registrationStartDate);
-    if (formData.registrationEndDate) payload.append("registrationEndDate", formData.registrationEndDate);
     payload.append("status", formData.status);
     payload.append("type", formData.type);
     payload.append("competitionScope", formData.type);
@@ -354,7 +520,6 @@ const LeagueManagement: React.FC = () => {
     payload.append("breakBetweenMatches", String(formData.breakBetweenMatches));
     payload.append("numberOfFields", String(formData.numberOfFields));
     payload.append("startTime", formData.startTime);
-    payload.append("groupCount", String(formData.groupCount));
     payload.append("generationType", formData.generationType);
     // Integration guide required fields
     payload.append("fee", String(formData.fee));
@@ -387,6 +552,7 @@ const LeagueManagement: React.FC = () => {
   const filteredLeagues = leagues.filter((league: any) =>
     league.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     league.season?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (league.term?.name || league.termName || "")?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (league.type || league.leagueType || "")?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     league.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -415,22 +581,24 @@ const LeagueManagement: React.FC = () => {
             <thead>
               <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                 <th className="py-3 px-4 min-w-[200px]">League Detail</th>
-                <th className="py-3 px-4 min-w-[100px]">Season</th>
+                <th className="py-3 px-4 min-w-[100px]">Term / Season</th>
                 <th className="py-3 px-4 min-w-[140px]">Type</th>
+                <th className="py-3 px-4 min-w-[100px]">Status</th>
+                <th className="py-3 px-4 min-w-[100px]">Teams</th>
                 <th className="py-3 px-4 min-w-[150px]">Dates</th>
                 <th className="py-3 px-4 w-[50px] text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center py-20">
+                <tr><td colSpan={7} className="text-center py-20">
                   <div className="flex flex-col items-center gap-3 text-gray-400">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
                     <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Leagues...</span>
                   </div>
                 </td></tr>
               ) : filteredLeagues.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-20 text-gray-500 font-medium italic">No leagues found.</td></tr>
+                <tr><td colSpan={7} className="text-center py-20 text-gray-500 font-medium italic">No leagues found.</td></tr>
               ) : (
                 filteredLeagues.map((league: any) => (
                   <tr
@@ -456,7 +624,7 @@ const LeagueManagement: React.FC = () => {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-bold tracking-tight">
                         <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-none border border-slate-200 dark:border-slate-700 uppercase">
-                          {league.season || "N/A"}
+                          {league.term?.name || league.termName || league.season || "N/A"}
                         </span>
                       </div>
                     </td>
@@ -483,6 +651,26 @@ const LeagueManagement: React.FC = () => {
                           </span>
                         );
                       })()}
+                    </td>
+                    <td className="py-4 px-4">
+                      {(() => {
+                        const s = (league.status || "DRAFT").toUpperCase();
+                        let badgeClass = "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+                        if (s === "ACTIVE") badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/60";
+                        else if (s === "UPCOMING") badgeClass = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60";
+                        else if (s === "COMPLETED") badgeClass = "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/60";
+                        return (
+                          <span className={`px-2 py-1 text-[10px] font-bold rounded-none border uppercase tracking-wider ${badgeClass}`}>
+                            {s}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <Users size={14} className="text-slate-400" />
+                        <span>{league.teams?.length || 0}</span>
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex flex-col gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
@@ -553,29 +741,88 @@ const LeagueManagement: React.FC = () => {
         className="max-w-[920px] max-h-[92vh] overflow-y-auto p-6 lg:p-8 rounded-xl shadow-2xl"
         noBackgroundBlur={true}
       >
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-xl text-brand-600">
-            <Trophy size={24} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-xl text-brand-600">
+              <Trophy size={24} />
+            </div>
+            <div>
+              <h4 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
+                {isEditing ? "Modify League" : "Create New League"}
+              </h4>
+              <p className="text-xs text-slate-500 font-medium">
+                Step {currentStep} of 3: {
+                  currentStep === 1
+                    ? "Basic Information & Logo"
+                    : currentStep === 2
+                    ? "Fixtures & Scoring Rules"
+                    : "Participating Teams"
+                }
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
-              {isEditing ? "Modify League" : "Create New League"}
-            </h4>
-            <p className="text-xs text-slate-500 font-medium">
-              Configure competition scope, schedule timelines, teams, and ladder rules.
-            </p>
+
+          {/* Stepper Tabs */}
+          <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-100/70 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700/80">
+            {[
+              { step: 1 as const, label: "1. Basic Info & Logo" },
+              { step: 2 as const, label: "2. Fixtures & Rules" },
+              { step: 3 as const, label: "3. Participating Teams" },
+            ].map((s) => {
+              const isCurrent = currentStep === s.step;
+              const isDone = currentStep > s.step;
+
+              return (
+                <button
+                  key={s.step}
+                  type="button"
+                  onClick={() => {
+                    if (s.step === 1) setCurrentStep(1);
+                    else if (s.step === 2) {
+                      if (validateStep1()) setCurrentStep(2);
+                    } else if (s.step === 3) {
+                      if (validateStep1() && validateStep2()) setCurrentStep(3);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isCurrent
+                      ? "bg-brand-600 text-white shadow-xs"
+                      : isDone
+                      ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/40"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-extrabold ${
+                    isCurrent ? "bg-white text-brand-600" : isDone ? "bg-brand-600 text-white" : "bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                  }`}>
+                    {isDone ? "✓" : s.step}
+                  </span>
+                  <span>{s.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Section 1: Basic Information */}
-          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-              <Trophy size={16} className="text-brand-600" />
-              <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                Basic Information
-              </h5>
-            </div>
+        <div
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
+              e.preventDefault();
+            }
+          }}
+          className="space-y-6"
+        >
+          {/* STEP 1: Basic Information & Logo */}
+          {currentStep === 1 && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              {/* Section 1: Basic Information */}
+              <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <Trophy size={16} className="text-brand-600" />
+                  <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    Basic Information
+                  </h5>
+                </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -594,16 +841,42 @@ const LeagueManagement: React.FC = () => {
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Season <span className="text-rose-500">*</span>
+                  Year
                 </label>
-                <input
-                  type="text"
-                  value={formData.season}
-                  onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
-                  placeholder="e.g. 2026-2027"
+                <select
+                  value={formData.year}
+                  onChange={(e) => {
+                    setFormData({ ...formData, year: e.target.value, term: "", startDate: "", endDate: "" });
+                    setSelectedTeamIds([]);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
+                >
+                  <option value="">All Years</option>
+                  {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Academic Term <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.term}
+                  onChange={(e) => handleTermChange(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
                   required
-                />
+                >
+                  <option value="">Select Academic Term</option>
+                  {terms.map((t: any) => (
+                    <option key={t._id || t.id} value={t._id || t.id}>
+                      {t.name || t.termName || t.title || "Term"}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -668,16 +941,81 @@ const LeagueManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 2: Schedule & Registration Timelines */}
+              {/* League Logo / Crest */}
+              <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <ImageIcon size={16} className="text-indigo-600" />
+                  <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    League Logo / Crest (leagueLogo)
+                  </h5>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-5">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center cursor-pointer overflow-hidden group hover:border-brand-500 transition-colors shrink-0 shadow-xs"
+                  >
+                    {previewImage ? (
+                      <img src={previewImage} alt="Logo preview" className="w-full h-full object-contain p-1.5" />
+                    ) : (
+                      <div className="flex flex-col items-center text-slate-400 group-hover:text-brand-500 transition-colors">
+                        <ImageIcon className="w-7 h-7 mb-1" />
+                        <span className="text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="modal-league-logo"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor="modal-league-logo"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors shadow-xs"
+                      >
+                        <ImageIcon size={13} />
+                        <span>{previewImage ? "Change Logo" : "Select your logo"}</span>
+                      </label>
+
+                      {previewImage && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold dark:border-rose-900/40 dark:hover:bg-rose-950/20 transition-colors"
+                        >
+                          <X size={13} />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      PNG, JPG, or SVG recommended. Displays in header, ladder, and standings.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Fixtures & Scoring Rules */}
+          {currentStep === 2 && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              {/* Section 2: Schedule Timelines */}
           <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               <Calendar size={16} className="text-emerald-600" />
               <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                Tournament & Registration Schedule
+                Tournament Schedule
               </h5>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   Start Date
@@ -687,7 +1025,17 @@ const LeagueManagement: React.FC = () => {
                     type="date"
                     ref={startDateRef}
                     value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      setFormData((prev) => ({ ...prev, startDate: newStart }));
+                      if (selectedDayOfWeek !== null && newStart && formData.endDate) {
+                        const dates = getDatesForWeekday(newStart, formData.endDate, selectedDayOfWeek);
+                        if (dates.length > 0) {
+                          setFormData((prev) => ({ ...prev, numberOfRounds: dates.length }));
+                          setSessionDates(dates);
+                        }
+                      }
+                    }}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   />
                   <div
@@ -714,7 +1062,17 @@ const LeagueManagement: React.FC = () => {
                     type="date"
                     ref={endDateRef}
                     value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    onChange={(e) => {
+                      const newEnd = e.target.value;
+                      setFormData((prev) => ({ ...prev, endDate: newEnd }));
+                      if (selectedDayOfWeek !== null && formData.startDate && newEnd) {
+                        const dates = getDatesForWeekday(formData.startDate, newEnd, selectedDayOfWeek);
+                        if (dates.length > 0) {
+                          setFormData((prev) => ({ ...prev, numberOfRounds: dates.length }));
+                          setSessionDates(dates);
+                        }
+                      }
+                    }}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   />
                   <div
@@ -724,60 +1082,6 @@ const LeagueManagement: React.FC = () => {
                         endDateRef.current?.showPicker();
                       } catch {
                         endDateRef.current?.focus();
-                      }
-                    }}
-                  >
-                    <Calendar className="text-slate-400 w-3.5 h-3.5" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Registration Start Date
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    ref={regStartDateRef}
-                    value={formData.registrationStartDate}
-                    onChange={(e) => setFormData({ ...formData, registrationStartDate: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
-                  />
-                  <div
-                    className="absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center cursor-pointer z-10"
-                    onClick={() => {
-                      try {
-                        regStartDateRef.current?.showPicker();
-                      } catch {
-                        regStartDateRef.current?.focus();
-                      }
-                    }}
-                  >
-                    <Calendar className="text-slate-400 w-3.5 h-3.5" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Registration End Date
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    ref={regEndDateRef}
-                    value={formData.registrationEndDate}
-                    onChange={(e) => setFormData({ ...formData, registrationEndDate: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
-                  />
-                  <div
-                    className="absolute right-0 top-0 bottom-0 w-10 flex items-center justify-center cursor-pointer z-10"
-                    onClick={() => {
-                      try {
-                        regEndDateRef.current?.showPicker();
-                      } catch {
-                        regEndDateRef.current?.focus();
                       }
                     }}
                   >
@@ -798,42 +1102,6 @@ const LeagueManagement: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {/* Generation Type */}
-              <div className="md:col-span-3">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Generation Mode <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex gap-4">
-                  <label className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${formData.generationType === "AUTOMATIC" ? "border-brand-500 bg-brand-50/50 dark:bg-brand-950/20" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"}`}>
-                    <input
-                      type="radio"
-                      name="generationType"
-                      value="AUTOMATIC"
-                      checked={formData.generationType === "AUTOMATIC"}
-                      onChange={() => setFormData({ ...formData, generationType: "AUTOMATIC" })}
-                      className="w-4 h-4 text-brand-600 focus:ring-brand-500"
-                    />
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">AUTOMATIC Mode</div>
-                      <div className="text-[10px] text-slate-500">Automatically generates fixtures immediately after creating the league.</div>
-                    </div>
-                  </label>
-                  <label className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${formData.generationType === "MANUAL" ? "border-brand-500 bg-brand-50/50 dark:bg-brand-950/20" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"}`}>
-                    <input
-                      type="radio"
-                      name="generationType"
-                      value="MANUAL"
-                      checked={formData.generationType === "MANUAL"}
-                      onChange={() => setFormData({ ...formData, generationType: "MANUAL" })}
-                      className="w-4 h-4 text-brand-600 focus:ring-brand-500"
-                    />
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">MANUAL Mode</div>
-                      <div className="text-[10px] text-slate-500">Creates the league and adds teams. Generate fixtures later.</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
 
               {/* Fixture Format */}
               <div>
@@ -924,21 +1192,6 @@ const LeagueManagement: React.FC = () => {
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                 />
               </div>
-
-              {/* Group Count */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Number of Groups
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  value={formData.groupCount}
-                  onChange={(e) => setFormData({ ...formData, groupCount: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
-                  placeholder="e.g. 1"
-                />
-              </div>
             </div>
 
             {/* League Fee & Venue */}
@@ -952,9 +1205,10 @@ const LeagueManagement: React.FC = () => {
                   min={0}
                   step="any"
                   value={formData.fee}
-                  onChange={(e) => setFormData({ ...formData, fee: Number(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, fee: e.target.value === "" ? "" : Number(e.target.value) })}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   placeholder="e.g. 150 (0 = free)"
+                  required
                 />
                 <p className="text-[10px] text-slate-400 mt-1">If &gt; 0, invoices are auto-generated for UNPAID players.</p>
               </div>
@@ -969,6 +1223,70 @@ const LeagueManagement: React.FC = () => {
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   placeholder="e.g. Olympic Park Arena"
                 />
+              </div>
+            </div>
+
+            {/* Weekday Recurrence Match Day Selector */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <Calendar size={13} className="text-brand-600" />
+                    Auto-Generate Rounds By Match Day
+                  </span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Select a match day (Monday – Sunday) across the Start Date to End Date range. Admin can still customize or override any round below.
+                  </p>
+                </div>
+                {selectedDayOfWeek !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDayOfWeek(null)}
+                    className="text-[10px] font-bold text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-white underline cursor-pointer self-start sm:self-auto"
+                  >
+                    Clear Day Selection
+                  </button>
+                )}
+              </div>
+
+              {/* Day Tabs: Monday to Sunday */}
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                {WEEKDAYS.map((wd) => {
+                  const isSelected = selectedDayOfWeek === wd.dayIndex;
+                  let dayCount: number | null = null;
+                  if (formData.startDate && formData.endDate) {
+                    try {
+                      dayCount = getDatesForWeekday(formData.startDate, formData.endDate, wd.dayIndex).length;
+                    } catch {}
+                  }
+
+                  return (
+                    <button
+                      key={wd.dayIndex}
+                      type="button"
+                      onClick={() => handleSelectWeekday(wd.dayIndex)}
+                      title={`Generate rounds for all ${wd.full}s`}
+                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer shadow-xs ${
+                        isSelected
+                          ? "bg-brand-600 text-white border-brand-600 ring-2 ring-brand-500/30 font-black scale-[1.02]"
+                          : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:bg-brand-50/40 dark:hover:bg-brand-950/20 font-bold"
+                      }`}
+                    >
+                      <span className="text-xs sm:text-sm">{wd.label}</span>
+                      <span
+                        className={`text-[9px] mt-0.5 font-extrabold px-1.5 py-0.5 rounded-full ${
+                          isSelected
+                            ? "bg-white/25 text-white"
+                            : dayCount !== null && dayCount > 0
+                            ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                            : "text-slate-300 dark:text-slate-600"
+                        }`}
+                      >
+                        {dayCount !== null ? `${dayCount} ${dayCount === 1 ? "rnd" : "rnds"}` : "-"}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -988,24 +1306,40 @@ const LeagueManagement: React.FC = () => {
                   {sessionDates.filter(Boolean).length} / {formData.numberOfRounds} set
                 </span>
               </div>
-              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                {sessionDates.map((dateVal, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-1.5 min-w-[90px]">
-                      <span className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-300 text-[10px] font-bold flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Round {idx + 1}</span>
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {sessionDates.map((dateVal, idx) => {
+                  let formattedDay = "";
+                  if (dateVal) {
+                    try {
+                      const [y, m, d] = dateVal.split("-").map(Number);
+                      const dt = new Date(y, m - 1, d);
+                      formattedDay = dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+                    } catch {}
+                  }
+
+                  return (
+                    <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-1.5 min-w-[90px]">
+                        <span className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-950 text-brand-600 dark:text-brand-300 text-[10px] font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Round {idx + 1}</span>
+                      </div>
+                      <input
+                        type="date"
+                        value={dateVal}
+                        onChange={(e) => handleSessionDateChange(idx, e.target.value)}
+                        className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold dark:text-white focus:border-brand-500 outline-none cursor-pointer"
+                        required
+                      />
+                      {formattedDay && (
+                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 min-w-[85px] text-right shrink-0">
+                          {formattedDay}
+                        </span>
+                      )}
                     </div>
-                    <input
-                      type="date"
-                      value={dateVal}
-                      onChange={(e) => handleSessionDateChange(idx, e.target.value)}
-                      className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold dark:text-white focus:border-brand-500 outline-none cursor-pointer"
-                      required
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -1026,14 +1360,9 @@ const LeagueManagement: React.FC = () => {
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
                 🕘 {formData.startTime}
               </span>
-              {formData.fee > 0 && (
+              {Number(formData.fee) > 0 && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
                   💰 ${formData.fee}/player
-                </span>
-              )}
-              {formData.groupCount > 1 && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
-                  {formData.groupCount} Groups
                 </span>
               )}
             </div>
@@ -1108,183 +1437,197 @@ const LeagueManagement: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Section 4: Participating Teams (teams) */}
-          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-blue-600" />
-                <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                  Participating Teams
-                </h5>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">
-                  {selectedTeamIds.length} Selected
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSelectAllTeams}
-                  className="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline"
-                >
-                  {filteredAcademyTeams.every((t) => selectedTeamIds.includes(t._id))
-                    ? "Deselect All"
-                    : "Select All"}
-                </button>
-              </div>
             </div>
+          )}
 
-            {/* Team Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
-              <input
-                type="text"
-                placeholder="Search academy teams to enroll..."
-                value={teamSearchQuery}
-                onChange={(e) => setTeamSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
-              />
-            </div>
-
-            {/* Scrollable Team List */}
-            <div className="max-h-48 overflow-y-auto no-scrollbar border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700/50">
-              {filteredAcademyTeams.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 text-xs italic">
-                  No academy teams found.
-                </div>
-              ) : (
-                filteredAcademyTeams.map((team: any) => {
-                  const isSelected = selectedTeamIds.includes(team._id);
-                  const tName = team.teamName || team.name || "Academy Team";
-                  const coachName =
-                    typeof team.coach === "object" && team.coach?.name
-                      ? team.coach.name
-                      : typeof team.coach === "string"
-                        ? team.coach
-                        : "Unassigned";
-
-                  return (
-                    <div
-                      key={team._id}
-                      onClick={() => toggleTeamSelect(team._id)}
-                      className={`flex items-center justify-between px-3.5 py-2.5 cursor-pointer transition-colors ${isSelected
-                          ? "bg-brand-50/50 dark:bg-brand-950/20"
-                          : "hover:bg-slate-50 dark:hover:bg-slate-700/30"
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => { }} // handled by parent onClick
-                          className="w-4 h-4 rounded text-brand-600 border-slate-300 focus:ring-brand-500"
-                        />
-                        <div>
-                          <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                            {tName}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            Coach: {coachName} {team.players?.length ? `• ${team.players.length} players` : ""}
-                          </span>
-                        </div>
-                      </div>
-
-                      <span className="text-[10px] font-mono text-slate-400">
-                        {team._id.slice(-6)}
+          {/* STEP 3: Participating Teams */}
+          {currentStep === 3 && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              {/* Section 4: Participating Teams (teams) */}
+              <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Users size={16} className="text-blue-600 shrink-0" />
+                    <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                      Participating Teams
+                    </h5>
+                    {formData.term && (
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        • {terms.find((t: any) => String(t._id || t.id) === String(formData.term))?.name || "Selected Term"}
                       </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Section 5: League Logo (leagueLogo) */}
-          <div className="bg-slate-50/60 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-              <ImageIcon size={16} className="text-indigo-600" />
-              <h5 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                League Logo / Crest (leagueLogo)
-              </h5>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-5">
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center cursor-pointer overflow-hidden group hover:border-brand-500 transition-colors shrink-0 shadow-xs"
-              >
-                {previewImage ? (
-                  <img src={previewImage} alt="Logo preview" className="w-full h-full object-contain p-1.5" />
-                ) : (
-                  <div className="flex flex-col items-center text-slate-400 group-hover:text-brand-500 transition-colors">
-                    <ImageIcon className="w-7 h-7 mb-1" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                    )}
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">
+                      {selectedTeamIds.length} Selected
+                    </span>
                   </div>
-                )}
-              </div>
 
-              <div className="flex flex-col gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="modal-league-logo"
-                />
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="modal-league-logo"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors shadow-xs"
-                  >
-                    <ImageIcon size={13} />
-                    <span>{previewImage ? "Change Logo" : "Select your logo"}</span>
-                  </label>
-
-                  {previewImage && (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={handleRemoveImage}
-                      className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold dark:border-rose-900/40 dark:hover:bg-rose-950/20 transition-colors"
+                      onClick={handleSelectAllTeams}
+                      className="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline cursor-pointer"
                     >
-                      <X size={13} />
-                      <span>Remove</span>
+                      {filteredAcademyTeams.length > 0 &&
+                      filteredAcademyTeams.every((t) => selectedTeamIds.includes(t._id))
+                        ? "Deselect All"
+                        : "Select All"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Team Search filter */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                  <input
+                    type="text"
+                    placeholder="Search academy teams to enroll..."
+                    value={teamSearchQuery}
+                    onChange={(e) => setTeamSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                      }
+                    }}
+                    className="w-full pl-9 pr-8 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
+                  />
+                  {teamSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setTeamSearchQuery("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                    >
+                      <X size={12} />
                     </button>
                   )}
                 </div>
-                <span className="text-[11px] text-slate-400">
-                  PNG, JPG, or SVG recommended. Displays in header, ladder, and standings.
-                </span>
+
+                {/* Scrollable Team List */}
+                <div className="max-h-64 sm:max-h-72 overflow-y-auto no-scrollbar border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700/50">
+                  {!formData.term ? (
+                    <div className="py-8 text-center text-slate-400 text-xs italic">
+                      Please select an Academic Term in Step 1 to view available teams.
+                    </div>
+                  ) : teamsLoading ? (
+                    <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
+                      <span>Loading teams for selected term...</span>
+                    </div>
+                  ) : filteredAcademyTeams.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400 text-xs italic">
+                      {allAcademyTeams.length === 0
+                        ? "No academy teams found for this term."
+                        : "No teams match your search query."}
+                    </div>
+                  ) : (
+                    filteredAcademyTeams.map((team: any) => {
+                      const isSelected = selectedTeamIds.includes(team._id);
+                      const tName = team.teamName || team.name || "Academy Team";
+                      const coachName =
+                        typeof team.coach === "object" && team.coach?.name
+                          ? team.coach.name
+                          : typeof team.coach === "string"
+                            ? team.coach
+                            : "Unassigned";
+
+                      return (
+                        <div
+                          key={team._id}
+                          onClick={() => toggleTeamSelect(team._id)}
+                          className={`flex items-center justify-between px-3.5 py-2.5 cursor-pointer transition-colors select-none ${
+                            isSelected
+                              ? "bg-brand-50/70 dark:bg-brand-950/30 border-l-2 border-brand-500"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                toggleTeamSelect(team._id);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded text-brand-600 border-slate-300 focus:ring-brand-500 cursor-pointer"
+                            />
+                            <div>
+                              <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                                {tName}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                Coach: {coachName} {team.players?.length ? `• ${team.players.length} players` : ""}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {team._id ? team._id.slice(-6) : ""}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
+
             </div>
-          </div>
+          )}
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Discard
-            </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="px-8 flex items-center gap-2"
-            >
-              <Trophy size={14} />
-              <span>
-                {createMutation.isPending || updateMutation.isPending
-                  ? "Committing..."
-                  : isEditing
-                    ? "Save Changes"
-                    : "Create League"}
-              </span>
-            </Button>
+          <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div>
+              {currentStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep((prev) => (prev > 1 ? (prev - 1) as 1 | 2 | 3 : 1))}
+                  className="px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  {currentStep === 3 ? "← Back to Step 2" : "← Back"}
+                </button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Discard
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {currentStep < 3 ? (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep === 1 && validateStep1()) setCurrentStep(2);
+                    else if (currentStep === 2 && validateStep2()) setCurrentStep(3);
+                  }}
+                  className="px-6 flex items-center gap-2"
+                >
+                  <span>{currentStep === 1 ? "Next: Fixtures & Rules" : "Next: Select Teams"}</span>
+                  <span>→</span>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="px-8 flex items-center gap-2 ml-10 transition-all duration-300"
+                >
+                  <Trophy size={14} />
+                  <span>
+                    {createMutation.isPending || updateMutation.isPending
+                      ? "Committing..."
+                      : isEditing
+                        ? "Save Changes"
+                        : "Create League"}
+                  </span>
+                </Button>
+              )}
+            </div>
           </div>
-        </form>
+        </div>
       </Modal>
 
       <ConfirmDeleteModal

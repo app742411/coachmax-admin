@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Link, useLocation } from "react-router";
 import { ChevronDownIcon, HorizontaLDots } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import { Trophy, Shield, Calendar, ClipboardList, Copy } from "lucide-react";
+import { Trophy, Shield, ClipboardList, Copy } from "lucide-react";
 import { useCategories } from "../hooks/useCategories";
 
 type NavItem = {
@@ -222,12 +222,6 @@ const AppSidebar: React.FC = () => {
           icon: <Shield size={18} />,
           path: "/teams"
         },
-        {
-          name: "Fixtures",
-          icon: <Calendar size={18} />,
-          path: "/fixtures"
-        },
-
         {
           name: "Finance",
           icon: <GridIcon />,

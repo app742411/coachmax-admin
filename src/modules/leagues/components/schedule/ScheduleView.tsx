@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getTeamPlayers } from "../../../../api/adminApi";
 import {
   CalendarDays,
   Plus,
@@ -19,7 +21,7 @@ import {
   Info,
   ShieldCheck,
 } from "lucide-react";
-import { Match, MatchStatus, GenerateFixturesResponse } from "../../types/league";
+import { Match, MatchStatus, GenerateFixturesResponse, MatchGoal } from "../../types/league";
 import {
   useLeagueMatches,
   useCreateMatch,
@@ -137,6 +139,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
 
+  // Result modal tab state
+  const [activeResultTab, setActiveResultTab] = useState<"DETAILS" | "GOALS">("DETAILS");
+
   // Add Match Form
   const [addForm, setAddForm] = useState({
     round: 1,
@@ -186,7 +191,39 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     awayFouls: 0,
     homeYellowCards: 0,
     awayYellowCards: 0,
+    goals: [] as MatchGoal[],
   });
+
+  // Fetch team players for Goals & Assists UI when modal is open
+  const { data: homeTeamPlayers } = useQuery({
+    queryKey: ["teamPlayers", selectedMatch?.homeTeam?._id],
+    queryFn: () => getTeamPlayers(selectedMatch!.homeTeam._id),
+    enabled: !!selectedMatch?.homeTeam?._id && isResultModalOpen && activeResultTab === "GOALS",
+  });
+
+  const { data: awayTeamPlayers } = useQuery({
+    queryKey: ["teamPlayers", selectedMatch?.awayTeam?._id],
+    queryFn: () => getTeamPlayers(selectedMatch!.awayTeam._id),
+    enabled: !!selectedMatch?.awayTeam?._id && isResultModalOpen && activeResultTab === "GOALS",
+  });
+
+  const homePlayers = useMemo(() => {
+    if (!homeTeamPlayers) return [];
+    if (Array.isArray(homeTeamPlayers)) return homeTeamPlayers;
+    if (Array.isArray(homeTeamPlayers.data)) return homeTeamPlayers.data;
+    if (Array.isArray(homeTeamPlayers.players)) return homeTeamPlayers.players;
+    if (Array.isArray(homeTeamPlayers.data?.players)) return homeTeamPlayers.data.players;
+    return [];
+  }, [homeTeamPlayers]);
+
+  const awayPlayers = useMemo(() => {
+    if (!awayTeamPlayers) return [];
+    if (Array.isArray(awayTeamPlayers)) return awayTeamPlayers;
+    if (Array.isArray(awayTeamPlayers.data)) return awayTeamPlayers.data;
+    if (Array.isArray(awayTeamPlayers.players)) return awayTeamPlayers.players;
+    if (Array.isArray(awayTeamPlayers.data?.players)) return awayTeamPlayers.data.players;
+    return [];
+  }, [awayTeamPlayers]);
 
   // Group matches by round
   const groupedRounds = useMemo(() => {
@@ -306,7 +343,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
       awayFouls: ms?.awayFouls ?? 0,
       homeYellowCards: ms?.homeYellowCards ?? 0,
       awayYellowCards: ms?.awayYellowCards ?? 0,
+      goals: (match.goals || []).map((g: any) => ({
+        id: g._id || g.id,
+        teamId: typeof g.team === 'object' && g.team ? g.team._id : (g.teamId || g.team),
+        scorerId: typeof g.scorer === 'object' && g.scorer ? g.scorer._id : (g.scorerId || g.scorer),
+        assistId: typeof g.assist === 'object' && g.assist ? g.assist._id : (g.assistId || g.assist),
+        minute: g.minute,
+      })),
     });
+    setActiveResultTab("DETAILS");
     setActionMenu(null);
     setIsResultModalOpen(true);
   };
@@ -482,14 +527,34 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
       }
       : undefined;
 
+    let payloadHomeScore = Number(resultForm.homeScore);
+    let payloadAwayScore = Number(resultForm.awayScore);
+    let payloadGoals: MatchGoal[] | undefined = undefined;
+
+    if (resultForm.goals && resultForm.goals.length > 0) {
+      // Force scores to match goal objects to prevent 400 Bad Request
+      payloadHomeScore = resultForm.goals.filter(g => g.teamId === selectedMatch.homeTeam._id).length;
+      payloadAwayScore = resultForm.goals.filter(g => g.teamId === selectedMatch.awayTeam._id).length;
+      payloadGoals = resultForm.goals;
+    } else {
+      // If no goals are provided but scores are > 0, omit the goals array completely
+      // If scores are 0-0, we can safely send an empty array to clear any existing goals
+      if (payloadHomeScore === 0 && payloadAwayScore === 0) {
+        payloadGoals = [];
+      } else {
+        payloadGoals = undefined;
+      }
+    }
+
     updateMatchMutation.mutate(
       {
         matchId: selectedMatch._id,
         data: {
-          homeScore: Number(resultForm.homeScore),
-          awayScore: Number(resultForm.awayScore),
+          homeScore: payloadHomeScore,
+          awayScore: payloadAwayScore,
           status: resultForm.status || "COMPLETED",
           matchStatistics: matchStatisticsPayload,
+          goals: payloadGoals,
         },
       },
       {
@@ -509,14 +574,22 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
       const rows = matches.map((m) => {
         const hName = m.homeTeam?.teamName || m.homeTeam?.name || "Home Team";
         const aName = m.awayTeam?.teamName || m.awayTeam?.name || "Away Team";
+        const mStatus = (m.status || "").toUpperCase();
+        const isStarted = mStatus === "COMPLETED" || mStatus === "LIVE";
+        const mScore = m.score?.homeScore ?? m.homeScore;
+        const aScore = m.score?.awayScore ?? m.awayScore;
+        const hasScore = mScore !== null && mScore !== undefined && aScore !== null && aScore !== undefined;
+        const hasNonZero = hasScore && (Number(mScore) > 0 || Number(aScore) > 0);
+        const showScore = hasScore && (isStarted || hasNonZero);
+
         return [
           m.round,
           `"${m.matchDateFormatted || m.matchDate || ""}"`,
           `"${m.time || ""}"`,
           `"${m.field || m.venue || ""}"`,
           `"${hName.replace(/"/g, '""')}"`,
-          m.homeScore ?? "-",
-          m.awayScore ?? "-",
+          showScore ? mScore : "-",
+          showScore ? aScore : "-",
           `"${aName.replace(/"/g, '""')}"`,
           m.status,
           `"${m.venue || ""}"`,
@@ -784,11 +857,131 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
             <span className="text-xs font-semibold">Loading Schedule...</span>
           </div>
         ) : filteredRounds.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-            <CalendarDays size={32} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No matches found</p>
-            <p className="text-xs text-slate-400">Add fixtures or click "Generate Random Fixtures" to get started.</p>
-          </div>
+          matches.length === 0 ? (
+            <div className="py-12 sm:py-16 px-4 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-900/40 max-w-2xl mx-auto my-4 space-y-6">
+              <div className="max-w-md mx-auto space-y-2">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                  <CalendarDays size={28} />
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  No Matches Scheduled Yet
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Start organizing your league schedule. Choose whether you'd like to auto-generate random fixtures or create matches manually.
+                </p>
+              </div>
+
+              {canManageMatches ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto text-left pt-1">
+                  {/* Option 1: Random / Auto Generate Fixtures */}
+                  <div
+                    onClick={() => !generateFixturesMutation.isPending && handleGenerateFixtures(false)}
+                    className="group relative p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-xs">
+                        {generateFixturesMutation.isPending ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Zap size={20} className="fill-amber-300 text-amber-300" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          Random Generate Fixtures
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                          Automatically calculate round-robin schedule and match pairings for all enrolled teams.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={generateFixturesMutation.isPending}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {generateFixturesMutation.isPending ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={13} className="fill-amber-300 text-amber-300" />
+                          <span>Generate Random Fixtures</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Option 2: Add Match Manually */}
+                  <div
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="group relative p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                        <Plus size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          Add Match Manually
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                          Create individual fixtures manually with custom dates, kick-off times, venues, fields, and opponents.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>Manually Add Match</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">No matches have been scheduled yet for this league.</p>
+              )}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+              <CalendarDays size={32} className="mx-auto text-slate-300" />
+              <div>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  No matches found for Round {roundFilter}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  You can add a fixture to this round or switch back to view all rounds.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setRoundFilter("ALL")}
+                  className="px-3.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
+                >
+                  View All Rounds
+                </button>
+                {canManageMatches && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddForm((prev) => ({ ...prev, round: Number(roundFilter) || 1 }));
+                      setIsAddModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5"
+                  >
+                    <Plus size={13} />
+                    <span>Add Match to Round {roundFilter}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )
         ) : (
           filteredRounds.map((roundGroup) => {
             const isCollapsed = !!collapsedRounds[roundGroup.round];
@@ -867,15 +1060,25 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                               : "2:00 pm");
                           const homeScore = match.score?.homeScore ?? match.homeScore;
                           const awayScore = match.score?.awayScore ?? match.awayScore;
-                          const isCompleted =
-                            match.status === "COMPLETED" ||
-                            match.status === "Completed" ||
-                            (homeScore !== null && homeScore !== undefined && awayScore !== null && awayScore !== undefined);
+                          const statusUpper = (match.status || "").toUpperCase();
+                          const isStartedOrCompleted =
+                            statusUpper === "COMPLETED" ||
+                            statusUpper === "LIVE";
+                          const hasScore =
+                            homeScore !== null &&
+                            awayScore !== null &&
+                            homeScore !== undefined &&
+                            awayScore !== undefined;
+                          const hasNonZeroScore =
+                            hasScore && (Number(homeScore) > 0 || Number(awayScore) > 0);
+                          const shouldShowScore =
+                            hasScore && (isStartedOrCompleted || hasNonZeroScore);
 
                           return (
                             <tr
                               key={match._id}
-                              className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                              onClick={() => canEnterResults && handleOpenResult(match)}
+                              className={`transition-colors ${canEnterResults ? "cursor-pointer hover:bg-slate-50/60 dark:hover:bg-slate-800/30" : "hover:bg-slate-50/60 dark:hover:bg-slate-800/30"}`}
                             >
                               {/* Time */}
                               <td className="py-4 px-4 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -899,13 +1102,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                                 </div>
                               </td>
 
-                              {/* Score (Matches Screenshot 2: e.g. "4 - 1" or "- - -") */}
+                              {/* Score (e.g. "4 - 1" or "- - -") */}
                               <td className="py-4 px-4 text-center">
-                                {isCompleted &&
-                                  homeScore !== null &&
-                                  awayScore !== null &&
-                                  homeScore !== undefined &&
-                                  awayScore !== undefined ? (
+                                {shouldShowScore ? (
                                   <span className="font-black text-sm text-slate-900 dark:text-white px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
                                     {homeScore} - {awayScore}
                                   </span>
@@ -1467,7 +1666,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
       <Modal
         isOpen={isResultModalOpen}
         onClose={() => setIsResultModalOpen(false)}
-        className="max-w-[560px] p-6 rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="max-w-[800px] p-6 rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-gray-800">
           <div className="p-2.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600">
@@ -1483,7 +1682,35 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
 
         {selectedMatch && (
           <form onSubmit={handleResultSubmit} className="space-y-5">
-            {/* Status Select */}
+            {/* Tabs */}
+            <div className="flex border-b border-slate-200 dark:border-slate-700 mb-4">
+              <button
+                type="button"
+                onClick={() => setActiveResultTab("DETAILS")}
+                className={`py-2 px-4 text-xs font-bold border-b-2 transition-colors ${
+                  activeResultTab === "DETAILS"
+                    ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
+              >
+                Match Details
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveResultTab("GOALS")}
+                className={`py-2 px-4 text-xs font-bold border-b-2 transition-colors ${
+                  activeResultTab === "GOALS"
+                    ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
+              >
+                Goals & Assists
+              </button>
+            </div>
+
+            {activeResultTab === "DETAILS" ? (
+              <div className="space-y-5">
+                {/* Status Select */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Match Status
@@ -1699,7 +1926,217 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/30 dark:bg-slate-800/20 p-2 rounded-xl">
+                {/* Home Team Goals */}
+                <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-900 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center text-[8px] font-bold">
+                      <TeamLogoCrest logo={selectedMatch.homeTeam.logo} name={selectedMatch.homeTeam.teamName || selectedMatch.homeTeam.name || "Home"} />
+                    </div>
+                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">{selectedMatch.homeTeam.teamName || selectedMatch.homeTeam.name || "Home Team"}</h4>
+                  </div>
+                  
+                  {/* Goals Table */}
+                  <div className="space-y-3 mb-4">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="col-span-5">Player</div>
+                      <div className="col-span-2 text-center">Min</div>
+                      <div className="col-span-4">Assist</div>
+                      <div className="col-span-1 text-center">Act</div>
+                    </div>
+                    {resultForm.goals.filter(g => g.teamId === selectedMatch.homeTeam._id).map((goal, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center text-xs">
+                        <div className="col-span-5">
+                          <select
+                            value={goal.scorerId}
+                            onChange={(e) => {
+                              const newGoals = [...resultForm.goals];
+                              const gIdx = newGoals.findIndex(g => g === goal);
+                              if (gIdx > -1) newGoals[gIdx].scorerId = e.target.value;
+                              setResultForm({ ...resultForm, goals: newGoals });
+                            }}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 text-slate-800 dark:text-slate-200"
+                          >
+                            <option value="">Select Player</option>
+                            {homePlayers.map((p: any) => (
+                              <option key={p._id || p.id} value={p._id || p.id}>
+                                {p.fullName || (p.firstName ? `${p.firstName} ${p.lastName}` : "") || p.name || "Unknown Player"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={goal.minute}
+                            onChange={(e) => {
+                              const newGoals = [...resultForm.goals];
+                              const gIdx = newGoals.findIndex(g => g === goal);
+                              if (gIdx > -1) newGoals[gIdx].minute = Number(e.target.value);
+                              setResultForm({ ...resultForm, goals: newGoals });
+                            }}
+                            className="w-full text-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1 py-1 text-slate-800 dark:text-slate-200"
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <select
+                            value={goal.assistId || ""}
+                            onChange={(e) => {
+                              const newGoals = [...resultForm.goals];
+                              const gIdx = newGoals.findIndex(g => g === goal);
+                              if (gIdx > -1) newGoals[gIdx].assistId = e.target.value;
+                              setResultForm({ ...resultForm, goals: newGoals });
+                            }}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 text-slate-800 dark:text-slate-200"
+                          >
+                            <option value="">None</option>
+                            {homePlayers.map((p: any) => (
+                              <option key={p._id || p.id} value={p._id || p.id}>
+                                {p.fullName || (p.firstName ? `${p.firstName} ${p.lastName}` : "") || p.name || "Unknown Player"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResultForm({ ...resultForm, goals: resultForm.goals.filter(g => g !== goal) });
+                            }}
+                            className="text-slate-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={14} className="mx-auto" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {resultForm.goals.filter(g => g.teamId === selectedMatch.homeTeam._id).length === 0 && (
+                      <div className="text-center py-4 text-xs font-semibold text-slate-400">No goals added</div>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-xs py-1.5 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+                    onClick={() => {
+                      setResultForm({
+                        ...resultForm,
+                        goals: [...resultForm.goals, { id: Math.random().toString(), teamId: selectedMatch.homeTeam._id, scorerId: "", minute: 1 }]
+                      });
+                    }}
+                  >
+                    + Add Goal
+                  </Button>
+                </div>
+
+                {/* Away Team Goals */}
+                <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-900 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center text-[8px] font-bold">
+                      <TeamLogoCrest logo={selectedMatch.awayTeam.logo} name={selectedMatch.awayTeam.teamName || selectedMatch.awayTeam.name || "Away"} />
+                    </div>
+                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">{selectedMatch.awayTeam.teamName || selectedMatch.awayTeam.name || "Away Team"}</h4>
+                  </div>
+                  
+                  {/* Goals Table */}
+                  <div className="space-y-3 mb-4">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="col-span-5">Player</div>
+                      <div className="col-span-2 text-center">Min</div>
+                      <div className="col-span-4">Assist</div>
+                      <div className="col-span-1 text-center">Act</div>
+                    </div>
+                    {resultForm.goals.filter(g => g.teamId === selectedMatch.awayTeam._id).map((goal, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center text-xs">
+                        <div className="col-span-5">
+                          <select
+                            value={goal.scorerId}
+                            onChange={(e) => {
+                              const newGoals = [...resultForm.goals];
+                              const gIdx = newGoals.findIndex(g => g === goal);
+                              if (gIdx > -1) newGoals[gIdx].scorerId = e.target.value;
+                              setResultForm({ ...resultForm, goals: newGoals });
+                            }}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 text-slate-800 dark:text-slate-200"
+                          >
+                            <option value="">Select Player</option>
+                            {awayPlayers.map((p: any) => (
+                              <option key={p._id || p.id} value={p._id || p.id}>
+                                {p.fullName || (p.firstName ? `${p.firstName} ${p.lastName}` : "") || p.name || "Unknown Player"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={goal.minute}
+                            onChange={(e) => {
+                              const newGoals = [...resultForm.goals];
+                              const gIdx = newGoals.findIndex(g => g === goal);
+                              if (gIdx > -1) newGoals[gIdx].minute = Number(e.target.value);
+                              setResultForm({ ...resultForm, goals: newGoals });
+                            }}
+                            className="w-full text-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1 py-1 text-slate-800 dark:text-slate-200"
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <select
+                            value={goal.assistId || ""}
+                            onChange={(e) => {
+                              const newGoals = [...resultForm.goals];
+                              const gIdx = newGoals.findIndex(g => g === goal);
+                              if (gIdx > -1) newGoals[gIdx].assistId = e.target.value;
+                              setResultForm({ ...resultForm, goals: newGoals });
+                            }}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 text-slate-800 dark:text-slate-200"
+                          >
+                            <option value="">None</option>
+                            {awayPlayers.map((p: any) => (
+                              <option key={p._id || p.id} value={p._id || p.id}>
+                                {p.fullName || (p.firstName ? `${p.firstName} ${p.lastName}` : "") || p.name || "Unknown Player"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResultForm({ ...resultForm, goals: resultForm.goals.filter(g => g !== goal) });
+                            }}
+                            className="text-slate-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={14} className="mx-auto" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {resultForm.goals.filter(g => g.teamId === selectedMatch.awayTeam._id).length === 0 && (
+                      <div className="text-center py-4 text-xs font-semibold text-slate-400">No goals added</div>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-xs py-1.5 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+                    onClick={() => {
+                      setResultForm({
+                        ...resultForm,
+                        goals: [...resultForm.goals, { id: Math.random().toString(), teamId: selectedMatch.awayTeam._id, scorerId: "", minute: 1 }]
+                      });
+                    }}
+                  >
+                    + Add Goal
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button

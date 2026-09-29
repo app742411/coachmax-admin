@@ -141,6 +141,14 @@ export interface GenerateFixturesResponse {
   };
 }
 
+export interface MatchGoal {
+  id?: string;
+  teamId: string;
+  scorerId: string;
+  assistId?: string;
+  minute: number;
+}
+
 export interface Match {
   _id: string;
   leagueId?: string;
@@ -164,6 +172,7 @@ export interface Match {
   awayScore?: number | null;
   status: MatchStatus;
   matchStatistics?: MatchStatistics;
+  goals?: MatchGoal[];
   notes?: string;
   fixtureSource?: FixtureSource | string;
   isManuallyModified?: boolean;

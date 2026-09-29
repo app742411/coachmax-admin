@@ -212,7 +212,12 @@ export const getClassPlayers = async (classId: string): Promise<any> => {
 
 // ================= TEAM ATTENDANCE & FULL TABLE =================
 
-export const getTeamFullTable = async (teamId: string): Promise<any> => {
+export const getTeamFullTable = async (teamId: string, leagueId?: string): Promise<any> => {
+  // Prevent backend CastError for mock data (like "t1")
+  if (!teamId || !/^[0-9a-fA-F]{24}$/.test(teamId)) {
+    return { success: true, data: { sessions: [], players: [] } };
+  }
+
   let isAdmin = false;
   try {
     const userStr = localStorage.getItem("user");
@@ -220,12 +225,15 @@ export const getTeamFullTable = async (teamId: string): Promise<any> => {
     isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(user?.role);
   } catch { }
   const endpoint = isAdmin ? "/api/admin/getTeamFullTable" : "/api/user/getTeamFullTable";
-  const url = `${endpoint}?teamId=${teamId}`;
+  let url = `${endpoint}?teamId=${teamId}`;
+  if (leagueId) {
+    url += `&leagueId=${leagueId}`;
+  }
   const res = await apiClient.get(url);
   return res.data;
 };
 
-export const markSingleTeamAttendance = async (teamId: string, data: { sessionDate: string; playerId: string; status: string }): Promise<any> => {
+export const markSingleTeamAttendance = async (teamId: string, data: { sessionDate: string; playerId: string; status: string; leagueId?: string }): Promise<any> => {
   let isAdmin = false;
   try {
     const userStr = localStorage.getItem("user");
@@ -237,7 +245,7 @@ export const markSingleTeamAttendance = async (teamId: string, data: { sessionDa
   return res.data;
 };
 
-export const markTeamAttendance = async (teamId: string, data: { sessionDate: string; records: { player: string; status: string }[] }): Promise<any> => {
+export const markTeamAttendance = async (teamId: string, data: { sessionDate: string; records: { player: string; status: string }[]; leagueId?: string }): Promise<any> => {
   let isAdmin = false;
   try {
     const userStr = localStorage.getItem("user");
@@ -329,6 +337,11 @@ export const getTeamById = async (id: string): Promise<any> => {
   return res.data;
 };
 
+export const getTeamPlayers = async (teamId: string): Promise<any> => {
+  const res = await apiClient.get(`/api/admin/getTeamPlayers/${teamId}`);
+  return res.data;
+};
+
 export const deleteTeam = async (id: string): Promise<any> => {
   const res = await apiClient.delete(`/api/admin/teams/${id}`);
   return res.data;
@@ -365,7 +378,8 @@ export const assignPlayerToTeam = async (
   teamId: string,
   playerIds: string | string[],
   paymentStatus: string = "UNPAID",
-  playerStatuses?: Record<string, string>
+  playerStatuses?: Record<string, string>,
+  leagueId?: string
 ): Promise<any> => {
   const ids = Array.isArray(playerIds) ? playerIds : [playerIds];
   const players = ids.map((id) => ({
@@ -373,9 +387,12 @@ export const assignPlayerToTeam = async (
     paymentStatus: (playerStatuses && playerStatuses[id]) || paymentStatus || "UNPAID",
   }));
 
-  const payload = {
+  const payload: any = {
     players,
   };
+  if (leagueId) {
+    payload.leagueId = leagueId;
+  }
   const res = await apiClient.post(`/api/admin/teams/${teamId}/assign`, payload);
   return res.data;
 };

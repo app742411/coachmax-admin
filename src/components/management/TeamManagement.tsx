@@ -77,6 +77,7 @@ const TeamManagement: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedPlayerIdsForAdd, setSelectedPlayerIdsForAdd] = useState<string[]>([]);
+  const [selectedPlayerStatusesForAdd, setSelectedPlayerStatusesForAdd] = useState<Record<string, string>>({});
   const [playerSearchQueryForAdd, setPlayerSearchQueryForAdd] = useState("");
 
   // Query available players for initial team creation
@@ -177,6 +178,7 @@ const TeamManagement: React.FC = () => {
     setRoundCount(1);
     setSessionDates([new Date().toISOString().split("T")[0]]);
     setSelectedPlayerIdsForAdd([]);
+    setSelectedPlayerStatusesForAdd({});
     setPlayerSearchQueryForAdd("");
     setSelectedFile(null);
     setPreviewImage(null);
@@ -207,6 +209,7 @@ const TeamManagement: React.FC = () => {
       viceCaptain: team.viceCaptain?._id || team.viceCaptain || "",
     });
     setSelectedPlayerIdsForAdd([]);
+    setSelectedPlayerStatusesForAdd({});
     setPlayerSearchQueryForAdd("");
     if (Array.isArray(team.schedule) && team.schedule.length > 0) {
       setCustomSchedules(team.schedule);
@@ -303,7 +306,7 @@ const TeamManagement: React.FC = () => {
     if (!isEditing && selectedPlayerIdsForAdd.length > 0) {
       const playersPayload = selectedPlayerIdsForAdd.map((playerId) => ({
         player: playerId,
-        paymentStatus: "UNPAID",
+        paymentStatus: selectedPlayerStatusesForAdd[playerId] || "UNPAID",
       }));
       payload.append("players", JSON.stringify(playersPayload));
     }
@@ -624,12 +627,18 @@ const TeamManagement: React.FC = () => {
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group *</label>
                   <input
                     type="text"
+                    list="age-group-options"
                     value={formData.ageGroup}
                     onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
                     className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all dark:text-white"
                     placeholder="e.g. U16"
                     required
                   />
+                  <datalist id="age-group-options">
+                    {Array.from({ length: 29 }, (_, i) => i + 2).map((num) => (
+                      <option key={num} value={`U${num}`} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Year</label>
@@ -647,11 +656,12 @@ const TeamManagement: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Academic Term</label>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Academic Term *</label>
                   <select
                     value={formData.term}
                     onChange={(e) => setFormData({ ...formData, term: e.target.value })}
                     className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                    required
                   >
                     <option value="">Select Academic Term</option>
                     {terms.map((t: any) => (
@@ -868,9 +878,31 @@ const TeamManagement: React.FC = () => {
                               <span className="text-[10px] text-gray-400 capitalize">({player.gender})</span>
                             )}
                           </div>
-                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 border border-amber-200 dark:border-amber-800">
-                            UNPAID
-                          </span>
+                          {isSelected ? (
+                            <select
+                              value={selectedPlayerStatusesForAdd[pId] || "UNPAID"}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setSelectedPlayerStatusesForAdd((prev) => ({ ...prev, [pId]: e.target.value }));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`text-[10px] font-bold uppercase px-1.5 py-0.5 border rounded-none outline-none cursor-pointer ${
+                                (selectedPlayerStatusesForAdd[pId] || "UNPAID") === "PAID"
+                                  ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800"
+                                  : (selectedPlayerStatusesForAdd[pId] || "UNPAID") === "TRIAL"
+                                  ? "text-blue-600 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800"
+                                  : "text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800"
+                              }`}
+                            >
+                              <option value="UNPAID">UNPAID</option>
+                              <option value="PAID">PAID</option>
+                              <option value="TRIAL">TRIAL</option>
+                            </select>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-1.5 py-0.5 border border-slate-200 dark:border-slate-700">
+                              NOT ASSIGNED
+                            </span>
+                          )}
                         </div>
                       );
                     })}

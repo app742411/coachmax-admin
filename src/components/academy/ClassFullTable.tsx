@@ -75,6 +75,8 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const [selectedStatus, setSelectedStatus] = useState<string>("TRIAL");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
+  const [openAttendanceMenu, setOpenAttendanceMenu] = useState<{ playerId: string; sessionDate: string; currentStatus: string } | null>(null);
+  const [attendanceMenuPos, setAttendanceMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   const updatePosition = () => {
     if (!openMenuId) return;
@@ -151,6 +153,25 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [openMenuId]);
+
+  useEffect(() => {
+    if (!openAttendanceMenu) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const menu = document.getElementById("portal-attendance-menu");
+      if (menu && !menu.contains(e.target as Node)) {
+        setOpenAttendanceMenu(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenAttendanceMenu(null);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openAttendanceMenu]);
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounter = useRef(0);
   const removeClassMutation = useRemoveClassFromPlayer();
@@ -315,18 +336,32 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
     }
   };
 
-  const handleToggleAttendance = (playerId: string, sessionDate: string, currentStatus: string) => {
-    // Cycle: NOT_MARKED -> PRESENT -> LATE -> ABSENT -> PRESENT
-    let newStatus = "PRESENT";
-    if (currentStatus === "PRESENT") newStatus = "LATE";
-    else if (currentStatus === "LATE") newStatus = "ABSENT";
-    else if (currentStatus === "ABSENT") newStatus = "PRESENT";
-
-    markSingleMutation.mutate({
-      sessionDate,
-      playerId,
-      status: newStatus,
+  const handleToggleAttendance = (playerId: string, sessionDate: string, currentStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentStatus || currentStatus === "NOT_MARKED") {
+      markSingleMutation.mutate({
+        sessionDate,
+        playerId,
+        status: "PRESENT",
+      });
+      return;
+    }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setAttendanceMenuPos({
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX,
     });
+    setOpenAttendanceMenu({ playerId, sessionDate, currentStatus });
+  };
+
+  const handleSetAttendanceStatus = (status: string) => {
+    if (!openAttendanceMenu) return;
+    markSingleMutation.mutate({
+      sessionDate: openAttendanceMenu.sessionDate,
+      playerId: openAttendanceMenu.playerId,
+      status,
+    });
+    setOpenAttendanceMenu(null);
   };
 
   const handleMarkAllPresent = (sessionDate: string) => {
@@ -613,7 +648,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                       <td
                         key={sessionDate}
                         className="py-2 px-1.5 border-l border-slate-50 dark:border-slate-800/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-                        onClick={() => handleToggleAttendance(row.playerId, sessionDate, status)}
+                        onClick={(e) => handleToggleAttendance(row.playerId, sessionDate, status, e)}
                       >
                         {renderStatusIcon(status)}
                       </td>
@@ -1047,6 +1082,31 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
           <Button variant="outline" onClick={() => setAssignPlayer(null)}>Cancel</Button>
         </div>
       </Modal>
+
+      {/* Attendance Dropdown Portal */}
+      {openAttendanceMenu && attendanceMenuPos && createPortal(
+        <div
+          id="portal-attendance-menu"
+          style={{ position: "absolute", top: attendanceMenuPos.top, left: attendanceMenuPos.left }}
+          className="z-[10000] w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-xs font-bold rounded overflow-hidden"
+        >
+          {[
+            { value: "PRESENT", label: "Present", color: "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" },
+            { value: "LATE", label: "Late", color: "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30" },
+            { value: "ABSENT", label: "Absent", color: "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" },
+            { value: "NOT_MARKED", label: "Clear", color: "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" }
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => handleSetAttendanceStatus(opt.value)}
+              className={`w-full text-left px-3 py-2 transition-colors ${opt.color} ${openAttendanceMenu.currentStatus === opt.value ? "bg-slate-50 dark:bg-slate-700" : ""}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

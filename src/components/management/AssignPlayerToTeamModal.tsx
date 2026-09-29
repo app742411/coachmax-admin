@@ -10,6 +10,7 @@ interface AssignPlayerToTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
   teamId: string | null;
+  leagueId?: string | null;
 }
 
 type AssignmentFilter = "ALL" | "AVAILABLE" | "ASSIGNED";
@@ -67,7 +68,7 @@ export const ASSIGNMENT_STATUSES: AssignmentStatusOption[] = [
   },
 ];
 
-export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId }: AssignPlayerToTeamModalProps) {
+export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagueId }: AssignPlayerToTeamModalProps) {
   const queryClient = useQueryClient();
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -214,7 +215,7 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId }: Ass
     }) => {
       // 1. Primary backend call POST /api/admin/teams/:tId/assign
       // Sends clean payload: { players: [ { playerId, paymentStatus }, ... ] }
-      const res = await assignPlayerToTeam(tId, pIds, primaryStatus, statusMap);
+      const res = await assignPlayerToTeam(tId, pIds, primaryStatus, statusMap, leagueId || undefined);
 
       // 2. Sync any player with a custom individual status differing from primaryStatus
       const diffIds = pIds.filter(id => statusMap[id] && statusMap[id] !== primaryStatus);

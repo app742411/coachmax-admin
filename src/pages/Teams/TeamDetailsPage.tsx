@@ -19,6 +19,7 @@ import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "../../components/management/AssignPlayerToTeamModal";
 import AddTemporaryPlayersModal from "../../components/management/AddTemporaryPlayersModal";
 import EditTemporaryPlayerModal from "../../components/management/EditTemporaryPlayerModal";
+import { TeamLeaguesView } from "./components/TeamLeaguesView";
 import TeamFullTable from "../../components/teams/TeamFullTable";
 import {
   Shield,
@@ -153,7 +154,7 @@ export default function TeamDetailsPage() {
     enabled: !!teamId,
   });
 
-  const team = teamData?.data || teamData || null;
+  const team = teamData?.team || teamData?.data || teamData || null;
 
   // Fetch Coaches for edit modal
   const { data: coachesData } = useQuery({
@@ -744,6 +745,9 @@ export default function TeamDetailsPage() {
 
         {/* TEAM ATTENDANCE MATRIX & FULL TABLE */}
         <TeamFullTable teamId={teamId!} teamName={team.teamName} />
+
+        {/* TEAM ASSIGNED LEAGUES VIEW */}
+        <TeamLeaguesView leagues={team.leagues} />
       </div>
 
       {/* ASSIGN PLAYERS MODAL */}
@@ -807,12 +811,18 @@ export default function TeamDetailsPage() {
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group *</label>
                   <input
                     type="text"
+                    list="age-group-options"
                     value={formData.ageGroup}
                     onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
                     className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-[#0047FF] outline-none transition-all dark:text-white"
                     placeholder="e.g. U16"
                     required
                   />
+                  <datalist id="age-group-options">
+                    {Array.from({ length: 29 }, (_, i) => i + 2).map((num) => (
+                      <option key={num} value={`U${num}`} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Fee ($)</label>
