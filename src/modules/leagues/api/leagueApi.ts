@@ -822,6 +822,17 @@ export const deleteLeagueMatch = async (leagueId: string, matchId: string): Prom
   }
 };
 
+export const deleteLeagueRound = async (leagueId: string, roundNumber: number | string): Promise<any> => {
+  try {
+    return await leagueService.deleteRound(leagueId, roundNumber);
+  } catch (e) {
+    const state = initLeagueState(leagueId);
+    state.schedule = state.schedule.filter((r) => r.round !== Number(roundNumber));
+    saveLocalLeagueData(leagueId, state);
+    return true;
+  }
+};
+
 export const getLeagueTeams = async (leagueId: string): Promise<LeagueTeam[]> => {
   const master = await getLeagueMasterData(leagueId);
   return master.teams || master.teamManagement || [];

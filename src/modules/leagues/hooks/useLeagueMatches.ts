@@ -5,6 +5,7 @@ import {
   createLeagueMatch,
   updateLeagueMatch,
   deleteLeagueMatch,
+  deleteLeagueRound,
   generateRandomFixtures,
 } from "../api/leagueApi";
 import { Match, RoundSchedule } from "../types/league";
@@ -91,6 +92,26 @@ export const useDeleteMatch = (leagueId: string) => {
     },
     onError: (err: any) => {
       toast.error(err?.message || "Failed to delete match");
+    },
+  });
+};
+
+export const useDeleteRound = (leagueId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (round: number | string) => deleteLeagueRound(leagueId, round),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leagueMatches", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueSchedule", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["league", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
+      queryClient.invalidateQueries({ queryKey: ["leagueGraphs", leagueId] });
+      toast.success("Round deleted successfully");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to delete round");
     },
   });
 };

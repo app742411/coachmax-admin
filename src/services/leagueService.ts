@@ -136,6 +136,14 @@ export const leagueService = {
     }
   },
 
+  // Delete all fixtures/matches for a specific round under league
+  deleteRound: async (leagueId: string, round: number | string) => {
+    const response = await apiClient.delete(
+      `/api/admin/leagues/${leagueId}/rounds/${round}`
+    );
+    return response.data?.data || response.data;
+  },
+
   // Delete fixture
   deleteFixture: async (fixtureId: string) => {
     const response = await apiClient.delete(`/api/admin/fixtures/${fixtureId}`);

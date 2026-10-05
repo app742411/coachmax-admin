@@ -7,6 +7,8 @@ import { getAllLeagues, createLeague, updateLeague, deleteLeague, getAllTeams, g
 import { toast } from "react-hot-toast";
 import { Trophy, Calendar, Image as ImageIcon, Users, Search, X, Settings2, Zap } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import { useTerms } from "../../hooks/useTerms";
+import { findCurrentTerm } from "../../hooks/useCurrentTerm";
 
 const WEEKDAYS = [
   { label: "Mon", full: "Monday", dayIndex: 1 },
@@ -56,8 +58,29 @@ const LeagueManagement: React.FC = () => {
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilterYear, setSelectedFilterYear] = useState<string>(
+    new Date().getFullYear().toString()
+  );
+  const [selectedFilterTerm, setSelectedFilterTerm] = useState<string>("");
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  const { terms: filterTerms } = useTerms({
+    year: selectedFilterYear || undefined,
+    isEvent: "all",
+  });
+
+  useEffect(() => {
+    if (filterTerms && filterTerms.length > 0) {
+      const active = findCurrentTerm(filterTerms) || filterTerms[0];
+      const termIdToSet = active?._id || active?.id;
+      if (!selectedFilterTerm || !filterTerms.some((t: any) => (t._id || t.id) === selectedFilterTerm)) {
+        if (termIdToSet) {
+          setSelectedFilterTerm(termIdToSet);
+        }
+      }
+    }
+  }, [filterTerms]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -549,17 +572,56 @@ const LeagueManagement: React.FC = () => {
     );
   });
 
-  const filteredLeagues = leagues.filter((league: any) =>
-    league.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    league.season?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (league.term?.name || league.termName || "")?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (league.type || league.leagueType || "")?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    league.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLeagues = leagues.filter((league: any) => {
+    // 1. Search Query Filter
+    const matchesSearch =
+      !searchQuery ||
+      league.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      league.season?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (league.term?.name || league.termName || "")?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (league.type || league.leagueType || "")?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      league.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // 2. Year Filter
+    if (selectedFilterYear) {
+      const lYear = String(
+        league.year ||
+        league.term?.year ||
+        (league.startDate ? new Date(league.startDate).getFullYear() : "") ||
+        ""
+      );
+      const inSeason = league.season ? String(league.season).includes(selectedFilterYear) : false;
+      if (lYear && lYear !== selectedFilterYear && !inSeason) {
+        return false;
+      }
+    }
+
+    // 3. Term Filter
+    if (selectedFilterTerm) {
+      const leagueTermId = typeof league.term === "object" ? (league.term?._id || league.term?.id) : (league.term || league.termId);
+      const selectedTermObj = filterTerms.find((t: any) => String(t._id || t.id) === String(selectedFilterTerm));
+      const termName = selectedTermObj?.name || selectedTermObj?.termName || "";
+
+      const matchesTermId = leagueTermId && String(leagueTermId) === String(selectedFilterTerm);
+      const matchesTermName = termName && (
+        (league.term?.name && league.term.name.toLowerCase() === termName.toLowerCase()) ||
+        (league.termName && league.termName.toLowerCase() === termName.toLowerCase()) ||
+        (league.season && league.season.toLowerCase().includes(termName.toLowerCase()))
+      );
+
+      if (!matchesTermId && !matchesTermName) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="relative w-full max-w-sm">
           <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -572,7 +634,40 @@ const LeagueManagement: React.FC = () => {
             className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-none outline-none focus:border-brand-500 bg-white dark:bg-slate-800 dark:text-white transition-colors shadow-sm"
           />
         </div>
-        <Button onClick={handleOpenAdd} size="sm">Add League</Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Year Filter Dropdown */}
+          <select
+            value={selectedFilterYear}
+            onChange={(e) => {
+              setSelectedFilterYear(e.target.value);
+              setSelectedFilterTerm("");
+            }}
+            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-none focus:outline-none focus:border-[#0047FF] shadow-xs cursor-pointer"
+          >
+            <option value="">All Years</option>
+            {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((yr) => (
+              <option key={yr} value={yr}>
+                {yr}
+              </option>
+            ))}
+          </select>
+
+          {/* Term Filter Dropdown */}
+          <select
+            value={selectedFilterTerm}
+            onChange={(e) => setSelectedFilterTerm(e.target.value)}
+            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-none focus:outline-none focus:border-[#0047FF] shadow-xs cursor-pointer max-w-[240px]"
+          >
+            <option value="">All Terms</option>
+            {filterTerms.map((t: any) => (
+              <option key={t._id || t.id} value={t._id || t.id}>
+                {t.name || t.termName || t.title || "Term"} {t.year ? `(${t.year})` : ""}
+              </option>
+            ))}
+          </select>
+
+          <Button onClick={handleOpenAdd} size="sm">Add League</Button>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-100 shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 overflow-visible">

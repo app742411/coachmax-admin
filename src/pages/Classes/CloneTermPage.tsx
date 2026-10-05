@@ -8,12 +8,29 @@ import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
 import { successToast, errorToast } from "../../utils/toast";
-import { Calendar, User, ArrowRight, CheckSquare, Square, ChevronDown, ChevronUp, ShieldCheck, BookOpen, Users, Info } from "lucide-react";
+import {
+  Calendar,
+  User,
+  ArrowRight,
+  CheckSquare,
+  Square,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+  BookOpen,
+  Users,
+  Info,
+  Trophy,
+  Shield,
+  Layers,
+  Sparkles,
+} from "lucide-react";
 
 interface Player {
   _id: string;
   name: string;
-  selected: boolean;
+  paymentStatus?: string;
+  selected?: boolean;
 }
 
 interface ClassPreview {
@@ -25,7 +42,31 @@ interface ClassPreview {
   playerCount: number;
   alreadyExists: boolean;
   players: Player[];
-  allSelected: boolean;
+  selected?: boolean;
+  allSelected?: boolean;
+}
+
+interface TeamPreview {
+  teamId: string;
+  teamName: string;
+  logo?: string;
+  coach?: string;
+  playerCount: number;
+  alreadyExists: boolean;
+  selected?: boolean;
+  players: Player[];
+}
+
+interface LeaguePreview {
+  leagueId: string;
+  name: string;
+  season?: string;
+  fixtureFormat?: string;
+  numberOfRounds?: number;
+  teamsCount?: number;
+  alreadyExists: boolean;
+  selected?: boolean;
+  teams: TeamPreview[];
 }
 
 interface Term {
@@ -43,18 +84,32 @@ export default function CloneTermPage() {
   const [targetYear, setTargetYear] = useState<string>("");
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [submittingClone, setSubmittingClone] = useState(false);
-  const [previewData, setPreviewData] = useState<ClassPreview[]>([]);
+
+  // Preview Data
+  const [previewClasses, setPreviewClasses] = useState<ClassPreview[]>([]);
+  const [previewLeagues, setPreviewLeagues] = useState<LeaguePreview[]>([]);
+
   const [step, setStep] = useState(1); // 1 = Select Terms, 2 = Preview & Select Items
-  const [expandedClasses, setExpandedClasses] = useState<Record<string, boolean>>({});
+  const [previewTab, setPreviewTab] = useState<"all" | "classes" | "leagues">("all");
   const [activeTab, setActiveTab] = useState<"terms" | "holiday">("terms");
   const [responseSourceTerm, setResponseSourceTerm] = useState<{ _id: string; name: string } | null>(null);
   const [responseTargetTerm, setResponseTargetTerm] = useState<{ _id: string; name: string } | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showLoaderModal, setShowLoaderModal] = useState(false);
 
-  // Selection states (keep track of selected classIds and mapping of classId -> selected playerIds)
+  // Class Selection states
   const [selectedClasses, setSelectedClasses] = useState<Record<string, boolean>>({});
   const [selectedPlayers, setSelectedPlayers] = useState<Record<string, Record<string, boolean>>>({});
+  const [expandedClasses, setExpandedClasses] = useState<Record<string, boolean>>({});
+
+  // League Selection states
+  const [selectedLeagues, setSelectedLeagues] = useState<Record<string, boolean>>({});
+  const [selectedTeams, setSelectedTeams] = useState<Record<string, Record<string, boolean>>>({}); // leagueId -> teamId -> boolean
+  const [selectedLeaguePlayers, setSelectedLeaguePlayers] = useState<
+    Record<string, Record<string, Record<string, boolean>>>
+  >({}); // leagueId -> teamId -> playerId -> boolean
+  const [expandedLeagues, setExpandedLeagues] = useState<Record<string, boolean>>({});
+  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
 
   const isEventParam = activeTab === "terms" ? "false" : "true";
   const { terms: fetchedTerms } = useTerms({ isEvent: isEventParam });
@@ -62,7 +117,6 @@ export default function CloneTermPage() {
   useEffect(() => {
     if (fetchedTerms) {
       setTerms(fetchedTerms as any);
-      // Reset previous term selections when switching tabs
       setSourceTermId("");
       setTargetTermId("");
       setSourceYear("");
@@ -71,26 +125,50 @@ export default function CloneTermPage() {
   }, [activeTab, fetchedTerms]);
 
   const [allClasses, setAllClasses] = useState<any[]>([]);
+  const [allLeagues, setAllLeagues] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchAllClasses = async () => {
+    const fetchSummaryData = async () => {
       try {
-        const response = await apiClient.get("/api/admin/getAllClasses");
-        if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          setAllClasses(response.data.data);
+        const [classesRes, leaguesRes] = await Promise.allSettled([
+          apiClient.get("/api/admin/getAllClasses"),
+          apiClient.get("/api/admin/leagues"),
+        ]);
+
+        if (classesRes.status === "fulfilled" && classesRes.value.data?.data && Array.isArray(classesRes.value.data.data)) {
+          setAllClasses(classesRes.value.data.data);
+        }
+        if (leaguesRes.status === "fulfilled") {
+          const lData = leaguesRes.value.data?.data || leaguesRes.value.data?.leagues || leaguesRes.value.data || [];
+          if (Array.isArray(lData)) {
+            setAllLeagues(lData);
+          }
         }
       } catch (error) {
-        console.error("Failed to fetch classes:", error);
+        console.error("Failed to fetch initial stats:", error);
       }
     };
-    fetchAllClasses();
+    fetchSummaryData();
   }, []);
 
-  // Helper to dynamically calculate term stats from allClasses list
+  const getImageUrl = (path: string | undefined | null) => {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${baseUrl}${cleanPath}`;
+  };
+
+  // Calculate term stats from allClasses and allLeagues lists
   const getTermStats = (termId: string) => {
     const termClasses = allClasses.filter((c) => {
       const classTermId = c.term?._id || c.term;
       return classTermId === termId;
+    });
+
+    const termLeagues = allLeagues.filter((l) => {
+      const leagueTermId = typeof l.term === "object" ? (l.term?._id || l.term?.id) : (l.term || l.termId);
+      return leagueTermId === termId;
     });
 
     const playersSet = new Set<string>();
@@ -109,8 +187,19 @@ export default function CloneTermPage() {
       if (coachId) coachesSet.add(coachId);
     });
 
+    let totalTeams = 0;
+    termLeagues.forEach((l) => {
+      if (Array.isArray(l.teams)) {
+        totalTeams += l.teams.length;
+      } else if (typeof l.teamsCount === "number") {
+        totalTeams += l.teamsCount;
+      }
+    });
+
     return {
       classes: termClasses.length,
+      leagues: termLeagues.length,
+      teams: totalTeams,
       players: playersSet.size,
       coaches: coachesSet.size,
     };
@@ -139,24 +228,63 @@ export default function CloneTermPage() {
 
       if (response.data && response.data.success) {
         const classesList: ClassPreview[] = response.data.classes || [];
-        setPreviewData(classesList);
+        const leaguesList: LeaguePreview[] = response.data.leagues || [];
+
+        setPreviewClasses(classesList);
+        setPreviewLeagues(leaguesList);
         setResponseSourceTerm(response.data.sourceTerm || null);
         setResponseTargetTerm(response.data.targetTerm || null);
 
-        // Initialize selections: select all classes and players by default
+        // 1. Initialize Class selections (default to selected if not alreadyExists)
         const classesSel: Record<string, boolean> = {};
         const playersSel: Record<string, Record<string, boolean>> = {};
 
         classesList.forEach((cls) => {
-          classesSel[cls.classId] = true;
+          const isClsSelected = cls.selected !== false && !cls.alreadyExists;
+          classesSel[cls.classId] = isClsSelected;
           playersSel[cls.classId] = {};
-          cls.players.forEach((p) => {
-            playersSel[cls.classId][p._id] = true;
+          (cls.players || []).forEach((p) => {
+            playersSel[cls.classId][p._id] = isClsSelected && p.selected !== false;
+          });
+        });
+
+        // 2. Initialize League selections (default to selected if not alreadyExists)
+        const leaguesSel: Record<string, boolean> = {};
+        const teamsSel: Record<string, Record<string, boolean>> = {};
+        const leaguePlayersSel: Record<string, Record<string, Record<string, boolean>>> = {};
+
+        leaguesList.forEach((lg) => {
+          const isLgSelected = lg.selected !== false && !lg.alreadyExists;
+          leaguesSel[lg.leagueId] = isLgSelected;
+          teamsSel[lg.leagueId] = {};
+          leaguePlayersSel[lg.leagueId] = {};
+
+          (lg.teams || []).forEach((t) => {
+            const isTeamSelected = isLgSelected && t.selected !== false && !t.alreadyExists;
+            teamsSel[lg.leagueId][t.teamId] = isTeamSelected;
+            leaguePlayersSel[lg.leagueId][t.teamId] = {};
+
+            (t.players || []).forEach((p) => {
+              leaguePlayersSel[lg.leagueId][t.teamId][p._id] = isTeamSelected && p.selected !== false;
+            });
           });
         });
 
         setSelectedClasses(classesSel);
         setSelectedPlayers(playersSel);
+        setSelectedLeagues(leaguesSel);
+        setSelectedTeams(teamsSel);
+        setSelectedLeaguePlayers(leaguePlayersSel);
+
+        // Default open preview tab
+        if (classesList.length > 0 && leaguesList.length === 0) {
+          setPreviewTab("classes");
+        } else if (leaguesList.length > 0 && classesList.length === 0) {
+          setPreviewTab("leagues");
+        } else {
+          setPreviewTab("all");
+        }
+
         setStep(2);
       } else {
         errorToast(response.data?.message || "Failed to fetch preview information.");
@@ -174,12 +302,11 @@ export default function CloneTermPage() {
     const nextVal = !selectedClasses[classId];
     setSelectedClasses((prev) => ({ ...prev, [classId]: nextVal }));
 
-    // Also toggle all players under this class
-    const cls = previewData.find((c) => c.classId === classId);
+    const cls = previewClasses.find((c) => c.classId === classId);
     if (cls) {
       setSelectedPlayers((prev) => {
         const classPlayers = { ...prev[classId] };
-        cls.players.forEach((p) => {
+        (cls.players || []).forEach((p) => {
           classPlayers[p._id] = nextVal;
         });
         return { ...prev, [classId]: classPlayers };
@@ -187,51 +314,195 @@ export default function CloneTermPage() {
     }
   };
 
-  // Toggle single player checkbox
+  // Toggle single player under class
   const handleTogglePlayer = (classId: string, playerId: string) => {
     setSelectedPlayers((prev) => {
       const classPlayers = { ...prev[classId] };
       const nextVal = !classPlayers[playerId];
       classPlayers[playerId] = nextVal;
 
-      // If at least one player is selected, we should probably keep the class selected
-      // If no players are selected (and class has players), we can optionally keep it or unselect it.
-      // Here, let's auto-select the class if a player is selected
       if (nextVal) {
         setSelectedClasses((prevClasses) => ({ ...prevClasses, [classId]: true }));
       }
-
       return { ...prev, [classId]: classPlayers };
     });
   };
 
-  // Master Toggle: Select/Deselect All
-  const isAllSelected = previewData.length > 0 && previewData.every((c) => selectedClasses[c.classId]);
-  const handleToggleAll = () => {
-    const nextVal = !isAllSelected;
+  // Toggle single league checkbox (and all teams & team players under it)
+  const handleToggleLeague = (leagueId: string) => {
+    const nextVal = !selectedLeagues[leagueId];
+    setSelectedLeagues((prev) => ({ ...prev, [leagueId]: nextVal }));
+
+    const lg = previewLeagues.find((l) => l.leagueId === leagueId);
+    if (lg) {
+      setSelectedTeams((prev) => {
+        const leagueTeams = { ...prev[leagueId] };
+        (lg.teams || []).forEach((t) => {
+          leagueTeams[t.teamId] = nextVal;
+        });
+        return { ...prev, [leagueId]: leagueTeams };
+      });
+
+      setSelectedLeaguePlayers((prev) => {
+        const lgPlayerMap = { ...prev[leagueId] };
+        (lg.teams || []).forEach((t) => {
+          lgPlayerMap[t.teamId] = { ...(lgPlayerMap[t.teamId] || {}) };
+          (t.players || []).forEach((p) => {
+            lgPlayerMap[t.teamId][p._id] = nextVal;
+          });
+        });
+        return { ...prev, [leagueId]: lgPlayerMap };
+      });
+    }
+  };
+
+  // Toggle single team under league (and its players)
+  const handleToggleTeam = (leagueId: string, teamId: string) => {
+    const nextVal = !selectedTeams[leagueId]?.[teamId];
+
+    setSelectedTeams((prev) => ({
+      ...prev,
+      [leagueId]: {
+        ...prev[leagueId],
+        [teamId]: nextVal,
+      },
+    }));
+
+    if (nextVal) {
+      setSelectedLeagues((prev) => ({ ...prev, [leagueId]: true }));
+    }
+
+    const lg = previewLeagues.find((l) => l.leagueId === leagueId);
+    const team = lg?.teams.find((t) => t.teamId === teamId);
+    if (team) {
+      setSelectedLeaguePlayers((prev) => ({
+        ...prev,
+        [leagueId]: {
+          ...prev[leagueId],
+          [teamId]: (team.players || []).reduce(
+            (acc, p) => ({ ...acc, [p._id]: nextVal }),
+            {}
+          ),
+        },
+      }));
+    }
+  };
+
+  // Toggle single player under a league team
+  const handleToggleLeaguePlayer = (leagueId: string, teamId: string, playerId: string) => {
+    setSelectedLeaguePlayers((prev) => {
+      const lgMap = { ...prev[leagueId] };
+      const teamMap = { ...(lgMap[teamId] || {}) };
+      const nextVal = !teamMap[playerId];
+      teamMap[playerId] = nextVal;
+
+      if (nextVal) {
+        setSelectedLeagues((prevLg) => ({ ...prevLg, [leagueId]: true }));
+        setSelectedTeams((prevTeams) => ({
+          ...prevTeams,
+          [leagueId]: { ...prevTeams[leagueId], [teamId]: true },
+        }));
+      }
+
+      return {
+        ...prev,
+        [leagueId]: {
+          ...lgMap,
+          [teamId]: teamMap,
+        },
+      };
+    });
+  };
+
+  // Master Toggle: Select/Deselect All Across Classes & Leagues
+  const isAllClassesSelected =
+    previewClasses.length > 0 && previewClasses.every((c) => selectedClasses[c.classId]);
+  const isAllLeaguesSelected =
+    previewLeagues.length > 0 && previewLeagues.every((l) => selectedLeagues[l.leagueId]);
+  const isGlobalAllSelected =
+    (previewClasses.length === 0 || isAllClassesSelected) &&
+    (previewLeagues.length === 0 || isAllLeaguesSelected) &&
+    (previewClasses.length > 0 || previewLeagues.length > 0);
+
+  const handleToggleGlobalAll = () => {
+    const nextVal = !isGlobalAllSelected;
+
+    // Toggle Classes
     const classesSel: Record<string, boolean> = {};
     const playersSel: Record<string, Record<string, boolean>> = {};
-
-    previewData.forEach((cls) => {
+    previewClasses.forEach((cls) => {
       classesSel[cls.classId] = nextVal;
       playersSel[cls.classId] = {};
-      cls.players.forEach((p) => {
+      (cls.players || []).forEach((p) => {
         playersSel[cls.classId][p._id] = nextVal;
+      });
+    });
+
+    // Toggle Leagues
+    const leaguesSel: Record<string, boolean> = {};
+    const teamsSel: Record<string, Record<string, boolean>> = {};
+    const leaguePlayersSel: Record<string, Record<string, Record<string, boolean>>> = {};
+    previewLeagues.forEach((lg) => {
+      leaguesSel[lg.leagueId] = nextVal;
+      teamsSel[lg.leagueId] = {};
+      leaguePlayersSel[lg.leagueId] = {};
+      (lg.teams || []).forEach((t) => {
+        teamsSel[lg.leagueId][t.teamId] = nextVal;
+        leaguePlayersSel[lg.leagueId][t.teamId] = {};
+        (t.players || []).forEach((p) => {
+          leaguePlayersSel[lg.leagueId][t.teamId][p._id] = nextVal;
+        });
       });
     });
 
     setSelectedClasses(classesSel);
     setSelectedPlayers(playersSel);
+    setSelectedLeagues(leaguesSel);
+    setSelectedTeams(teamsSel);
+    setSelectedLeaguePlayers(leaguePlayersSel);
   };
 
-  const handleToggleExpand = (classId: string) => {
+  const handleToggleExpandClass = (classId: string) => {
     setExpandedClasses((prev) => ({ ...prev, [classId]: !prev[classId] }));
   };
 
+  const handleToggleExpandLeague = (leagueId: string) => {
+    setExpandedLeagues((prev) => ({ ...prev, [leagueId]: !prev[leagueId] }));
+  };
+
+  const handleToggleExpandTeam = (teamId: string) => {
+    setExpandedTeams((prev) => ({ ...prev, [teamId]: !prev[teamId] }));
+  };
+
+  // Compute selected counts
+  const totalSelectedClasses = Object.values(selectedClasses).filter(Boolean).length;
+  let totalSelectedClassPlayers = 0;
+  Object.keys(selectedPlayers).forEach((cid) => {
+    if (selectedClasses[cid]) {
+      totalSelectedClassPlayers += Object.values(selectedPlayers[cid]).filter(Boolean).length;
+    }
+  });
+
+  const totalSelectedLeagues = Object.values(selectedLeagues).filter(Boolean).length;
+  let totalSelectedTeams = 0;
+  let totalSelectedLeaguePlayers = 0;
+  Object.keys(selectedTeams).forEach((lid) => {
+    if (selectedLeagues[lid]) {
+      Object.keys(selectedTeams[lid] || {}).forEach((tid) => {
+        if (selectedTeams[lid][tid]) {
+          totalSelectedTeams += 1;
+          const pMap = selectedLeaguePlayers[lid]?.[tid] || {};
+          totalSelectedLeaguePlayers += Object.values(pMap).filter(Boolean).length;
+        }
+      });
+    }
+  });
+
+  const totalSelectedItems = totalSelectedClasses + totalSelectedLeagues;
+
   const handleCloneClick = () => {
-    const selectedClassCount = Object.values(selectedClasses).filter(Boolean).length;
-    if (selectedClassCount === 0) {
-      errorToast("No classes selected for cloning.");
+    if (totalSelectedItems === 0) {
+      errorToast("No classes or leagues selected for cloning.");
       return;
     }
     setShowConfirmModal(true);
@@ -242,10 +513,10 @@ export default function CloneTermPage() {
     setShowLoaderModal(true);
     setSubmittingClone(true);
 
-    const payloadClasses = previewData
+    const payloadClasses = previewClasses
       .filter((cls) => selectedClasses[cls.classId])
       .map((cls) => {
-        const classPlayerIds = cls.players
+        const classPlayerIds = (cls.players || [])
           .filter((p) => selectedPlayers[cls.classId]?.[p._id])
           .map((p) => p._id);
         return {
@@ -254,15 +525,37 @@ export default function CloneTermPage() {
         };
       });
 
+    const payloadLeagues = previewLeagues
+      .filter((lg) => selectedLeagues[lg.leagueId])
+      .map((lg) => {
+        const selectedTeamObjects = (lg.teams || [])
+          .filter((t) => selectedTeams[lg.leagueId]?.[t.teamId])
+          .map((t) => {
+            const teamPlayerIds = (t.players || [])
+              .filter((p) => selectedLeaguePlayers[lg.leagueId]?.[t.teamId]?.[p._id])
+              .map((p) => p._id);
+            return {
+              teamId: t.teamId,
+              players: teamPlayerIds,
+            };
+          });
+
+        return {
+          leagueId: lg.leagueId,
+          teams: selectedTeamObjects,
+        };
+      });
+
     try {
       const response = await apiClient.post("/api/admin/cloneTerm", {
         sourceTermId,
         targetTermId,
         classes: payloadClasses,
+        leagues: payloadLeagues,
       });
 
       if (response.data && response.data.success) {
-        successToast("Term classes and players cloned successfully!");
+        successToast("Term data (classes, leagues & teams) cloned successfully!");
         setShowLoaderModal(false);
         navigate("/classes");
       } else {
@@ -311,24 +604,17 @@ export default function CloneTermPage() {
   const sourceTermObj = terms.find((t) => t._id === sourceTermId);
   const targetTermObj = terms.find((t) => t._id === targetTermId);
 
-  // Compute selected stats
-  const totalSelectedClasses = Object.values(selectedClasses).filter(Boolean).length;
-  let totalSelectedPlayers = 0;
-  Object.keys(selectedPlayers).forEach((cid) => {
-    if (selectedClasses[cid]) {
-      totalSelectedPlayers += Object.values(selectedPlayers[cid]).filter(Boolean).length;
-    }
-  });
-
   return (
     <>
-      <PageMeta title="CoachMax | Clone Term" description="Clone classes and players from one term to another" />
+      <PageMeta title="CoachMax | Clone Term" description="Clone classes, leagues, teams, and players to a new term" />
       <div className="space-y-6">
         {/* Custom Header Section */}
         <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Clone Term</h1>
-            <p className="text-sm text-slate-400 font-medium mt-1">Copy classes and player assignments to a new term in seconds.</p>
+            <p className="text-sm text-slate-400 font-medium mt-1">
+              Copy classes, leagues, teams, and player rosters to a new term in seconds.
+            </p>
           </div>
           <div>
             <button
@@ -345,10 +631,12 @@ export default function CloneTermPage() {
           <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12">
             {/* Step 1 */}
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0 ${step === 1
-                ? "bg-[#0047FF] text-white ring-4 ring-blue-500/20"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                }`}>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0 ${step === 1
+                  ? "bg-[#0047FF] text-white ring-4 ring-blue-500/20"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                  }`}
+              >
                 1
               </div>
               <div>
@@ -362,15 +650,19 @@ export default function CloneTermPage() {
 
             {/* Step 2 */}
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0 ${step === 2
-                ? "bg-[#0047FF] text-white ring-4 ring-blue-500/20"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                }`}>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0 ${step === 2
+                  ? "bg-[#0047FF] text-white ring-4 ring-blue-500/20"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                  }`}
+              >
                 2
               </div>
               <div>
-                <div className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">Review & Customize</div>
-                <div className="text-[10px] text-slate-400 font-medium">Select classes & players</div>
+                <div className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">
+                  Review & Customize
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">Select classes, leagues & teams</div>
               </div>
             </div>
 
@@ -379,10 +671,12 @@ export default function CloneTermPage() {
 
             {/* Step 3 */}
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0 ${step === 3 || submittingClone
-                ? "bg-[#0047FF] text-white ring-4 ring-blue-500/20"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                }`}>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0 ${step === 3 || submittingClone
+                  ? "bg-[#0047FF] text-white ring-4 ring-blue-500/20"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                  }`}
+              >
                 3
               </div>
               <div>
@@ -424,7 +718,7 @@ export default function CloneTermPage() {
                       </div>
                     </div>
                     {/* Stats */}
-                    <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
+                    <div className="grid grid-cols-4 gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
                       <div>
                         <div className="text-sm font-black text-slate-800 dark:text-white">
                           {sourceTermId ? getTermStats(sourceTermId).classes : 0}
@@ -432,16 +726,22 @@ export default function CloneTermPage() {
                         <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Classes</div>
                       </div>
                       <div>
+                        <div className="text-sm font-black text-[#0047FF]">
+                          {sourceTermId ? getTermStats(sourceTermId).leagues : 0}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Leagues</div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-black text-slate-800 dark:text-white">
+                          {sourceTermId ? getTermStats(sourceTermId).teams : 0}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Teams</div>
+                      </div>
+                      <div>
                         <div className="text-sm font-black text-slate-800 dark:text-white">
                           {sourceTermId ? getTermStats(sourceTermId).players : 0}
                         </div>
                         <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Players</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {sourceTermId ? getTermStats(sourceTermId).coaches : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Coaches</div>
                       </div>
                     </div>
                   </div>
@@ -475,7 +775,7 @@ export default function CloneTermPage() {
                       </div>
                     </div>
                     {/* Stats */}
-                    <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
+                    <div className="grid grid-cols-4 gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
                       <div>
                         <div className="text-sm font-black text-slate-800 dark:text-white">
                           {targetTermId ? getTermStats(targetTermId).classes : 0}
@@ -483,16 +783,22 @@ export default function CloneTermPage() {
                         <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Classes</div>
                       </div>
                       <div>
+                        <div className="text-sm font-black text-emerald-500">
+                          {targetTermId ? getTermStats(targetTermId).leagues : 0}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Leagues</div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-black text-slate-800 dark:text-white">
+                          {targetTermId ? getTermStats(targetTermId).teams : 0}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Teams</div>
+                      </div>
+                      <div>
                         <div className="text-sm font-black text-slate-800 dark:text-white">
                           {targetTermId ? getTermStats(targetTermId).players : 0}
                         </div>
                         <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Players</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {targetTermId ? getTermStats(targetTermId).coaches : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Coaches</div>
                       </div>
                     </div>
                   </div>
@@ -614,7 +920,7 @@ export default function CloneTermPage() {
                   <div>
                     <h4 className="font-bold text-xs text-slate-800 dark:text-white uppercase tracking-wider mb-1">How it works?</h4>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-[420px]">
-                      We'll copy all selected classes and player assignments from the source term to the target term. You can review and deselect any class or player before confirming the clone.
+                      Copy all selected classes, leagues, teams, and player assignments to the target term. You can customize which items to include before confirming.
                     </p>
                   </div>
                 </div>
@@ -627,16 +933,22 @@ export default function CloneTermPage() {
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Classes</span>
                   </div>
                   <div className="text-center">
-                    <div className="w-9 h-9 rounded-none bg-[#0047FF]/10 text-[#0047FF] flex items-center justify-center mx-auto mb-1.5 shadow-theme-xs">
+                    <div className="w-9 h-9 rounded-none bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto mb-1.5 shadow-theme-xs">
+                      <Trophy className="w-4 h-4" />
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Leagues</span>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-9 h-9 rounded-none bg-purple-500/10 text-purple-600 flex items-center justify-center mx-auto mb-1.5 shadow-theme-xs">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Teams</span>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-9 h-9 rounded-none bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto mb-1.5 shadow-theme-xs">
                       <Users className="w-4 h-4" />
                     </div>
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Players</span>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-9 h-9 rounded-none bg-[#0047FF]/10 text-[#0047FF] flex items-center justify-center mx-auto mb-1.5 shadow-theme-xs">
-                      <Calendar className="w-4 h-4" />
-                    </div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Rosters</span>
                   </div>
                 </div>
               </div>
@@ -648,11 +960,11 @@ export default function CloneTermPage() {
                 <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest border-b pb-3 mb-4">Clone Summary</h3>
                 <div className="flex flex-col items-center text-center py-6 bg-slate-50 dark:bg-slate-800/40 p-4 border border-slate-100 dark:border-slate-800 rounded-none">
                   <div className="w-14 h-14 bg-[#0047FF]/10 text-[#0047FF] flex items-center justify-center mb-3 rounded-none">
-                    <BookOpen className="w-6 h-6" />
+                    <Sparkles className="w-6 h-6" />
                   </div>
-                  <h4 className="font-bold text-xs text-slate-800 dark:text-white uppercase tracking-wide">What will be cloned?</h4>
+                  <h4 className="font-bold text-xs text-slate-800 dark:text-white uppercase tracking-wide">Ready to Duplicate</h4>
                   <p className="text-[10px] text-slate-400 font-medium leading-relaxed max-w-[200px] mt-1">
-                    Review the details of what will be copied to the target term.
+                    Select source and target terms to see preview of all items that can be cloned.
                   </p>
                 </div>
               </div>
@@ -684,6 +996,22 @@ export default function CloneTermPage() {
                 </div>
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
                   <span className="text-slate-400 flex items-center gap-2 font-semibold">
+                    <Trophy className="w-4 h-4 text-amber-500" /> Leagues
+                  </span>
+                  <span className="font-black text-[#0047FF]">
+                    {sourceTermId ? getTermStats(sourceTermId).leagues : 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                  <span className="text-slate-400 flex items-center gap-2 font-semibold">
+                    <Shield className="w-4 h-4 text-purple-500" /> Teams
+                  </span>
+                  <span className="font-black text-slate-800 dark:text-white">
+                    {sourceTermId ? getTermStats(sourceTermId).teams : 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                  <span className="text-slate-400 flex items-center gap-2 font-semibold">
                     <Users className="w-4 h-4 text-slate-400" /> Players
                   </span>
                   <span className="font-black text-slate-800 dark:text-white">
@@ -700,35 +1028,8 @@ export default function CloneTermPage() {
                 <div>
                   <h5 className="font-bold text-[10px] text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-0.5">Safe & Secure</h5>
                   <p className="text-[10px] text-emerald-600 dark:text-emerald-500 font-semibold leading-normal">
-                    Existing data in target term will not be affected.
+                    Existing data in target term will not be overwritten.
                   </p>
-                </div>
-              </div>
-
-              {/* Steps component */}
-              <div className="bg-slate-50 dark:bg-slate-800/40 p-4 border border-slate-100 dark:border-slate-800 rounded-none space-y-3">
-                <h5 className="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-1">Steps to follow</h5>
-                <div className="space-y-2.5 text-[10px] font-bold text-slate-600 dark:text-slate-400">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[9px] font-black shrink-0 shadow-theme-xs">1</span>
-                    Select source term (from where to copy)
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[9px] font-black shrink-0 shadow-theme-xs">2</span>
-                    Select target term (where to copy)
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[9px] font-black shrink-0 shadow-theme-xs">3</span>
-                    Preview classes & players
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[9px] font-black shrink-0 shadow-theme-xs">4</span>
-                    Customize if needed
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-none bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[9px] font-black shrink-0 shadow-theme-xs">5</span>
-                    Confirm and clone
-                  </div>
                 </div>
               </div>
             </div>
@@ -751,13 +1052,13 @@ export default function CloneTermPage() {
                 <div className="text-right">
                   <div className="text-xs font-bold text-slate-500 uppercase">Selected Summary</div>
                   <div className="text-sm font-black text-slate-800 dark:text-white">
-                    {totalSelectedClasses} Classes / {totalSelectedPlayers} Players
+                    {totalSelectedClasses} Classes ({totalSelectedClassPlayers} P) • {totalSelectedLeagues} Leagues ({totalSelectedTeams} T, {totalSelectedLeaguePlayers} P)
                   </div>
                 </div>
 
                 <button
                   onClick={handleCloneClick}
-                  disabled={submittingClone || totalSelectedClasses === 0}
+                  disabled={submittingClone || totalSelectedItems === 0}
                   className="inline-flex items-center justify-center gap-2 rounded-none bg-[#0047FF] hover:bg-blue-700 disabled:bg-blue-300 px-6 py-3 text-xs font-black uppercase tracking-wider text-white transition-colors cursor-pointer"
                 >
                   Confirm Clone
@@ -765,14 +1066,51 @@ export default function CloneTermPage() {
               </div>
             </div>
 
+            {/* Sub-Tabs: All / Classes / Leagues */}
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 gap-1">
+              <button
+                type="button"
+                onClick={() => setPreviewTab("all")}
+                className={`flex-1 py-2 px-3 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${previewTab === "all"
+                  ? "bg-white dark:bg-slate-900 text-[#0047FF] shadow-xs"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
+              >
+                <Layers className="w-4 h-4" />
+                All Items ({previewClasses.length + previewLeagues.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTab("classes")}
+                className={`flex-1 py-2 px-3 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${previewTab === "classes"
+                  ? "bg-white dark:bg-slate-900 text-[#0047FF] shadow-xs"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                Classes ({previewClasses.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTab("leagues")}
+                className={`flex-1 py-2 px-3 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${previewTab === "leagues"
+                  ? "bg-white dark:bg-slate-900 text-[#0047FF] shadow-xs"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                  }`}
+              >
+                <Trophy className="w-4 h-4" />
+                Leagues & Teams ({previewLeagues.length})
+              </button>
+            </div>
+
             {/* List Selection Header with Select All */}
             <div className="bg-[#031549] text-white p-4 flex items-center justify-between">
               <button
-                onClick={handleToggleAll}
+                onClick={handleToggleGlobalAll}
                 className="flex items-center gap-2.5 hover:text-blue-200 transition-colors text-xs font-black uppercase tracking-wider"
               >
-                {isAllSelected ? <CheckSquare className="w-4.5 h-4.5 text-blue-400" /> : <Square className="w-4.5 h-4.5" />}
-                Select All Classes ({previewData.length})
+                {isGlobalAllSelected ? <CheckSquare className="w-4.5 h-4.5 text-blue-400" /> : <Square className="w-4.5 h-4.5" />}
+                Select All ({previewClasses.length + previewLeagues.length} Items)
               </button>
 
               <button
@@ -783,125 +1121,381 @@ export default function CloneTermPage() {
               </button>
             </div>
 
-            {/* Preview Table/List */}
-            <div className="space-y-4">
-              {previewData.map((cls) => {
-                const isSelected = !!selectedClasses[cls.classId];
-                const isExpanded = !!expandedClasses[cls.classId];
-                const hasPlayers = cls.players.length > 0;
-                const classSelPlayers = selectedPlayers[cls.classId] || {};
-                const selectedPlayersCount = Object.values(classSelPlayers).filter(Boolean).length;
+            {/* Preview List Sections */}
+            <div className="space-y-6">
+              {/* 1. Classes Section */}
+              {(previewTab === "all" || previewTab === "classes") && previewClasses.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-[#0047FF]" />
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
+                        Classes ({previewClasses.length})
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500">
+                      {totalSelectedClasses} of {previewClasses.length} Selected
+                    </span>
+                  </div>
 
-                return (
-                  <div
-                    key={cls.classId}
-                    className={`bg-white dark:bg-slate-900 border transition-all ${isSelected
-                      ? "border-[#0047FF]/40 shadow-sm"
-                      : "border-slate-200 dark:border-slate-800 opacity-60"
-                      }`}
-                  >
-                    {/* Class Main Header */}
-                    <div className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <button
-                          onClick={() => handleToggleClass(cls.classId)}
-                          className="text-[#0047FF] hover:scale-105 transition-transform mt-0.5 shrink-0"
+                  <div className="space-y-3">
+                    {previewClasses.map((cls) => {
+                      const isSelected = !!selectedClasses[cls.classId];
+                      const isExpanded = !!expandedClasses[cls.classId];
+                      const hasPlayers = (cls.players || []).length > 0;
+                      const classSelPlayers = selectedPlayers[cls.classId] || {};
+                      const selectedPlayersCount = Object.values(classSelPlayers).filter(Boolean).length;
+
+                      return (
+                        <div
+                          key={cls.classId}
+                          className={`bg-white dark:bg-slate-900 border transition-all ${isSelected
+                            ? "border-[#0047FF]/40 shadow-sm"
+                            : "border-slate-200 dark:border-slate-800 opacity-60"
+                            }`}
                         >
-                          {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5 text-slate-300" />}
-                        </button>
+                          {/* Class Main Header */}
+                          <div className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <button
+                                onClick={() => handleToggleClass(cls.classId)}
+                                className="text-[#0047FF] hover:scale-105 transition-transform mt-0.5 shrink-0"
+                              >
+                                {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5 text-slate-300" />}
+                              </button>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-bold text-sm text-slate-800 dark:text-white truncate">
-                              {cls.name}
-                            </h4>
-                            {cls.alreadyExists && (
-                              <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/30">
-                                Already Exists
-                              </span>
-                            )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-bold text-sm text-slate-800 dark:text-white truncate">
+                                    {cls.name}
+                                  </h4>
+                                  {cls.alreadyExists && (
+                                    <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/30">
+                                      Already Exists
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 font-bold mt-1">
+                                  <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 uppercase tracking-wider">
+                                    {cls.category}
+                                  </span>
+                                  <span>/</span>
+                                  <span className="bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF] px-1.5 py-0.5 uppercase tracking-wider">
+                                    {cls.program}
+                                  </span>
+                                  <span>/</span>
+                                  <span className="text-slate-500 flex items-center gap-1">
+                                    <User className="w-3 h-3" /> Coach: {cls.coach?.trim() || "Unassigned"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Section: Player stats & Accordion trigger */}
+                            <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-800">
+                              <div className="text-xs font-semibold text-slate-500">
+                                {hasPlayers ? (
+                                  <span>
+                                    {selectedPlayersCount} of {cls.players.length} Players Selected
+                                  </span>
+                                ) : (
+                                  <span className="italic text-slate-400">No players assigned</span>
+                                )}
+                              </div>
+
+                              {hasPlayers && (
+                                <button
+                                  onClick={() => handleToggleExpandClass(cls.classId)}
+                                  className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-[#0047FF] transition-colors cursor-pointer"
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      Hide Players
+                                      <ChevronUp className="w-4 h-4" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      View Players
+                                      <ChevronDown className="w-4 h-4" />
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 font-bold mt-1">
-                            <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 uppercase tracking-wider">
-                              {cls.category}
-                            </span>
-                            <span>/</span>
-                            <span className="bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF] px-1.5 py-0.5 uppercase tracking-wider">
-                              {cls.program}
-                            </span>
-                            <span>/</span>
-                            <span className="text-slate-500 flex items-center gap-1">
-                              <User className="w-3 h-3" /> Coach: {cls.coach || "Unassigned"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right Section: Player stats & Accordion trigger */}
-                      <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-800">
-                        <div className="text-xs font-semibold text-slate-500">
-                          {hasPlayers ? (
-                            <span>
-                              {selectedPlayersCount} of {cls.players.length} Players Selected
-                            </span>
-                          ) : (
-                            <span className="italic text-slate-400">No players assigned</span>
+                          {/* Class Players Dropdown List */}
+                          {hasPlayers && isExpanded && (
+                            <div className="border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/40 p-4">
+                              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 ml-0.5">
+                                Assigned Players ({cls.players.length})
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                {cls.players.map((p) => {
+                                  const isPlayerSelected = !!classSelPlayers[p._id] && isSelected;
+                                  return (
+                                    <button
+                                      key={p._id}
+                                      type="button"
+                                      onClick={() => handleTogglePlayer(cls.classId, p._id)}
+                                      className={`flex items-center gap-2.5 p-2.5 border text-left rounded-none transition-all cursor-pointer ${isPlayerSelected
+                                        ? "bg-white dark:bg-slate-900 border-[#0047FF]/30 text-slate-800 dark:text-white"
+                                        : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800/60 text-slate-400"
+                                        }`}
+                                    >
+                                      <span className="text-[#0047FF] shrink-0">
+                                        {isPlayerSelected ? <CheckSquare className="w-4.5 h-4.5" /> : <Square className="w-4.5 h-4.5 text-slate-300" />}
+                                      </span>
+                                      <span className="text-xs font-bold truncate">{p.name}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           )}
                         </div>
-
-                        {hasPlayers && (
-                          <button
-                            onClick={() => handleToggleExpand(cls.classId)}
-                            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-[#0047FF] transition-colors"
-                          >
-                            {isExpanded ? (
-                              <>
-                                Hide Players
-                                <ChevronUp className="w-4 h-4" />
-                              </>
-                            ) : (
-                              <>
-                                View Players
-                                <ChevronDown className="w-4 h-4" />
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Class Players Dropdown List */}
-                    {hasPlayers && isExpanded && (
-                      <div className="border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/40 p-4">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 ml-0.5">
-                          Players list
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                          {cls.players.map((p) => {
-                            const isPlayerSelected = !!classSelPlayers[p._id] && isSelected;
-                            return (
-                              <button
-                                key={p._id}
-                                onClick={() => handleTogglePlayer(cls.classId, p._id)}
-                                className={`flex items-center gap-2.5 p-2.5 border text-left rounded-none transition-all ${isPlayerSelected
-                                  ? "bg-white dark:bg-slate-900 border-[#0047FF]/30 text-slate-800 dark:text-white"
-                                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800/60 text-slate-400"
-                                  }`}
-                              >
-                                <span className="text-[#0047FF] shrink-0">
-                                  {isPlayerSelected ? <CheckSquare className="w-4.5 h-4.5" /> : <Square className="w-4.5 h-4.5 text-slate-300" />}
-                                </span>
-                                <span className="text-xs font-bold truncate">{p.name}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {/* 2. Leagues & Teams Section */}
+              {(previewTab === "all" || previewTab === "leagues") && previewLeagues.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-500" />
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
+                        Leagues & Teams ({previewLeagues.length})
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500">
+                      {totalSelectedLeagues} of {previewLeagues.length} Selected
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {previewLeagues.map((lg) => {
+                      const isLgSelected = !!selectedLeagues[lg.leagueId];
+                      const isLgExpanded = !!expandedLeagues[lg.leagueId];
+                      const leagueTeams = lg.teams || [];
+                      const hasTeams = leagueTeams.length > 0;
+                      const lgTeamsSel = selectedTeams[lg.leagueId] || {};
+                      const selectedTeamsCount = Object.values(lgTeamsSel).filter(Boolean).length;
+
+                      return (
+                        <div
+                          key={lg.leagueId}
+                          className={`bg-white dark:bg-slate-900 border transition-all ${isLgSelected
+                            ? "border-amber-400/50 shadow-sm"
+                            : "border-slate-200 dark:border-slate-800 opacity-60"
+                            }`}
+                        >
+                          {/* League Header */}
+                          <div className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-amber-50/20 via-transparent to-transparent dark:from-amber-950/10">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <button
+                                onClick={() => handleToggleLeague(lg.leagueId)}
+                                className="text-amber-500 hover:scale-105 transition-transform mt-0.5 shrink-0 cursor-pointer"
+                              >
+                                {isLgSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5 text-slate-300" />}
+                              </button>
+
+                              <div className="w-9 h-9 rounded-none bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 border border-amber-500/20">
+                                <Trophy className="w-5 h-5" />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-bold text-sm text-slate-800 dark:text-white truncate">
+                                    {lg.name}
+                                  </h4>
+                                  {lg.alreadyExists && (
+                                    <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-800/30">
+                                      Already Exists
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 font-bold mt-1">
+                                  {lg.season && (
+                                    <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 uppercase tracking-wider">
+                                      {lg.season}
+                                    </span>
+                                  )}
+                                  {lg.fixtureFormat && (
+                                    <span className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 uppercase tracking-wider">
+                                      {lg.fixtureFormat.replace("_", " ")}
+                                    </span>
+                                  )}
+                                  {typeof lg.numberOfRounds === "number" && (
+                                    <span className="text-slate-500">
+                                      {lg.numberOfRounds} Rounds
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Section: Team stats & Accordion trigger */}
+                            <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-800">
+                              <div className="text-xs font-semibold text-slate-500">
+                                {hasTeams ? (
+                                  <span>
+                                    {selectedTeamsCount} of {leagueTeams.length} Teams Selected
+                                  </span>
+                                ) : (
+                                  <span className="italic text-slate-400">0 Teams</span>
+                                )}
+                              </div>
+
+                              {hasTeams && (
+                                <button
+                                  onClick={() => handleToggleExpandLeague(lg.leagueId)}
+                                  className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-600 hover:text-amber-700 transition-colors cursor-pointer"
+                                >
+                                  {isLgExpanded ? (
+                                    <>
+                                      Hide Teams
+                                      <ChevronUp className="w-4 h-4" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      View Teams ({leagueTeams.length})
+                                      <ChevronDown className="w-4 h-4" />
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* League Teams List */}
+                          {hasTeams && isLgExpanded && (
+                            <div className="border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/40 p-4 space-y-3">
+                              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-0.5">
+                                Teams in {lg.name} ({leagueTeams.length})
+                              </div>
+
+                              <div className="space-y-2">
+                                {leagueTeams.map((team) => {
+                                  const isTeamSelected = !!lgTeamsSel[team.teamId] && isLgSelected;
+                                  const isTeamExpanded = !!expandedTeams[team.teamId];
+                                  const teamPlayers = team.players || [];
+                                  const hasTeamPlayers = teamPlayers.length > 0;
+                                  const teamPlayersMap = selectedLeaguePlayers[lg.leagueId]?.[team.teamId] || {};
+                                  const selTeamPlayerCount = Object.values(teamPlayersMap).filter(Boolean).length;
+
+                                  return (
+                                    <div
+                                      key={team.teamId}
+                                      className={`bg-white dark:bg-slate-900 border rounded-none p-3 transition-all ${isTeamSelected
+                                        ? "border-purple-400/40 shadow-2xs"
+                                        : "border-slate-200 dark:border-slate-800 opacity-60"
+                                        }`}
+                                    >
+                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleTeam(lg.leagueId, team.teamId)}
+                                            className="text-purple-600 hover:scale-105 transition-transform shrink-0 cursor-pointer"
+                                          >
+                                            {isTeamSelected ? <CheckSquare className="w-4.5 h-4.5" /> : <Square className="w-4.5 h-4.5 text-slate-300" />}
+                                          </button>
+
+                                          {/* Team Logo / Icon */}
+                                          <div className="w-8 h-8 rounded-none bg-purple-50 dark:bg-purple-950/30 overflow-hidden flex items-center justify-center text-purple-600 border border-purple-100 dark:border-purple-900/40 shrink-0">
+                                            {team.logo ? (
+                                              <img src={getImageUrl(team.logo) as string} alt={team.teamName} className="w-full h-full object-cover" />
+                                            ) : (
+                                              <Shield className="w-4 h-4" />
+                                            )}
+                                          </div>
+
+                                          <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                              <h5 className="font-bold text-xs text-slate-800 dark:text-white truncate">
+                                                {team.teamName}
+                                              </h5>
+                                              {team.alreadyExists && (
+                                                <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
+                                                  Exists
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="text-[10px] text-slate-400 font-medium">
+                                              Coach: <span className="text-slate-600 dark:text-slate-300">{team.coach?.trim() || "Unassigned"}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Player Count and Accordion Toggle */}
+                                        <div className="flex items-center gap-3 shrink-0">
+                                          <span className="text-[10px] font-bold text-slate-500">
+                                            {hasTeamPlayers ? `${selTeamPlayerCount} / ${teamPlayers.length} Players` : "0 Players"}
+                                          </span>
+
+                                          {hasTeamPlayers && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleExpandTeam(team.teamId)}
+                                              className="text-[10px] font-black uppercase tracking-wider text-purple-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                                            >
+                                              {isTeamExpanded ? "Hide" : "Players"}
+                                              {isTeamExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Team Player List Accordion */}
+                                      {hasTeamPlayers && isTeamExpanded && (
+                                        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                            {teamPlayers.map((p) => {
+                                              const isPSelected = !!teamPlayersMap[p._id] && isTeamSelected;
+                                              return (
+                                                <button
+                                                  key={p._id}
+                                                  type="button"
+                                                  onClick={() => handleToggleLeaguePlayer(lg.leagueId, team.teamId, p._id)}
+                                                  className={`flex items-center gap-2 p-2 border text-left rounded-none transition-all cursor-pointer ${isPSelected
+                                                    ? "bg-purple-50/40 dark:bg-purple-950/20 border-purple-300 dark:border-purple-800 text-slate-800 dark:text-white"
+                                                    : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800/60 text-slate-400"
+                                                    }`}
+                                                >
+                                                  <span className="text-purple-600 shrink-0">
+                                                    {isPSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 text-slate-300" />}
+                                                  </span>
+                                                  <div className="min-w-0">
+                                                    <div className="text-[11px] font-bold truncate">{p.name}</div>
+                                                    {p.paymentStatus && (
+                                                      <div className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+                                                        {p.paymentStatus}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -910,10 +1504,21 @@ export default function CloneTermPage() {
       {/* Confirmation Modal */}
       <Modal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} className="max-w-[450px] p-6 lg:p-8 rounded-none shadow-2xl">
         <h4 className="text-xl font-bold mb-2 tracking-tight">Confirm Clone Operation</h4>
-        <p className="text-xs text-gray-500 mb-6 font-medium leading-relaxed">
-          Are you sure you want to clone <span className="text-[#0047FF] font-bold">{(responseSourceTerm?.name || sourceTermObj?.name)} {sourceTermObj?.year ? `(${sourceTermObj.year})` : ""}</span> to <span className="text-[#0047FF] font-bold">{(responseTargetTerm?.name || targetTermObj?.name)} {targetTermObj?.year ? `(${targetTermObj.year})` : ""}</span>?
-          This will duplicate all selected classes and their player rosters.
+        <p className="text-xs text-gray-500 mb-4 font-medium leading-relaxed">
+          Are you sure you want to clone data from <span className="text-[#0047FF] font-bold">{(responseSourceTerm?.name || sourceTermObj?.name)}</span> to <span className="text-[#0047FF] font-bold">{(responseTargetTerm?.name || targetTermObj?.name)}</span>?
         </p>
+
+        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border border-slate-200 dark:border-slate-700 mb-6 space-y-2 text-xs">
+          <div className="flex justify-between font-bold">
+            <span className="text-slate-500">Classes to clone:</span>
+            <span className="text-slate-800 dark:text-white">{totalSelectedClasses} ({totalSelectedClassPlayers} players)</span>
+          </div>
+          <div className="flex justify-between font-bold">
+            <span className="text-slate-500">Leagues to clone:</span>
+            <span className="text-slate-800 dark:text-white">{totalSelectedLeagues} ({totalSelectedTeams} teams, {totalSelectedLeaguePlayers} players)</span>
+          </div>
+        </div>
+
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button variant="outline" onClick={() => setShowConfirmModal(false)}>Cancel</Button>
           <Button onClick={executeClone} className="bg-[#0047FF] hover:bg-blue-700 text-white">
@@ -928,7 +1533,7 @@ export default function CloneTermPage() {
           <div className="w-12 h-12 border-4 border-[#0047FF] border-t-transparent rounded-full animate-spin" />
           <h4 className="text-base font-bold text-slate-800 dark:text-white uppercase tracking-wider">Cloning Term Data...</h4>
           <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[280px]">
-            Don't close window, please wait some time. You are cloning one term data to another...
+            Don't close window, please wait some time. You are cloning term data (classes, leagues, and teams)...
           </p>
         </div>
       </Modal>
