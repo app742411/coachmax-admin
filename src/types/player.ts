@@ -43,6 +43,11 @@ export interface Player {
   programs?: PlayerProgram[];
   term?: string;
   paymentStatus?: string;
+  classPaymentStatuses?: {
+    class?: any;
+    paymentStatus?: string;
+    _id?: string;
+  }[];
   jerseyNumber: number;
   goals: number;
   assists: number;
@@ -76,6 +81,15 @@ export interface Player {
   __v: number;
 }
 
+export interface PlayerStats {
+  totalCount: number;
+  approvedCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+  eliteCount: number;
+  schoolCount: number;
+}
+
 export interface PlayersResponse {
   success: boolean;
   page: number;
@@ -83,4 +97,5 @@ export interface PlayersResponse {
   total: number;
   totalPages: number;
   users: Player[];
+  stats?: PlayerStats;
 }

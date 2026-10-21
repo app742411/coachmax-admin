@@ -2,6 +2,7 @@ import { useNavigate } from "react-router";
 import {
   useNotifications,
   useMarkAllNotificationsRead,
+  useMarkNotificationRead,
   getNotificationRedirectPath,
   getNotificationStyle,
 } from "../../hooks/useNotifications";
@@ -29,6 +30,7 @@ function formatType(type: string): string {
 export default function NotificationsPage() {
   const { data: notifications = [], isLoading } = useNotifications();
   const markAllRead = useMarkAllNotificationsRead();
+  const markRead = useMarkNotificationRead();
   const navigate = useNavigate();
 
   const unreadCount = Array.isArray(notifications)
@@ -36,6 +38,9 @@ export default function NotificationsPage() {
     : 0;
 
   const handleNotificationClick = (notification: any) => {
+    if (notification?._id && !notification.isRead) {
+      markRead.mutate(notification._id);
+    }
     const path = getNotificationRedirectPath(notification);
     navigate(path);
   };

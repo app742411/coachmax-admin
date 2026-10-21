@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { usePayments, useApprovePayment, useRejectPayment, useDashboardPayments } from "../../hooks/usePayments";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
 import toast from "react-hot-toast";
@@ -23,6 +24,7 @@ export default function Transactions() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const limit = 10;
+  const { markItemAsRead, isItemRead } = useSidebarBadges();
 
   const [rejectingTxnId, setRejectingTxnId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -178,31 +180,49 @@ export default function Transactions() {
                     <td colSpan={6} className="px-6 py-8 text-center text-gray-500">No transactions found.</td>
                   </tr>
                 ) : (
-                  transactions.map((txn: any) => (
-                    <tr
-                      key={txn._id}
-                      onClick={() => {
-                        if (txn.invoice?._id) {
-                          navigate(`/invoices/${txn.invoice._id}`);
-                        }
-                      }}
-                      className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${txn.invoice?._id ? "cursor-pointer" : ""
+                  transactions.map((txn: any) => {
+                    const isUnread =
+                      !isItemRead("pendingPayments", txn._id) && txn.status === "PENDING";
+                    return (
+                      <tr
+                        key={txn._id}
+                        onClick={() => {
+                          markItemAsRead("pendingPayments", txn._id);
+                          if (txn.invoice?._id) {
+                            markItemAsRead("unpaidInvoices", txn.invoice._id);
+                            navigate(`/invoices/${txn.invoice._id}`);
+                          }
+                        }}
+                        className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all cursor-pointer ${
+                          isUnread ? "bg-blue-50/20 dark:bg-blue-950/10 font-bold" : ""
                         }`}
-                    >
-                      <td className="py-4 px-4">
-                        <div className="font-semibold text-slate-500">
-                          {txn.transactionId || (txn._id ? txn._id.substring(Math.max(0, txn._id.length - 8)) : "N/A")}
-                        </div>
-                        {txn.invoice?.invoiceNumber && (
-                          <Link
-                            to={`/invoices/${txn.invoice._id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs font-bold text-[#0047FF] hover:underline block"
-                          >
-                            INV: {txn.invoice.invoiceNumber}
-                          </Link>
-                        )}
-                      </td>
+                      >
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            {isUnread && (
+                              <span
+                                className="w-2 h-2 rounded-full bg-rose-500 shrink-0"
+                                title="Unread Payment Approval"
+                              />
+                            )}
+                            <div className="font-semibold text-slate-500">
+                              {txn.transactionId || (txn._id ? txn._id.substring(Math.max(0, txn._id.length - 8)) : "N/A")}
+                            </div>
+                          </div>
+                          {txn.invoice?.invoiceNumber && (
+                            <Link
+                              to={`/invoices/${txn.invoice._id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markItemAsRead("pendingPayments", txn._id);
+                                markItemAsRead("unpaidInvoices", txn.invoice._id);
+                              }}
+                              className="text-xs font-bold text-[#0047FF] hover:underline block"
+                            >
+                              INV: {txn.invoice.invoiceNumber}
+                            </Link>
+                          )}
+                        </td>
                       <td className="py-4 px-3">
                         <div className="font-bold text-slate-800 dark:text-slate-200">{txn.parent?.fullName || "N/A"}</div>
                         <div className="font-semibold text-slate-500">{txn.parent?.email}</div>
@@ -219,7 +239,10 @@ export default function Transactions() {
                             href={`${import.meta.env.VITE_API_BASE_URL}/${txn.paymentScreenshot}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markItemAsRead("pendingPayments", txn._id);
+                            }}
                             className="text-xs font-bold text-[#0047FF] hover:underline"
                           >
                             View Image
@@ -246,6 +269,7 @@ export default function Transactions() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                markItemAsRead("pendingPayments", txn._id);
                                 approvePaymentMutation.mutate(txn._id);
                               }}
                               disabled={approvePaymentMutation.isPending || rejectPaymentMutation.isPending}
@@ -256,6 +280,7 @@ export default function Transactions() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                markItemAsRead("pendingPayments", txn._id);
                                 setRejectingTxnId(txn._id);
                                 setRejectReason("");
                               }}
@@ -268,8 +293,8 @@ export default function Transactions() {
                         )}
                       </td>
                     </tr>
-                  ))
-                )}
+                  );
+                }))}
               </tbody>
             </table>
           </div>

@@ -78,6 +78,28 @@ const TeamLogoCrest: React.FC<{ logo?: string; name: string }> = ({ logo, name }
   );
 };
 
+const getGoalScorerName = (scorer: any) => {
+  if (!scorer) return "Goal Scorer";
+  if (typeof scorer === "string") return scorer;
+  if (scorer.fullName) return scorer.fullName;
+  if (scorer.firstName || scorer.lastName) {
+    return `${scorer.firstName || ""} ${scorer.lastName || ""}`.trim();
+  }
+  if (scorer.name) return scorer.name;
+  return "Goal Scorer";
+};
+
+const getGoalAssistName = (assist: any) => {
+  if (!assist) return null;
+  if (typeof assist === "string") return assist;
+  if (assist.fullName) return assist.fullName;
+  if (assist.firstName || assist.lastName) {
+    return `${assist.firstName || ""} ${assist.lastName || ""}`.trim();
+  }
+  if (assist.name) return assist.name;
+  return null;
+};
+
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   const { data: matches = [], isLoading } = useLeagueMatches(leagueId);
   const { data: teams = [] } = useLeagueTeams(leagueId);
@@ -131,6 +153,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   // Filter & Accordion State
   const [roundFilter, setRoundFilter] = useState<string>("ALL");
   const [collapsedRounds, setCollapsedRounds] = useState<Record<number, boolean>>({});
+  const [expandedMatchIds, setExpandedMatchIds] = useState<Record<string, boolean>>({});
+  const [isFormGoalsOpen, setIsFormGoalsOpen] = useState(true);
+
+  const toggleMatchExpanded = (matchId: string) => {
+    setExpandedMatchIds((prev) => ({
+      ...prev,
+      [matchId]: !prev[matchId],
+    }));
+  };
+
   const [actionMenu, setActionMenu] = useState<{
     match: Match;
     top: number;
@@ -1154,111 +1186,315 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                           const shouldShowScore =
                             hasScore && (isStartedOrCompleted || hasNonZeroScore);
 
+                          const isMatchExpanded = !!expandedMatchIds[match._id];
+                          const matchGoals = Array.isArray(match.goals) ? match.goals : [];
+                          const homeMatchGoals = matchGoals.filter((g: any) => {
+                            const gTeamId = g.teamId || (typeof g.team === "object" ? g.team?._id : g.team);
+                            return String(gTeamId) === String(match.homeTeam._id);
+                          });
+                          const awayMatchGoals = matchGoals.filter((g: any) => {
+                            const gTeamId = g.teamId || (typeof g.team === "object" ? g.team?._id : g.team);
+                            return String(gTeamId) === String(match.awayTeam._id);
+                          });
+
                           return (
-                            <tr
-                              key={match._id}
-                              onClick={() => canEnterResults && handleOpenResult(match)}
-                              className={`transition-colors ${canEnterResults ? "cursor-pointer hover:bg-slate-50/60 dark:hover:bg-slate-800/30" : "hover:bg-slate-50/60 dark:hover:bg-slate-800/30"}`}
-                            >
-                              {/* Time */}
-                              <td className="py-4 px-4 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                                {matchTime}
-                              </td>
+                            <React.Fragment key={match._id}>
+                              <tr
+                                onClick={() => canEnterResults && handleOpenResult(match)}
+                                className={`transition-colors ${canEnterResults ? "cursor-pointer hover:bg-slate-50/60 dark:hover:bg-slate-800/30" : "hover:bg-slate-50/60 dark:hover:bg-slate-800/30"}`}
+                              >
+                                {/* Time */}
+                                <td className="py-4 px-4 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                  {matchTime}
+                                </td>
 
-                              {/* Field */}
-                              <td className="py-4 px-4 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                                {fieldVenue}
-                              </td>
+                                {/* Field */}
+                                <td className="py-4 px-4 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                  {fieldVenue}
+                                </td>
 
-                              {/* Home Team */}
-                              <td className="py-4 px-4">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden text-[9px] font-bold text-slate-700 dark:text-slate-200">
-                                    <TeamLogoCrest logo={homeLogo} name={homeName} />
+                                {/* Home Team */}
+                                <td className="py-4 px-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden text-[9px] font-bold text-slate-700 dark:text-slate-200">
+                                      <TeamLogoCrest logo={homeLogo} name={homeName} />
+                                    </div>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                                      {homeName}
+                                    </span>
                                   </div>
-                                  <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-                                    {homeName}
-                                  </span>
-                                </div>
-                              </td>
+                                </td>
 
-                              {/* Score (e.g. "4 - 1" or "- - -") */}
-                              <td className="py-4 px-4 text-center">
-                                {shouldShowScore ? (
-                                  <span className="font-black text-sm text-slate-900 dark:text-white px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
-                                    {homeScore} - {awayScore}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400 font-bold tracking-widest text-xs">
-                                    - - -
-                                  </span>
-                                )}
-                              </td>
+                                {/* Score (e.g. "4 - 1" or "- - -") */}
+                                <td className="py-4 px-4 text-center">
+                                  <div className="flex flex-col items-center justify-center gap-1">
+                                    {shouldShowScore ? (
+                                      <span className="font-black text-sm text-slate-900 dark:text-white px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                                        {homeScore} - {awayScore}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 font-bold tracking-widest text-xs">
+                                        - - -
+                                      </span>
+                                    )}
 
-                              {/* Away Team */}
-                              <td className="py-4 px-4">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden text-[9px] font-bold text-slate-700 dark:text-slate-200">
-                                    <TeamLogoCrest logo={awayLogo} name={awayName} />
+                                    {/* Goals Accordion Toggle Button */}
+                                    {matchGoals.length > 0 ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleMatchExpanded(match._id);
+                                        }}
+                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all shadow-xs cursor-pointer ${
+                                          isMatchExpanded
+                                            ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                            : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                                        }`}
+                                        title={isMatchExpanded ? "Collapse goal scorers & assists" : "View goal scorers & assists"}
+                                      >
+                                        <span>⚽ {matchGoals.length} {matchGoals.length === 1 ? "Goal" : "Goals"}</span>
+                                        {isMatchExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                                      </button>
+                                    ) : (
+                                      (statusUpper === "COMPLETED" || hasScore) && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleMatchExpanded(match._id);
+                                          }}
+                                          className={`inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer ${
+                                            isMatchExpanded
+                                              ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                                              : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                          }`}
+                                          title="Match telemetry breakdown"
+                                        >
+                                          <span>Telemetry</span>
+                                          {isMatchExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                        </button>
+                                      )
+                                    )}
                                   </div>
-                                  <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-                                    {awayName}
-                                  </span>
-                                </div>
-                              </td>
+                                </td>
 
-                              {/* Source */}
-                              <td className="py-4 px-4 whitespace-nowrap">
-                                {match.fixtureSource === "MANUAL" || match.isManuallyModified ? (
-                                  <span
-                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 shadow-xs"
-                                    title="Manually modified: Protected from random fixture overwrites"
+                                {/* Away Team */}
+                                <td className="py-4 px-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden text-[9px] font-bold text-slate-700 dark:text-slate-200">
+                                      <TeamLogoCrest logo={awayLogo} name={awayName} />
+                                    </div>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                                      {awayName}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Source */}
+                                <td className="py-4 px-4 whitespace-nowrap">
+                                  {match.fixtureSource === "MANUAL" || match.isManuallyModified ? (
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 shadow-xs"
+                                      title="Manually modified: Protected from random fixture overwrites"
+                                    >
+                                      <ShieldCheck size={11} className="text-amber-600 dark:text-amber-400" />
+                                      <span>MANUAL</span>
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800 shadow-xs"
+                                      title="Generated via random round-robin scheduler"
+                                    >
+                                      <span>GENERATED</span>
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Status */}
+                                <td className="py-4 px-4">
+                                  {getStatusBadge(match.status)}
+                                </td>
+
+                                {/* Actions Dropdown */}
+                                <td className="py-4 px-4 text-right">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (actionMenu?.match._id === match._id) {
+                                        setActionMenu(null);
+                                        return;
+                                      }
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      const menuHeight = 135;
+                                      const menuWidth = 160;
+                                      // Open upwards if not enough space below
+                                      const openUpwards =
+                                        window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
+                                      const top = openUpwards ? rect.top - menuHeight : rect.bottom + 4;
+                                      const left = Math.max(12, rect.right - menuWidth);
+
+                                      setActionMenu({ match, top, left });
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                    title="Match Actions"
                                   >
-                                    <ShieldCheck size={11} className="text-amber-600 dark:text-amber-400" />
-                                    <span>MANUAL</span>
-                                  </span>
-                                ) : (
-                                  <span
-                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800 shadow-xs"
-                                    title="Generated via random round-robin scheduler"
-                                  >
-                                    <span>GENERATED</span>
-                                  </span>
-                                )}
-                              </td>
+                                    <MoreVertical size={16} />
+                                  </button>
+                                </td>
+                              </tr>
 
-                              {/* Status */}
-                              <td className="py-4 px-4">
-                                {getStatusBadge(match.status)}
-                              </td>
+                              {/* Match Goals & Assists Accordion Panel */}
+                              {isMatchExpanded && (
+                                <tr className="bg-slate-50/70 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+                                  <td colSpan={8} className="py-3 px-6">
+                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900/90 p-4 shadow-xs">
+                                      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                                            Match Telemetry — Goal Scorers & Assist Playmakers
+                                          </h4>
+                                        </div>
+                                        {canEnterResults && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleOpenResult(match);
+                                            }}
+                                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors cursor-pointer"
+                                          >
+                                            <Edit2 size={12} />
+                                            <span>Edit Goals & Assists</span>
+                                          </button>
+                                        )}
+                                      </div>
 
-                              {/* Actions Dropdown */}
-                              <td className="py-4 px-4 text-right">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (actionMenu?.match._id === match._id) {
-                                      setActionMenu(null);
-                                      return;
-                                    }
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    const menuHeight = 135;
-                                    const menuWidth = 160;
-                                    // Open upwards if not enough space below
-                                    const openUpwards =
-                                      window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
-                                    const top = openUpwards ? rect.top - menuHeight : rect.bottom + 4;
-                                    const left = Math.max(12, rect.right - menuWidth);
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Home Team Goals */}
+                                        <div className="rounded-lg bg-slate-50/60 dark:bg-slate-800/40 p-3 border border-slate-100 dark:border-slate-800">
+                                          <div className="flex items-center gap-2 mb-2.5 pb-2 border-b border-slate-200/60 dark:border-slate-700/60">
+                                            <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-[8px] font-bold">
+                                              <TeamLogoCrest logo={homeLogo} name={homeName} />
+                                            </div>
+                                            <span className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">
+                                              {homeName}
+                                            </span>
+                                            <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                              {homeMatchGoals.length} {homeMatchGoals.length === 1 ? "Goal" : "Goals"}
+                                            </span>
+                                          </div>
 
-                                    setActionMenu({ match, top, left });
-                                  }}
-                                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                                  title="Match Actions"
-                                >
-                                  <MoreVertical size={16} />
-                                </button>
-                              </td>
-                            </tr>
+                                          {homeMatchGoals.length > 0 ? (
+                                            <div className="space-y-2">
+                                              {homeMatchGoals.map((g: any, gIdx: number) => {
+                                                const scorerName = getGoalScorerName(g.scorer || g.scorerId);
+                                                const assistName = getGoalAssistName(g.assist || g.assistId);
+                                                const minuteStr = g.minute ? `${g.minute}'` : "";
+                                                return (
+                                                  <div
+                                                    key={g.id || g._id || gIdx}
+                                                    className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 shadow-xs"
+                                                  >
+                                                    <div className="flex items-center gap-2 truncate">
+                                                      <span className="text-sm">⚽</span>
+                                                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                                                        {scorerName}
+                                                      </span>
+                                                      {minuteStr && (
+                                                        <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                                                          {minuteStr}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
+                                                      {assistName ? (
+                                                        <>
+                                                          <span className="text-[10px] font-medium text-slate-400">👟 Assist:</span>
+                                                          <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                                            {assistName}
+                                                          </span>
+                                                        </>
+                                                      ) : (
+                                                        <span className="text-slate-400 text-[10px] italic">Unassisted</span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          ) : (
+                                            <div className="text-center py-4 text-xs text-slate-400 dark:text-slate-500 font-medium italic">
+                                              No goals recorded for {homeName}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Away Team Goals */}
+                                        <div className="rounded-lg bg-slate-50/60 dark:bg-slate-800/40 p-3 border border-slate-100 dark:border-slate-800">
+                                          <div className="flex items-center gap-2 mb-2.5 pb-2 border-b border-slate-200/60 dark:border-slate-700/60">
+                                            <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center text-[8px] font-bold">
+                                              <TeamLogoCrest logo={awayLogo} name={awayName} />
+                                            </div>
+                                            <span className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">
+                                              {awayName}
+                                            </span>
+                                            <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                              {awayMatchGoals.length} {awayMatchGoals.length === 1 ? "Goal" : "Goals"}
+                                            </span>
+                                          </div>
+
+                                          {awayMatchGoals.length > 0 ? (
+                                            <div className="space-y-2">
+                                              {awayMatchGoals.map((g: any, gIdx: number) => {
+                                                const scorerName = getGoalScorerName(g.scorer || g.scorerId);
+                                                const assistName = getGoalAssistName(g.assist || g.assistId);
+                                                const minuteStr = g.minute ? `${g.minute}'` : "";
+                                                return (
+                                                  <div
+                                                    key={g.id || g._id || gIdx}
+                                                    className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 shadow-xs"
+                                                  >
+                                                    <div className="flex items-center gap-2 truncate">
+                                                      <span className="text-sm">⚽</span>
+                                                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                                                        {scorerName}
+                                                      </span>
+                                                      {minuteStr && (
+                                                        <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                                                          {minuteStr}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
+                                                      {assistName ? (
+                                                        <>
+                                                          <span className="text-[10px] font-medium text-slate-400">👟 Assist:</span>
+                                                          <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                                            {assistName}
+                                                          </span>
+                                                        </>
+                                                      ) : (
+                                                        <span className="text-slate-400 text-[10px] italic">Unassisted</span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          ) : (
+                                            <div className="text-center py-4 text-xs text-slate-400 dark:text-slate-500 font-medium italic">
+                                              No goals recorded for {awayName}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           );
                         })}
                       </tbody>
@@ -1816,17 +2052,37 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               </div>
             </div>
 
-            {/* Goals & Assists Section */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Goals & Assists
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  Optional: record goal scorers & assists
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/40 dark:bg-slate-800/20 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+            {/* Goals & Assists Section (Accordion Toggle) */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setIsFormGoalsOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">⚽</span>
+                  <div className="text-left">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
+                      Goals & Assists Telemetry
+                    </span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-400">
+                      Record specific goal scorers, minutes, and assist playmakers
+                    </span>
+                  </div>
+                  {resultForm.goals.length > 0 && (
+                    <span className="ml-2 px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      {resultForm.goals.length} Recorded
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-semibold group-hover:text-slate-700 dark:group-hover:text-slate-200">
+                  <span>{isFormGoalsOpen ? "Collapse Form" : "Expand Form"}</span>
+                  {isFormGoalsOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                </div>
+              </button>
+
+              {isFormGoalsOpen && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/40 dark:bg-slate-800/20 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
                 {/* Home Team Goals */}
                 <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
                   <div>
@@ -2057,6 +2313,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             {/* Auto-calculation preview */}

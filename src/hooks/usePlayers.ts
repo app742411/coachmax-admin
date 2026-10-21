@@ -1,13 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile, getAdminPlayerDetails, updatePlayerStatistics } from "../api/players";
+import { deletePlayer, getPlayers, exportUsersCSV, getPlayerProfile, getAdminPlayerDetails, updatePlayerStatistics, updatePlayer, getPlayerStats, updatePlayerPaymentStatus, UpdatePaymentStatusPayload } from "../api/players";
 import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWithTimeSlots, getClassFullTable, markSingleAttendance, markBulkAttendance, getClassPlayers, assignClassesToPlayer, removeClassFromPlayer, getTeamFullTable, markSingleTeamAttendance, markTeamAttendance, updateTeamPlayerStatistics } from "../api/adminApi";
 import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
 
-export const usePlayers = (page = 1, limit = 10, search?: string, program?: string, status?: string) => {
+export const usePlayerStats = (term?: string) => {
+  return useQuery({
+    queryKey: ["playerStats", term],
+    queryFn: () => getPlayerStats(term),
+  });
+};
+
+export const usePlayers = (
+  page = 1,
+  limit = 10,
+  search?: string,
+  program?: string,
+  status?: string,
+  term?: string,
+  medical?: string,
+  ageGroup?: string
+) => {
   return useQuery<PlayersResponse, Error>({
-    queryKey: ["players", page, limit, search, program, status],
+    queryKey: ["players", page, limit, search, program, status, term, medical, ageGroup],
     queryFn: () => {
       const userStr = localStorage.getItem("user");
       let isCoach = false;
@@ -25,8 +41,25 @@ export const usePlayers = (page = 1, limit = 10, search?: string, program?: stri
       if (isCoach) {
         return getCoachUniquePlayers(page, limit, search, program, status);
       }
-      return getPlayers(page, limit, search, program, status);
+      return getPlayers(page, limit, search, program, status, term, medical, ageGroup);
     },
+  });
+};
+
+export const useUpdatePlayer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ playerId, data }: { playerId: string; data: FormData | Record<string, any> }) =>
+      updatePlayer(playerId, data),
+    onSuccess: (data: any, variables: any) => {
+      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails", variables.playerId] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile", variables.playerId] });
+      toast.success(data?.message || "Player updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to update player");
+    }
   });
 };
 
@@ -108,7 +141,7 @@ export const useTeamFullTable = (teamId: string, leagueId?: string) => {
 export const useMarkSingleTeamAttendance = (teamId: string, leagueId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => markSingleTeamAttendance(teamId, { ...data, leagueId }),
+    mutationFn: (data: { sessionDate: string; playerId: string; status: string; reason?: string }) => markSingleTeamAttendance(teamId, { ...data, leagueId }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
@@ -139,7 +172,7 @@ export const useMarkTeamAttendance = (teamId: string, leagueId?: string) => {
 export const useMarkSingleAttendance = (classId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { sessionDate: string; playerId: string; status: string }) => {
+    mutationFn: (data: { sessionDate: string; playerId: string; status: string; reason?: string }) => {
       const userStr = localStorage.getItem("user");
       let isCoach = false;
       if (userStr) {
@@ -397,3 +430,27 @@ export const useUpdateTeamPlayerStatistics = (teamId: string) => {
     },
   });
 };
+
+export const useUpdatePlayerPaymentStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      payload,
+    }: {
+      userId: string;
+      payload: UpdatePaymentStatusPayload;
+    }) => updatePlayerPaymentStatus(userId, payload),
+    onSuccess: (data: any, variables: any) => {
+      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails", variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile", variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ["playerStats"] });
+      toast.success(data?.message || "Payment status updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "Failed to update payment status");
+    },
+  });
+};
+

@@ -76,7 +76,7 @@ export const getCoachGetClasses = async (): Promise<any> => {
 };
 
 
-export const markCoachSingleAttendance = async (classId: string, data: { sessionDate: string; playerId: string; status: string }): Promise<any> => {
+export const markCoachSingleAttendance = async (classId: string, data: { sessionDate: string; playerId: string; status: string; reason?: string }): Promise<any> => {
   const response = await apiClient.post(`/api/coach/attendance/${classId}/single`, data);
   return response.data;
 };

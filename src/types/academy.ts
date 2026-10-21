@@ -17,6 +17,7 @@ export interface ClassSchedule {
 }
 
 export interface UnallocatedPlayer {
+  _id?: string;
   id: string | number;
   name: string;
   avatar: string;
@@ -31,6 +32,8 @@ export interface UnallocatedPlayer {
   registrationRequestId?: string;
   paymentStatus?: string;
   termName?: string;
+  termId?: string;
+  isEvent?: boolean;
   preferredClasses?: Array<{
     id: string;
     name: string;
@@ -39,6 +42,14 @@ export interface UnallocatedPlayer {
     endTime: string;
     location: string;
   }>;
+  primaryClass?: {
+    id: string;
+    name: string;
+    dayOfWeek: string;
+    startTime: string;
+    endTime: string;
+    location?: string;
+  };
 }
 
 export interface WaitlistItem {

@@ -23,6 +23,7 @@ import RegistrationRequests from "./pages/PlayersManagement/RegistrationRequests
 import PlayerProfilePage from "./pages/PlayersManagement/PlayerProfilePage";
 import Academy from "./pages/Academy/Academy";
 import ProgramsManagement from "./pages/Programs/ProgramsManagement";
+import Programs2 from "./pages/Programs/Programs2";
 import ClassesList from "./pages/Classes/ClassesList";
 import CloneTermPage from "./pages/Classes/CloneTermPage";
 import ProductList from "./pages/Store/ProductList";
@@ -115,6 +116,7 @@ export default function App() {
             <Route path="/players" element={<PlayersManagement />} />
             <Route path="/player/:playerId" element={<PlayerProfilePage />} />
             <Route path="/programs" element={<ProgramsManagement />} />
+            <Route path="/programs-2" element={<Programs2 />} />
             <Route path="/classes" element={<ClassesList />} />
             <Route path="/clone-term" element={<CloneTermPage />} />
             <Route path="/program/:programType" element={<DynamicProgramRoute />} />

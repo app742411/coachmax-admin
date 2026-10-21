@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useInvoices, useUpdateInvoice } from "../../hooks/useInvoices";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 const formatDate = (dateString: string) => {
   if (!dateString) return "N/A";
@@ -26,6 +27,7 @@ export default function InvoiceList() {
   const [paymentStatus, setPaymentStatus] = useState("ALL");
   const [page, setPage] = useState(1);
   const limit = 10;
+  const { markItemAsRead, isItemRead } = useSidebarBadges();
 
   const { data, isLoading, isError } = useInvoices(search, paymentStatus, page, limit);
   const updateInvoiceMutation = useUpdateInvoice();
@@ -119,11 +121,28 @@ export default function InvoiceList() {
                     return (
                       <tr
                         key={inv._id}
-                        onClick={() => navigate(`/invoices/${inv._id}`)}
-                        className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all"
+                        onClick={() => {
+                          markItemAsRead("unpaidInvoices", inv._id);
+                          navigate(`/invoices/${inv._id}`);
+                        }}
+                        className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${
+                          !isItemRead("unpaidInvoices", inv._id) && inv.paymentStatus !== "PAID"
+                            ? "bg-blue-50/20 dark:bg-blue-950/10 font-bold"
+                            : ""
+                        }`}
                       >
                         <td className="py-4 px-4 font-semibold text-[#0047FF]">
-                          {inv.invoiceNumber || (inv._id ? inv._id.substring(Math.max(0, inv._id.length - 8)) : "N/A")}
+                          <div className="flex items-center gap-2">
+                            {!isItemRead("unpaidInvoices", inv._id) && inv.paymentStatus !== "PAID" && (
+                              <span
+                                className="w-2 h-2 rounded-full bg-rose-500 shrink-0"
+                                title="Unread Invoice"
+                              />
+                            )}
+                            <span>
+                              {inv.invoiceNumber || (inv._id ? inv._id.substring(Math.max(0, inv._id.length - 8)) : "N/A")}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-4 px-3">
                           <div className="font-bold text-slate-800 dark:text-slate-200">{inv.parent?.fullName || "N/A"}</div>

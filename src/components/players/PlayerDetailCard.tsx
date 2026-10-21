@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Player } from "../../types/player";
-import { useAdminPlayerDetails, usePlayerProfile, useCoachNotes } from "../../hooks/usePlayers";
+import { useAdminPlayerDetails, usePlayerProfile, useCoachNotes, useUpdatePlayerPaymentStatus } from "../../hooks/usePlayers";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import EditPlayerStatsModal from "./EditPlayerStatsModal";
-import { ShieldAlert } from "lucide-react";
+import PlayerPaymentHistoryModal from "./PlayerPaymentHistoryModal";
+import { ShieldAlert, Edit, Receipt } from "lucide-react";
 import RatingEditor from "./RatingEditor";
 import { StatusBadge } from "../common/StatusColorCode";
 
@@ -32,10 +33,11 @@ const getBadgeStyles = (noteType: string) => {
 interface PlayerDetailCardProps {
   player: Player;
   onClose: () => void;
+  onEditPlayer?: (player: Player) => void;
   isRegistrationRequest?: boolean;
 }
 
-export default function PlayerDetailCard({ player: initialPlayer, onClose, isRegistrationRequest }: PlayerDetailCardProps) {
+export default function PlayerDetailCard({ player: initialPlayer, onClose, onEditPlayer, isRegistrationRequest }: PlayerDetailCardProps) {
   const playerId = initialPlayer?._id || (initialPlayer as any)?.playerId || (initialPlayer as any)?.id;
   // Query full admin profile details (same source as PlayerProfilePage)
   const { data: adminDetailsRes } = useAdminPlayerDetails(playerId);
@@ -88,6 +90,8 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
   const notes = notesRes?.data || [];
   const [editingNote, setEditingNote] = useState<any | null>(null);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
+  const updatePaymentStatusMutation = useUpdatePlayerPaymentStatus();
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
   const avatar = player.profileImage ? `${baseUrl}/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
@@ -173,14 +177,26 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
               </div>
             </div>
 
-            <button
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              onClick={onClose}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-1.5">
+              {onEditPlayer && (
+                <button
+                  type="button"
+                  onClick={() => onEditPlayer(player)}
+                  className="text-slate-400 hover:text-[#0047FF] dark:hover:text-blue-400 p-1 transition-colors"
+                  title="Edit Player"
+                >
+                  <Edit size={17} />
+                </button>
+              )}
+              <button
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                onClick={onClose}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Medical Warning Alert (Prioritized at the top) */}
@@ -409,41 +425,71 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
           {/* Section 5.5: Assigned Classes with per-class Payment Status */}
           {assignedClassesInfo.length > 0 && (
             <div className="text-xs text-slate-700 dark:text-slate-350">
-              <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px] mb-3 pb-1 border-b border-slate-50 dark:border-slate-800/40 flex justify-between items-center">
-                <span>Assigned Classes</span>
-                <span className="text-[#0047FF] font-extrabold">{assignedClassesInfo.length}</span>
-              </h4>
+              <div className="flex items-center justify-between pb-1 border-b border-slate-50 dark:border-slate-800/40 mb-3">
+                <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                  <span>Assigned Classes</span>
+                  <span className="text-[#0047FF] font-extrabold">({assignedClassesInfo.length})</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentHistoryOpen(true)}
+                  className="text-[10px] font-bold text-[#0047FF] hover:underline uppercase flex items-center gap-1"
+                >
+                  <Receipt size={11} />
+                  <span>Full History & Status</span>
+                </button>
+              </div>
               <div className="space-y-2">
                 {assignedClassesInfo.map((clsItem: any, idx: number) => {
+                  const classId = clsItem.classId || clsItem._id || clsItem.id;
                   const className = clsItem.className || clsItem.name || "Class";
                   const status = clsItem.paymentStatus || player?.paymentStatus || "UNPAID";
                   const st = (status || "UNPAID").toUpperCase();
+                  const fee = clsItem.fee || clsItem.price;
+
                   return (
                     <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 text-xs">
                       <div>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 block">{className}</span>
-                        {(clsItem.dayOfWeek || clsItem.startTime) && (
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {[clsItem.dayOfWeek, clsItem.startTime].filter(Boolean).join(" • ")}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{className}</span>
+                          {fee !== undefined && (
+                            <span className="text-[10px] font-semibold text-slate-400">(${fee})</span>
+                          )}
+                        </div>
+                        {(clsItem.dayOfWeek || clsItem.startTime || clsItem.termName) && (
+                          <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                            {[clsItem.termName, clsItem.dayOfWeek, clsItem.startTime].filter(Boolean).join(" • ")}
                           </span>
                         )}
                       </div>
-                      <div>
-                        {st === "PAID" || st === "APPROVED" || st === "ACTIVE" ? (
-                          <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[9px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>
-                        ) : st === "TRIAL" ? (
-                          <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[9px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>
-                        ) : st === "TBC" ? (
-                          <span className="px-2 py-0.5 bg-white border border-slate-300 text-slate-800 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 font-bold text-[9px] uppercase rounded-none shadow-xs">TBC</span>
-                        ) : st === "HANDSHAKE" ? (
-                          <span className="px-2 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[9px] uppercase rounded-none dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-400">HANDSHAKE</span>
-                        ) : st === "EXTRA" || st === "OTHERS" ? (
-                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">EXTRA</span>
-                        ) : st === "SUBSTITUTE" ? (
-                          <span className="px-2 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[9px] uppercase rounded-none">SUBSTITUTE</span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-[9px] uppercase rounded-none dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">UNPAID</span>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={st}
+                          onChange={(e) => {
+                            if (playerId && classId) {
+                              updatePaymentStatusMutation.mutate({
+                                userId: playerId,
+                                payload: { paymentStatus: e.target.value, classId: classId.toString() },
+                              });
+                            }
+                          }}
+                          className={`h-6 px-1.5 text-[9px] font-bold uppercase rounded-none border cursor-pointer ${
+                            st === "PAID"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : st === "UNPAID" || st === "OVER_DUE"
+                              ? "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400"
+                              : "bg-slate-50 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300"
+                          }`}
+                        >
+                          <option value="PAID">PAID</option>
+                          <option value="UNPAID">UNPAID</option>
+                          <option value="TRIAL">TRIAL</option>
+                          <option value="OVER_DUE">OVER DUE</option>
+                          <option value="HANDSHAKE">HANDSHAKE</option>
+                          <option value="TBC">TBC</option>
+                          <option value="EXTRA">EXTRA</option>
+                          <option value="SUBSTITUTE">SUBSTITUTE</option>
+                        </select>
                       </div>
                     </div>
                   );
@@ -532,13 +578,23 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
 
         {/* Footer Actions */}
         {!isRegistrationRequest && (
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-2 flex items-center gap-2">
+            {onEditPlayer && (
+              <button
+                type="button"
+                onClick={() => onEditPlayer(player)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 hover:border-[#0047FF] dark:hover:border-blue-500 bg-white dark:bg-slate-800 hover:text-[#0047FF] dark:hover:text-blue-400 text-slate-700 dark:text-slate-200 font-bold py-2.5 text-xs uppercase tracking-wider transition-colors shadow-xs"
+              >
+                <Edit size={14} />
+                <span>Edit Details</span>
+              </button>
+            )}
             <Link
               to={`/player/${player._id}`}
               onClick={onClose}
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-[#0047FF] hover:bg-blue-700 text-white font-bold py-2.5 text-xs uppercase tracking-wider transition-colors shadow-theme-xs"
+              className={`${onEditPlayer ? "flex-1" : "w-full"} inline-flex items-center justify-center gap-1.5 bg-[#0047FF] hover:bg-blue-700 text-white font-bold py-2.5 text-xs uppercase tracking-wider transition-colors shadow-theme-xs`}
             >
-              <span>View Full Profile</span>
+              <span>Full Profile</span>
               <span>&rarr;</span>
             </Link>
           </div>
@@ -563,6 +619,12 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, isReg
         playerId={player._id}
         playerName={player.fullName}
         initialStats={statistics}
+      />
+
+      <PlayerPaymentHistoryModal
+        isOpen={isPaymentHistoryOpen}
+        onClose={() => setIsPaymentHistoryOpen(false)}
+        player={player}
       />
     </>
   );

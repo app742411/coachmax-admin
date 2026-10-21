@@ -4,12 +4,21 @@ import { ChevronDownIcon, HorizontaLDots } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 import { Trophy, Shield, ClipboardList, Copy } from "lucide-react";
 import { useCategories } from "../hooks/useCategories";
+import { useSidebarBadges } from "../hooks/useSidebarBadges";
+
+type NavSubItem = {
+  name: string;
+  path: string;
+  isEvent?: boolean;
+  badgeCount?: number;
+};
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; isEvent?: boolean }[];
+  badgeCount?: number;
+  subItems?: NavSubItem[];
 };
 
 type MenuSection = {
@@ -18,7 +27,7 @@ type MenuSection = {
   items: NavItem[];
 };
 
-const DEFAULT_PROGRAM_SUBITEMS = [
+const DEFAULT_PROGRAM_SUBITEMS: NavSubItem[] = [
   { name: "Academy", path: "/program/academy" },
   { name: "Schools", path: "/program/schools" },
   { name: "Holiday Camps", path: "/program/holiday-camps" },
@@ -46,17 +55,29 @@ const AppSidebar: React.FC = () => {
   const subMenuRefs = useRef<Record<string, HTMLUListElement | null>>({});
 
   const { categories } = useCategories({ isEvent: "all" });
+  const { badges, markPathAsSeen } = useSidebarBadges();
 
   const programsSubItems = useMemo(() => {
-    if (categories && categories.length > 0) {
-      return categories.map((cat: any) => ({
-        name: cat.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
-        path: `/program/${cat.name.toLowerCase().replace(/\s+/g, '-')}`,
-        isEvent: !!cat.isEvent,
-      }));
-    }
-    return DEFAULT_PROGRAM_SUBITEMS;
-  }, [categories]);
+    const baseItems: NavSubItem[] =
+      categories && categories.length > 0
+        ? categories.map((cat: any) => ({
+          name: cat.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          path: `/program/${cat.name.toLowerCase().replace(/\s+/g, "-")}`,
+          isEvent: !!cat.isEvent,
+        }))
+        : DEFAULT_PROGRAM_SUBITEMS;
+
+    return baseItems.map((item) => {
+      // Unallocated players badge attached to Academy
+      if (item.path.toLowerCase().includes("academy")) {
+        return {
+          ...item,
+          badgeCount: badges.unallocatedPlayers || 0,
+        };
+      }
+      return item;
+    });
+  }, [categories, badges.unallocatedPlayers]);
 
   const isActive = useCallback(
     (path: string) => location.pathname === path,
@@ -82,8 +103,6 @@ const AppSidebar: React.FC = () => {
     </svg>
   );
 
-
-
   const ChatIcon = () => (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -97,8 +116,7 @@ const AppSidebar: React.FC = () => {
     </svg>
   );
 
-
-  const coachMenuSections: MenuSection[] = [
+  const coachMenuSections: MenuSection[] = useMemo(() => [
     {
       title: "Main",
       key: "main",
@@ -111,9 +129,14 @@ const AppSidebar: React.FC = () => {
         {
           name: "My Players",
           icon: <UserIcon />,
+          badgeCount: badges.temporaryPlayers || 0,
           subItems: [
             { name: "Player List", path: "/my-players" },
-            { name: "Temporary Players", path: "/temporary-players-list" },
+            {
+              name: "Temporary Players",
+              path: "/temporary-players-list",
+              badgeCount: badges.temporaryPlayers || 0
+            },
             { name: "Add Temporary Players", path: "/add-temporary-players" },
             { name: "My Notes", path: "/coach-notes" }
           ],
@@ -128,13 +151,6 @@ const AppSidebar: React.FC = () => {
           icon: <CalendarIcon />,
           subItems: programsSubItems,
         },
-        // {
-        //   name: "Events",
-        //   icon: <CalendarIcon />,
-        //   subItems: [
-        //     { name: "Event List", path: "/events" },
-        //   ],
-        // },
         {
           name: "Communication",
           icon: <ChatIcon />,
@@ -161,9 +177,9 @@ const AppSidebar: React.FC = () => {
         },
       ],
     },
-  ];
+  ], [badges.temporaryPlayers, programsSubItems]);
 
-  const adminMenuSections: MenuSection[] = [
+  const adminMenuSections: MenuSection[] = useMemo(() => [
     {
       title: "Main",
       key: "main",
@@ -172,23 +188,39 @@ const AppSidebar: React.FC = () => {
         {
           name: "Players Management",
           icon: <UserIcon />,
+          badgeCount: badges.playersManagementTotal || 0,
           subItems: [
             { name: "Players", path: "/players" },
             { name: "Add Temporary Players", path: "/add-temporary-players" },
-            { name: "Temporary Players", path: "/temporary-players-list" },
-            { name: "Verification Request", path: "/new-registration-request" }
+            {
+              name: "Temporary Players",
+              path: "/temporary-players-list",
+              badgeCount: badges.temporaryPlayers || 0
+            },
+            {
+              name: "Verification Request",
+              path: "/new-registration-request",
+              badgeCount: badges.verificationRequests || 0
+            }
           ]
         },
         {
           name: "Programs",
           icon: <CalendarIcon />,
+          badgeCount: badges.unallocatedPlayers || 0,
           subItems: programsSubItems
         },
         {
           name: "Classes",
           icon: <CalendarIcon />,
-          path: "/classes"
+          path: "/programs-2",
+          badgeCount: badges.unallocatedPlayers || 0,
         },
+        // {
+        //   name: "Classes",
+        //   icon: <CalendarIcon />,
+        //   path: "/classes"
+        // },
       ],
     },
     {
@@ -198,10 +230,14 @@ const AppSidebar: React.FC = () => {
         {
           name: "Events",
           icon: <CalendarIcon />,
+          badgeCount: badges.eventRegistrations || 0,
           subItems: [
-            { name: "All Events", path: "/events" },
+            {
+              name: "All Events",
+              path: "/events",
+              badgeCount: badges.eventRegistrations || 0
+            },
             { name: "Add Event", path: "/add-event" },
-            // { name: "Training Sessions", path: "/training-sessions" },
           ],
         },
         {
@@ -225,15 +261,22 @@ const AppSidebar: React.FC = () => {
         {
           name: "Finance",
           icon: <GridIcon />,
+          badgeCount: badges.financeTotal || 0,
           subItems: [
-            // { name: "Overview", path: "/finance" },
             { name: "Bank Details", path: "/bank-details" },
-            { name: "Invoices", path: "/invoices" },
-            { name: "Transactions", path: "/transactions" },
+            {
+              name: "Invoices",
+              path: "/invoices",
+              badgeCount: badges.unpaidInvoices || 0
+            },
+            {
+              name: "Transactions",
+              path: "/transactions",
+              badgeCount: badges.pendingPayments || 0
+            },
             { name: "Term Earnings", path: "/term-earnings" }
           ]
         },
-
       ],
     },
     {
@@ -243,10 +286,15 @@ const AppSidebar: React.FC = () => {
         {
           name: "Store",
           icon: <GridIcon />,
+          badgeCount: badges.orders || 0,
           subItems: [
             { name: "Product List", path: "/products" },
             { name: "Add Product", path: "/add-product" },
-            { name: "Orders", path: "/orders" }
+            {
+              name: "Orders",
+              path: "/orders",
+              badgeCount: badges.orders || 0
+            }
           ]
         },
       ],
@@ -263,14 +311,6 @@ const AppSidebar: React.FC = () => {
             { name: "Add News", path: "/add-content" },
           ],
         },
-        // {
-        //   name: "Gallery",
-        //   icon: <GridIcon />,
-        //   subItems: [
-        //     { name: "View Gallery", path: "/gallery" },
-        //     { name: "Add Gallery", path: "/add-gallery" },
-        //   ],
-        // },
       ],
     },
     {
@@ -282,7 +322,6 @@ const AppSidebar: React.FC = () => {
         { name: "Sponsors", icon: <GridIcon />, path: "/sponsors" },
         { name: "Audit Logs", icon: <ClipboardList size={18} />, path: "/audit-logs" },
         { name: "Clone Term", icon: <Copy size={18} />, path: "/clone-term" },
-        // { name: "User Manual", icon: <BookOpen size={18} />, path: "/user-manual" },
       ],
     },
     {
@@ -292,7 +331,7 @@ const AppSidebar: React.FC = () => {
         { name: "Settings", icon: <SettingsIcon />, path: "/profile" }
       ],
     },
-  ];
+  ], [badges, programsSubItems]);
 
   const menuSections = ["SUPER_ADMIN", "ADMIN"].includes(userRole) ? adminMenuSections : coachMenuSections;
 
@@ -322,7 +361,7 @@ const AppSidebar: React.FC = () => {
       }
       return null;
     });
-  }, [location.pathname]);
+  }, [location.pathname, menuSections]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
@@ -353,98 +392,135 @@ const AppSidebar: React.FC = () => {
 
   const renderMenuItems = (items: NavItem[], sectionKey: string) => (
     <ul className="flex flex-col gap-1">
-      {items.map((nav, index) => (
-        <li key={nav.name}>
-          {nav.subItems ? (
-            <button
-              onClick={() => handleSubmenuToggle(sectionKey, index)}
-              className={`menu-item group ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
-                ? "menu-item-active"
-                : "menu-item-inactive"
-                } cursor-pointer ${!isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "lg:justify-start"
-                }`}
-            >
-              <span
-                className={`menu-item-icon-size ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
-                  ? "menu-item-icon-active"
-                  : "menu-item-icon-inactive"
-                  }`}
-              >
-                {nav.icon}
-              </span>
-              <span className={`menu-item-text ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}`}>
-                {nav.name}
-              </span>
-              <ChevronDownIcon
-                className={`ml-auto w-4 h-4 transition-transform duration-200 ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"} ${openSubmenu?.sectionKey === sectionKey &&
-                  openSubmenu?.index === index
-                  ? "rotate-180 text-white"
-                  : "text-slate-400"
-                  }`}
-              />
-            </button>
-          ) : (
-            nav.path && (
-              <Link
-                to={nav.path}
-                className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                  }`}
+      {items.map((nav, index) => {
+        const hasBadge = (nav.badgeCount || 0) > 0;
+        const isCollapsedMode = !isExpanded && !isHovered && !isMobileOpen;
+
+        return (
+          <li key={nav.name}>
+            {nav.subItems ? (
+              <button
+                onClick={() => handleSubmenuToggle(sectionKey, index)}
+                className={`menu-item group ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
+                  ? "menu-item-active"
+                  : "menu-item-inactive"
+                  } cursor-pointer ${isCollapsedMode
+                    ? "lg:justify-center"
+                    : "lg:justify-start"
+                  } relative`}
               >
                 <span
-                  className={`menu-item-icon-size ${isActive(nav.path)
+                  className={`menu-item-icon-size relative ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
                     }`}
                 >
                   {nav.icon}
+                  {isCollapsedMode && hasBadge && (
+                    <span className="absolute -top-1 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm ring-2 ring-[#031549]">
+                      {nav.badgeCount! > 99 ? "99+" : nav.badgeCount}
+                    </span>
+                  )}
                 </span>
-                <span className={`menu-item-text ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}`}>
+                <span className={`menu-item-text ${!isCollapsedMode ? "block" : "hidden"}`}>
                   {nav.name}
                 </span>
-              </Link>
-            )
-          )}
-          {nav.subItems && (
-            <div
-              className={`overflow-hidden transition-all duration-300 ${isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}`}
-              style={{
-                height:
-                  openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
-                    ? `${subMenuHeight[`${sectionKey}-${index}`]}px`
-                    : "0px",
-              }}
-            >
-              <ul
-                ref={(el) => {
-                  subMenuRefs.current[`${sectionKey}-${index}`] = el;
+
+                {!isCollapsedMode && hasBadge && (
+                  <span className="ml-auto mr-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold bg-rose-600 text-white shadow-sm ring-1 ring-rose-400/30 animate-pulse">
+                    ({nav.badgeCount! > 99 ? "99+" : nav.badgeCount})
+                  </span>
+                )}
+
+                <ChevronDownIcon
+                  className={`${hasBadge ? "" : "ml-auto"} w-4 h-4 transition-transform duration-200 ${!isCollapsedMode ? "block" : "hidden"} ${openSubmenu?.sectionKey === sectionKey &&
+                    openSubmenu?.index === index
+                    ? "rotate-180 text-white"
+                    : "text-slate-400"
+                    }`}
+                />
+              </button>
+            ) : (
+              nav.path && (
+                <Link
+                  to={nav.path}
+                  className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                    } ${isCollapsedMode ? "lg:justify-center" : "lg:justify-start"} relative`}
+                >
+                  <span
+                    className={`menu-item-icon-size relative ${isActive(nav.path)
+                      ? "menu-item-icon-active"
+                      : "menu-item-icon-inactive"
+                      }`}
+                  >
+                    {nav.icon}
+                    {isCollapsedMode && hasBadge && (
+                      <span className="absolute -top-1 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm ring-2 ring-[#031549]">
+                        {nav.badgeCount! > 99 ? "99+" : nav.badgeCount}
+                      </span>
+                    )}
+                  </span>
+                  <span className={`menu-item-text ${!isCollapsedMode ? "block" : "hidden"}`}>
+                    {nav.name}
+                  </span>
+                  {!isCollapsedMode && hasBadge && (
+                    <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold bg-rose-600 text-white shadow-sm ring-1 ring-rose-400/30">
+                      ({nav.badgeCount! > 99 ? "99+" : nav.badgeCount})
+                    </span>
+                  )}
+                </Link>
+              )
+            )}
+            {nav.subItems && (
+              <div
+                className={`overflow-hidden transition-all duration-300 ${!isCollapsedMode ? "block" : "hidden"}`}
+                style={{
+                  height:
+                    openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
+                      ? `${subMenuHeight[`${sectionKey}-${index}`]}px`
+                      : "0px",
                 }}
-                className="pt-1 space-y-1 ml-9 pb-1"
               >
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    <Link
-                      to={subItem.path}
-                      className={`menu-dropdown-item flex items-center justify-between gap-2 ${isActive(subItem.path)
-                        ? "menu-dropdown-item-active"
-                        : "menu-dropdown-item-inactive"
-                        }`}
-                    >
-                      <span className="truncate">{subItem.name}</span>
-                      {subItem.isEvent && (
-                        <span className="px-1 py-px text-[7px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-none shrink-0 select-none">
-                          Holiday
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      ))}
+                <ul
+                  ref={(el) => {
+                    subMenuRefs.current[`${sectionKey}-${index}`] = el;
+                  }}
+                  className="pt-1 space-y-1 ml-9 pb-1"
+                >
+                  {nav.subItems.map((subItem) => {
+                    const subBadge = (subItem.badgeCount || 0) > 0;
+                    return (
+                      <li key={subItem.name}>
+                        <Link
+                          to={subItem.path}
+                          className={`menu-dropdown-item flex items-center justify-between gap-2 ${isActive(subItem.path)
+                            ? "menu-dropdown-item-active"
+                            : "menu-dropdown-item-inactive"
+                            }`}
+                        >
+                          <span className="truncate">{subItem.name}</span>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                            {subItem.isEvent && (
+                              <span className="px-1 py-px text-[7px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-none select-none">
+                                Holiday
+                              </span>
+                            )}
+                            {subBadge && (
+                              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-extrabold bg-rose-600 text-white shadow-sm ring-1 ring-rose-500/30">
+                                ({subItem.badgeCount! > 99 ? "99+" : subItem.badgeCount})
+                              </span>
+                            )}
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 
@@ -495,7 +571,6 @@ const AppSidebar: React.FC = () => {
             ))}
           </div>
         </nav>
-
       </div>
     </aside>
   );

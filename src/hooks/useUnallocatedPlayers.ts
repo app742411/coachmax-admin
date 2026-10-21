@@ -4,37 +4,70 @@ import { UnallocatedPlayer } from "../types/academy";
 
 const mapUnallocatedToCard = (data: any): UnallocatedPlayer => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  const avatar = data.profileImage ? `${baseUrl}/${data.profileImage.replace(/^\/+/, "")}` : `https://ui-avatars.com/api/?name=${data.fullName}`;
-  // Extract details based on whatever data we have, e.g., age group and gender
-  const details = `${data.gender || "Unknown"}`;
+  const avatar = data.profileImage ? `${baseUrl}/${data.profileImage.replace(/^\/+/, "")}` : `https://ui-avatars.com/api/?name=${data.fullName || "Player"}`;
+  
+  // Extract details (e.g. Gender, Age) cleanly without showing raw "Unknown"
+  const details = data.gender && data.gender !== "Unknown" ? data.gender : (data.dateOfBirth ? `DOB: ${new Date(data.dateOfBirth).toLocaleDateString("en-GB")}` : "Player");
 
   // Format requested date/time
-  const requestedDate = new Date(data.joinedDate || data.createdAt);
+  const requestedDate = new Date(data.joinedDate || data.createdAt || Date.now());
   const formattedRequested = `${requestedDate.toLocaleDateString("en-US", { weekday: 'short' })} ${requestedDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' })}`;
+
+  // Extract Category from request or user
+  const reqCategory = data.registrationRequest?.category || data.category || (data.categories && data.categories[0]);
+  const categoryId = reqCategory?._id || (typeof reqCategory === "string" ? reqCategory : undefined);
+  const categoryName = reqCategory?.name || (typeof reqCategory === "string" ? "Academy" : (data.category?.name || "Academy"));
+  const isEvent = Boolean(reqCategory?.isEvent || data.category?.isEvent);
+
+  // Extract Program from request or user
+  const reqPrograms = (data.registrationRequest?.programs && data.registrationRequest.programs.length > 0)
+    ? data.registrationRequest.programs
+    : (data.programs || []);
+  const primaryProgram = reqPrograms[0];
+  const programId = primaryProgram?._id || (typeof primaryProgram === "string" ? primaryProgram : undefined);
+  const fullProgramName = primaryProgram?.name || (typeof primaryProgram === "string" ? primaryProgram : "N/A");
+
+  // Extract Term from request or user
+  const reqTerm = data.registrationRequest?.preferredTerm || data.term;
+  const termName = reqTerm?.name || undefined;
+  const termId = reqTerm?._id || (typeof reqTerm === "string" ? reqTerm : undefined);
+
+  // Preferred Classes requested by player
+  const preferredClasses = (data.registrationRequest?.preferredClasses || []).map((c: any) => ({
+    id: c._id || c.id,
+    name: c.name || "Class",
+    dayOfWeek: c.dayOfWeek || "",
+    startTime: c.startTime || "",
+    endTime: c.endTime || "",
+    location: c.location || c.venue || "",
+  }));
+
+  const primaryClass = preferredClasses.length > 0 ? preferredClasses[0] : undefined;
+
+  // Program / Category short code for badge
+  const programCode = fullProgramName && fullProgramName !== "N/A"
+    ? fullProgramName.substring(0, 3).toUpperCase()
+    : (categoryName ? categoryName.substring(0, 2).toUpperCase() : "AC");
 
   return {
     id: data._id,
-    name: data.fullName,
+    name: data.fullName || "Unnamed Player",
     avatar,
-    details: details,
+    details,
     rating: data.rating || 0,
     requested: formattedRequested,
-    programCode: data.programs && data.programs.length > 0 ? data.programs[0].name.substring(0, 2).toUpperCase() : "AC",
-    fullProgramName: data.programs && data.programs.length > 0 ? data.programs[0].name : "N/A",
-    categoryName: data.category?.name || "N/A",
-    categoryId: data.category?._id || undefined,
-    programId: data.programs && data.programs.length > 0 ? data.programs[0]._id : undefined,
+    programCode,
+    fullProgramName,
+    categoryName,
+    categoryId,
+    programId,
     registrationRequestId: data.registrationRequest?._id || undefined,
     paymentStatus: data.paymentStatus || "TRIAL",
-    termName: data.registrationRequest?.preferredTerm?.name || undefined,
-    preferredClasses: data.registrationRequest?.preferredClasses?.map((c: any) => ({
-      id: c._id,
-      name: c.name,
-      dayOfWeek: c.dayOfWeek,
-      startTime: c.startTime,
-      endTime: c.endTime,
-      location: c.location,
-    })) || [],
+    termName,
+    termId,
+    isEvent,
+    preferredClasses,
+    primaryClass,
   };
 };
 

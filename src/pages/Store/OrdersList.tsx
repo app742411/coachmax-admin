@@ -4,6 +4,7 @@ import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import Pagination from "../../components/common/Pagination";
 import { useOrders } from "../../hooks/useOrders";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 export default function OrdersList() {
   const [search, setSearch] = useState("");
@@ -11,6 +12,7 @@ export default function OrdersList() {
   const [page, setPage] = useState(1);
   const limit = 5;
   const navigate = useNavigate();
+  const { markItemAsRead, isItemRead } = useSidebarBadges();
 
   const { data, isLoading, isError } = useOrders(search, statusFilter, page, limit);
 
@@ -78,15 +80,35 @@ export default function OrdersList() {
                     <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No orders found.</td>
                   </tr>
                 ) : (
-                  orders.map((order: any) => (
-                    <tr 
-                      key={order._id} 
-                      onClick={() => navigate(`/orders/${order._id}`)}
-                      className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all"
-                    >
-                      <td className="py-4 px-4 font-semibold text-[#0047FF]">
-                        {order._id.substring(order._id.length - 8).toUpperCase()}
-                      </td>
+                  orders.map((order: any) => {
+                    const isUnread =
+                      !isItemRead("orders", order._id) &&
+                      (order.status === "PENDING" || order.status === "PROCESSING");
+                    return (
+                      <tr
+                        key={order._id}
+                        onClick={() => {
+                          markItemAsRead("orders", order._id);
+                          navigate(`/orders/${order._id}`);
+                        }}
+                        className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${
+                          isUnread ? "bg-blue-50/30 dark:bg-blue-950/10 font-bold" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-4 font-semibold text-[#0047FF]">
+                          <div className="flex items-center gap-2">
+                            {isUnread && (
+                              <span
+                                className="w-2 h-2 rounded-full bg-rose-500 shrink-0"
+                                title="Unread Order"
+                              />
+                            )}
+                            <span>
+                              {order.orderNumber ||
+                                order._id.substring(order._id.length - 8).toUpperCase()}
+                            </span>
+                          </div>
+                        </td>
                       <td className="py-4 px-3">
                         <div className="font-bold text-slate-800 dark:text-slate-200">{order.parent?.fullName || "N/A"}</div>
                         <div className="font-semibold text-slate-500">{order.parent?.email}</div>
@@ -112,8 +134,8 @@ export default function OrdersList() {
                         </span>
                       </td>
                     </tr>
-                  ))
-                )}
+                  );
+                }))}
               </tbody>
             </table>
           </div>

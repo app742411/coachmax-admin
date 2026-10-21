@@ -40,6 +40,7 @@ interface Event {
     isRegistrationOpen: boolean;
     bannerImage: string | null;
     status: "UPCOMING" | "ONGOING" | "COMPLETED";
+    eventType?: string;
     createdBy?: {
         _id: string;
         name: string;
@@ -223,8 +224,17 @@ export default function EventList() {
 
                                 <div className="p-6 relative">
                                     <div className="mb-4">
-                                        <h4 className="text-xl font-bold text-gray-800 dark:text-white  tracking-tighter leading-tight line-clamp-1 group-hover:text-brand-500 transition-colors">{event.title}</h4>
-                                        <p className="text-[10px] font-bold text-brand-500 tracking-[0.2em] mb-3 opacity-80">{event.category} Event</p>
+                                        <h4 className="text-xl font-bold text-gray-800 dark:text-white tracking-tighter leading-tight line-clamp-1 group-hover:text-brand-500 transition-colors">{event.title}</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className={`text-[10px] font-bold tracking-[0.1em] px-2 py-0.5 rounded ${
+                                                event.eventType === "CAMP" || event.eventType === "HOLIDAY CAMP"
+                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                                                    : "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                                            }`}>
+                                                {event.eventType === "CAMP" ? "Holiday Camp" : event.eventType || "Tournament"}
+                                            </span>
+                                            <span className="text-[10px] text-gray-400 font-medium">• {event.category}</span>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-3 pt-4 border-t border-gray-50 dark:border-gray-800/50">

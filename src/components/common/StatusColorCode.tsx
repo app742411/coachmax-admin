@@ -206,7 +206,71 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ status, className = "", 
     );
   }
 
-  // TRIAL, TBC, EXTRA, OTHERS, SUBSTITUTE -> Blank (no payment icon in table column)
+  // OVER_DUE -> Red outlined circle with warning line
+  if (s === "OVER_DUE") {
+    return (
+      <div
+        className={`flex items-center justify-center text-rose-600 dark:text-rose-400 ${className}`}
+        title="OVER DUE"
+      >
+        <svg className={size} viewBox="0 0 20 20" fill="none" stroke="currentColor">
+          <circle cx="10" cy="10" r="7.5" strokeWidth="1.8" />
+          <line x1="10" y1="6" x2="10" y2="10.5" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="10" cy="13.5" r="0.9" fill="currentColor" />
+        </svg>
+      </div>
+    );
+  }
+
+  // TRIAL -> Blank space, shows "TRIAL" on hover
+  if (s === "TRIAL") {
+    return (
+      <div
+        className={`group/status relative inline-flex items-center justify-center ${size} ${className} cursor-default`}
+        title="TRIAL"
+        aria-label="TRIAL"
+      >
+        <span className="inline-block w-4 h-4 select-none opacity-0" />
+        <span className="pointer-events-none absolute left-1/2 -top-7 -translate-x-1/2 opacity-0 group-hover/status:opacity-100 transition-opacity bg-slate-900 text-white dark:bg-slate-800 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md z-[110] whitespace-nowrap">
+          TRIAL
+        </span>
+      </div>
+    );
+  }
+
+  // TBC -> Blank space, shows "TBC" on hover
+  if (s === "TBC") {
+    return (
+      <div
+        className={`group/status relative inline-flex items-center justify-center ${size} ${className} cursor-default`}
+        title="TBC"
+        aria-label="TBC"
+      >
+        <span className="inline-block w-4 h-4 select-none opacity-0" />
+        <span className="pointer-events-none absolute left-1/2 -top-7 -translate-x-1/2 opacity-0 group-hover/status:opacity-100 transition-opacity bg-slate-900 text-white dark:bg-slate-800 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md z-[110] whitespace-nowrap">
+          TBC
+        </span>
+      </div>
+    );
+  }
+
+  // EXTRA, OTHERS, SUBSTITUTE -> Blank space, shows "EXTRA" on hover
+  if (s === "EXTRA" || s === "OTHERS" || s === "SUBSTITUTE") {
+    const label = s === "SUBSTITUTE" ? "SUBSTITUTE" : "EXTRA";
+    return (
+      <div
+        className={`group/status relative inline-flex items-center justify-center ${size} ${className} cursor-default`}
+        title={label}
+        aria-label={label}
+      >
+        <span className="inline-block w-4 h-4 select-none opacity-0" />
+        <span className="pointer-events-none absolute left-1/2 -top-7 -translate-x-1/2 opacity-0 group-hover/status:opacity-100 transition-opacity bg-slate-900 text-white dark:bg-slate-800 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-md z-[110] whitespace-nowrap">
+          {label}
+        </span>
+      </div>
+    );
+  }
+
   return null;
 };
 

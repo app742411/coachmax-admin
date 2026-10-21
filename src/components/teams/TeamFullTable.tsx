@@ -18,6 +18,7 @@ import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import EditPlayerStatsModal from "../players/EditPlayerStatsModal";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import { getPlayerStatusTextClass, StatusIcon, StatusUpdateMenuList } from "../common/StatusColorCode";
+import { AttendanceCellFlag, AttendanceStatusDropdown } from "../common/AttendanceReasonMenu";
 import { Activity } from "lucide-react";
 
 interface TeamFullTableProps {
@@ -69,7 +70,14 @@ export default function TeamFullTable({
   const [unassignPlayer, setUnassignPlayer] = useState<any | null>(null);
 
   // Attendance menu states
-  const [openAttendanceMenu, setOpenAttendanceMenu] = useState<{ playerId: string; sessionDate: string; currentStatus: string } | null>(null);
+  const [openAttendanceMenu, setOpenAttendanceMenu] = useState<{
+    playerId: string;
+    sessionDate: string;
+    currentStatus: string;
+    currentReason?: string;
+    markedByParent?: boolean;
+    playerName?: string;
+  } | null>(null);
   const [attendanceMenuPos, setAttendanceMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   // Unassign Player Mutation
@@ -250,12 +258,12 @@ export default function TeamFullTable({
       case "LATE":
         return (
           <div className="flex justify-center text-amber-500">
-            <svg
-              className="w-5 h-5 stroke-current fill-none"
-              strokeWidth="2.5"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="12" cy="12" r="9" />
+            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                clipRule="evenodd"
+              />
             </svg>
           </div>
         );
@@ -273,32 +281,42 @@ export default function TeamFullTable({
     playerId: string,
     sessionDate: string,
     currentStatus: string,
-    e: React.MouseEvent
+    e: React.MouseEvent,
+    currentReason?: string,
+    markedByParent?: boolean,
+    playerName?: string
   ) => {
     e.stopPropagation();
-    if (!currentStatus || currentStatus === "NOT_MARKED") {
-      markSingleMutation.mutate({
-        sessionDate,
-        playerId,
-        status: "PRESENT",
-      });
-      return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const menuWidth = 220;
+    const menuHeight = 240;
+    let top = rect.bottom + window.scrollY;
+    let left = rect.left + window.scrollX;
+    if (rect.bottom + menuHeight > window.innerHeight) {
+      top = rect.top - menuHeight + window.scrollY;
+    }
+    if (left + menuWidth > window.innerWidth) {
+      left = window.innerWidth - menuWidth - 10;
     }
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setAttendanceMenuPos({
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX,
+    setAttendanceMenuPos({ top, left });
+    setOpenAttendanceMenu({
+      playerId,
+      sessionDate,
+      currentStatus,
+      currentReason: currentReason || "",
+      markedByParent: markedByParent || false,
+      playerName: playerName || "",
     });
-    setOpenAttendanceMenu({ playerId, sessionDate, currentStatus });
   };
 
-  const handleSetAttendanceStatus = (status: string) => {
+  const handleSetAttendanceStatus = (status: string, reason?: string) => {
     if (!openAttendanceMenu) return;
     markSingleMutation.mutate({
       sessionDate: openAttendanceMenu.sessionDate,
       playerId: openAttendanceMenu.playerId,
       status,
+      reason,
     });
     setOpenAttendanceMenu(null);
   };
@@ -520,7 +538,7 @@ export default function TeamFullTable({
                             setOpenMenuId(openMenuId === pId ? null : pId);
                           }}
                           className="sticky left-[35px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40 cursor-pointer"
-                          title="Click to update status"
+                          title={["TRIAL", "TBC", "EXTRA", "OTHERS", "SUBSTITUTE"].includes(((row.paymentStatus || row.status) || "").toUpperCase()) ? ((row.paymentStatus || row.status) || "").toUpperCase() : "Click to update status"}
                         >
                           <StatusIcon status={row.paymentStatus || row.status} />
                         </td>
@@ -595,6 +613,10 @@ export default function TeamFullTable({
                         {sessions.map((sessionDate: string) => {
                           const currentStatus =
                             row.attendance?.[sessionDate] || "NOT_MARKED";
+                          const attDetail = row.attendanceDetails?.[sessionDate];
+                          const reason = attDetail?.reason || (typeof row.attendance?.[sessionDate] === 'object' ? row.attendance[sessionDate].reason : "");
+                          const markedByParent = attDetail?.markedByParent || false;
+
                           return (
                             <td
                               key={sessionDate}
@@ -603,11 +625,15 @@ export default function TeamFullTable({
                                   row.playerId,
                                   sessionDate,
                                   currentStatus,
-                                  e
+                                  e,
+                                  reason,
+                                  markedByParent,
+                                  row.playerName || row.name
                                 )
                               }
-                              className="py-2 px-1.5 text-center border-l border-slate-50 dark:border-slate-800/40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              className="relative py-2 px-1.5 text-center border-l border-slate-50 dark:border-slate-800/40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group/cell"
                             >
+                              <AttendanceCellFlag reason={reason} markedByParent={markedByParent} status={currentStatus} />
                               {renderStatusIcon(currentStatus)}
                             </td>
                           );
@@ -874,29 +900,19 @@ export default function TeamFullTable({
         />
       )}
 
-      {/* Attendance Dropdown Portal */}
-      {openAttendanceMenu && attendanceMenuPos && createPortal(
-        <div
-          id="portal-attendance-menu"
-          style={{ position: "absolute", top: attendanceMenuPos.top, left: attendanceMenuPos.left }}
-          className="z-[10000] w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-xs font-bold rounded overflow-hidden"
-        >
-          {[
-            { value: "PRESENT", label: "Present", color: "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" },
-            { value: "LATE", label: "Late", color: "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30" },
-            { value: "ABSENT", label: "Absent", color: "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" },
-            { value: "NOT_MARKED", label: "Clear", color: "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" }
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => handleSetAttendanceStatus(opt.value)}
-              className={`w-full text-left px-3 py-2 transition-colors ${opt.color} ${openAttendanceMenu.currentStatus === opt.value ? "bg-slate-50 dark:bg-slate-700" : ""}`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>,
-        document.body
+      {/* Attendance Dropdown Portal with Reason & Flags */}
+      {openAttendanceMenu && attendanceMenuPos && (
+        <AttendanceStatusDropdown
+          isOpen={Boolean(openAttendanceMenu)}
+          position={attendanceMenuPos}
+          currentStatus={openAttendanceMenu.currentStatus}
+          currentReason={openAttendanceMenu.currentReason}
+          markedByParent={openAttendanceMenu.markedByParent}
+          playerName={openAttendanceMenu.playerName}
+          sessionDateStr={openAttendanceMenu.sessionDate}
+          onSelectStatus={handleSetAttendanceStatus}
+          onClose={() => setOpenAttendanceMenu(null)}
+        />
       )}
     </div>
   );

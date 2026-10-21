@@ -1,12 +1,21 @@
+import { useEffect } from "react";
 import { useParams } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useOrderDetails, useUpdateOrderStatus } from "../../hooks/useOrders";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 export default function OrderDetails() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading, isError } = useOrderDetails(id as string);
   const updateStatusMutation = useUpdateOrderStatus();
+  const { markItemAsRead } = useSidebarBadges();
+
+  useEffect(() => {
+    if (id) {
+      markItemAsRead("orders", id);
+    }
+  }, [id, markItemAsRead]);
 
   if (isLoading) return <div className="p-8 text-center text-slate-500 font-semibold">Loading order details...</div>;
   if (isError || !data?.data) return <div className="p-8 text-center text-rose-500 font-semibold">Failed to load order details or order not found.</div>;

@@ -1,11 +1,26 @@
 import apiClient from "./apiClient";
 import { PlayersResponse } from "../types/player";
 
-export const getPlayers = async (page = 1, limit = 10, search?: string, program?: string, status?: string): Promise<PlayersResponse> => {
+export const getPlayers = async (
+  page = 1,
+  limit = 10,
+  search?: string,
+  program?: string,
+  status?: string,
+  term?: string,
+  medical?: string,
+  ageGroup?: string
+): Promise<PlayersResponse> => {
   const params: any = { page, limit };
-  if (search) params.search = search;
+  if (search && search.trim()) params.search = search.trim();
   if (program && program !== "All") params.program = program;
-  if (status && status !== "All") params.status = status;
+  if (status && status !== "All") {
+    params.status = status;
+    params.paymentStatus = status.toUpperCase();
+  }
+  if (term && term !== "All") params.term = term;
+  if (medical && medical !== "All") params.medical = medical;
+  if (ageGroup && ageGroup !== "All") params.ageGroup = ageGroup;
 
   const response = await apiClient.get<PlayersResponse>("/api/admin/getUsers", { params });
   return response.data;
@@ -13,6 +28,14 @@ export const getPlayers = async (page = 1, limit = 10, search?: string, program?
 
 export const deletePlayer = async (id: string): Promise<void> => {
   await apiClient.delete(`/players/${id}`);
+};
+
+export const updatePlayer = async (playerId: string, data: FormData | Record<string, any>): Promise<any> => {
+  const isFormData = data instanceof FormData;
+  const response = await apiClient.put(`/api/admin/updatePlayer/${playerId}`, data, {
+    headers: isFormData ? { "Content-Type": "multipart/form-data" } : undefined,
+  });
+  return response.data;
 };
 
 
@@ -48,5 +71,27 @@ export const updatePlayerStatistics = async (playerId: string, data: any): Promi
 
 export const updatePlayerRating = async (id: string, rating: number): Promise<void> => {
   await apiClient.put(`/api/admin/updateRating/${id}`, { rating });
+};
+
+export const getPlayerStats = async (term?: string): Promise<{ success: boolean; stats: any }> => {
+  const params: any = {};
+  if (term && term !== "All") params.term = term;
+  const response = await apiClient.get("/api/admin/playerStats", { params });
+  return response.data;
+};
+
+export interface UpdatePaymentStatusPayload {
+  paymentStatus: string;
+  classId?: string;
+  teamId?: string;
+  leagueId?: string;
+}
+
+export const updatePlayerPaymentStatus = async (
+  userId: string,
+  payload: UpdatePaymentStatusPayload
+): Promise<any> => {
+  const response = await apiClient.put(`/api/admin/updatePaymentStatus/${userId}`, payload);
+  return response.data;
 };
 

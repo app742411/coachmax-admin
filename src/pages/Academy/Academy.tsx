@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import toast from "react-hot-toast";
 import PageMeta from "../../components/common/PageMeta";
 import AcademyHeader from "../../components/academy/AcademyHeader";
 import DayTabs from "../../components/academy/DayTabs";
@@ -14,16 +15,17 @@ import AddClassModal from "../../components/classes/AddClassModal";
 import PlayersListModal from "../../components/academy/PlayersListModal";
 import TermManagement from "../../components/management/TermManagement";
 import { Modal } from "../../components/ui/modal";
-
-
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 interface AcademyProps {
   programType?: string;
 }
 
 export default function Academy({ programType = "Academy" }: AcademyProps) {
+  const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as any;
+  const { markItemAsRead } = useSidebarBadges();
 
   const [activeDay, setActiveDay] = useState(() => {
     if (state?.day) return state.day.charAt(0).toUpperCase() + state.day.slice(1).toLowerCase();
@@ -36,7 +38,96 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   const [, setYear] = useState("");
   const [termId, setTermId] = useState("");
   const [expandedClassIds, setExpandedClassIds] = useState<Record<string, boolean>>({});
+  const [targetHighlightClassId, setTargetHighlightClassId] = useState<string | null>(null);
   const assignClassesMutation = useAssignClassesToPlayer();
+
+  // Smart 3-tier redirection handler when admin clicks "Go to Request" on an unallocated player card
+  const handleNavigateToRequestedTarget = (player: any) => {
+    if (!player) return;
+    if (player._id || player.id) {
+      markItemAsRead("unallocatedPlayers", player._id || player.id);
+    }
+
+    // Tier 3 Special: Holiday Camp / Event redirection
+    const isCamp =
+      player.isEvent ||
+      player.categoryName?.toLowerCase().includes("camp") ||
+      player.categoryName?.toLowerCase().includes("holiday");
+
+    if (isCamp) {
+      navigate("/events/camp", { state: { playerId: player.id } });
+      toast.success(`Redirected to Holiday Camp for ${player.name}`);
+      return;
+    }
+
+    // Tier 3: Sync Category
+    if (player.categoryId && player.categoryId !== categoryId) {
+      setCategoryId(player.categoryId);
+      if (player.categoryName) setCategoryName(player.categoryName);
+    }
+
+    // Tier 2: Sync Program / Sub-program
+    if (player.programId && player.programId !== programId) {
+      setProgramId(player.programId);
+      if (player.fullProgramName) setProgramName(player.fullProgramName);
+    }
+
+    // Sync Term if specified in request
+    if (player.termId && player.termId !== termId) {
+      setTermId(player.termId);
+    }
+
+    // Tier 1: Specific requested class / session
+    const primaryClass =
+      player.primaryClass ||
+      (player.preferredClasses && player.preferredClasses.length > 0
+        ? player.preferredClasses[0]
+        : null);
+
+    if (primaryClass) {
+      // 1. Switch Day Tab (e.g. Wednesday)
+      if (primaryClass.dayOfWeek) {
+        const targetDay =
+          primaryClass.dayOfWeek.charAt(0).toUpperCase() +
+          primaryClass.dayOfWeek.slice(1).toLowerCase();
+        setActiveDay(targetDay);
+      }
+
+      // 2. Expand & Highlight specific class table
+      if (primaryClass.id) {
+        setExpandedClassIds((prev) => ({
+          ...prev,
+          [primaryClass.id]: true,
+        }));
+        setTargetHighlightClassId(primaryClass.id);
+
+        // Smoothly scroll to the target class accordion
+        setTimeout(() => {
+          const el = document.getElementById(`class-card-${primaryClass.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 350);
+
+        // Clear glowing ring after 3.5 seconds
+        setTimeout(() => {
+          setTargetHighlightClassId(null);
+        }, 3500);
+      }
+
+      toast.success(
+        `Navigated to: ${primaryClass.dayOfWeek} ${primaryClass.startTime || ""} (${player.name})`
+      );
+    } else if (player.fullProgramName && player.fullProgramName !== "N/A") {
+      toast.success(
+        `Switched to ${player.categoryName || "Academy"} > ${player.fullProgramName}. Choose a class to assign ${player.name}.`
+      );
+    } else {
+      toast.success(
+        `Switched to ${player.categoryName || "Academy"}. Select a program and class to assign ${player.name}.`
+      );
+    }
+  };
 
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isTermModalOpen, setIsTermModalOpen] = useState(false);
@@ -195,6 +286,9 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
       <AcademyHeader
         programType={programType}
+        selectedCategoryId={categoryId}
+        selectedProgramId={programId}
+        selectedTermId={termId}
         onCategoryChange={(id, name) => {
           setCategoryId(id);
           if (name) setCategoryName(name);
@@ -234,6 +328,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                     programName={programName}
                     timeSlotStr={`${slot.startTime} - ${slot.endTime}`}
                     isExpanded={isExpanded}
+                    isHighlighted={targetHighlightClassId === slot.classId}
                     onToggle={() =>
                       setExpandedClassIds(prev => ({
                         ...prev,
@@ -288,6 +383,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                   onLoadMore={() => setUnallocatedLimit(prev => prev + 5)}
                   isLoadingMore={isUnallocatedFetching && unallocatedData.players.length > 0}
                   onAssignPlayer={(player) => setPendingAssignPlayer(player)}
+                  onNavigateToTarget={handleNavigateToRequestedTarget}
                   onViewAll={() => setIsUnallocatedModalOpen(true)}
                 />
               )}
@@ -456,6 +552,10 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         onAssignPlayer={(player) => {
           setPendingAssignPlayer(player);
           setIsUnallocatedModalOpen(false);
+        }}
+        onNavigateToTarget={(player) => {
+          setIsUnallocatedModalOpen(false);
+          handleNavigateToRequestedTarget(player);
         }}
       />
 

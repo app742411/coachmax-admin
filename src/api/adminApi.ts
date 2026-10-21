@@ -195,7 +195,7 @@ export const getClassFullTable = async (classId: string): Promise<any> => {
   return res.data;
 };
 
-export const markSingleAttendance = async (classId: string, data: { sessionDate: string; playerId: string; status: string }): Promise<any> => {
+export const markSingleAttendance = async (classId: string, data: { sessionDate: string; playerId: string; status: string; reason?: string }): Promise<any> => {
   const res = await apiClient.post(`${ENDPOINTS.MARK_SINGLE_ATTENDANCE}/${classId}`, data);
   return res.data;
 };
@@ -233,7 +233,7 @@ export const getTeamFullTable = async (teamId: string, leagueId?: string): Promi
   return res.data;
 };
 
-export const markSingleTeamAttendance = async (teamId: string, data: { sessionDate: string; playerId: string; status: string; leagueId?: string }): Promise<any> => {
+export const markSingleTeamAttendance = async (teamId: string, data: { sessionDate: string; playerId: string; status: string; leagueId?: string; reason?: string }): Promise<any> => {
   let isAdmin = false;
   try {
     const userStr = localStorage.getItem("user");
@@ -589,7 +589,39 @@ export const markAllNotificationsRead = async (): Promise<any> => {
   return response.data;
 };
 
+export const markNotificationRead = async (notificationId: string): Promise<any> => {
+  const response = await apiClient.patch(`/api/admin/notifications/${notificationId}/read`);
+  return response.data;
+};
+
 export const getAdminDashboard = async (): Promise<any> => {
   const response = await apiClient.get(ENDPOINTS.GET_DASHBOARD);
   return response.data;
 };
+
+export interface SidebarBadges {
+  verificationRequests: number;
+  temporaryPlayers: number;
+  unallocatedPlayers: number;
+  unpaidInvoices: number;
+  pendingPayments: number;
+  eventRegistrations: number;
+  orders: number;
+  playersManagementTotal: number;
+  financeTotal: number;
+  pendingItemIds?: {
+    verificationRequests?: string[];
+    temporaryPlayers?: string[];
+    unallocatedPlayers?: string[];
+    unpaidInvoices?: string[];
+    pendingPayments?: string[];
+    eventRegistrations?: string[];
+    orders?: string[];
+  };
+}
+
+export const getSidebarBadges = async (): Promise<SidebarBadges> => {
+  const response = await apiClient.get("/api/admin/sidebar-badges");
+  return response.data?.data;
+};
+

@@ -16,13 +16,19 @@ import {
   Layers,
   PhoneCall,
   Download,
-  ChevronDown
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import toast from "react-hot-toast";
+import HolidayCampAttendanceDashboard from "./HolidayCampAttendanceDashboard";
+import HolidayCampRegistrationModal from "./HolidayCampRegistrationModal";
+import Button from "../ui/button/Button";
+import { UserPlus, UserCheck2, List } from "lucide-react";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 interface EventStats {
   totalSlots: number;
@@ -70,6 +76,7 @@ interface Participant {
 }
 
 const EventDetailsComp: React.FC = () => {
+  const { markItemAsRead } = useSidebarBadges();
   const { id } = useParams<{ id: string }>();
   const [event, setEvent] = useState<Event | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -79,6 +86,11 @@ const EventDetailsComp: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 10;
   const [exportOpen, setExportOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"attendance" | "roster">("attendance");
+  const [isRegModalOpen, setIsRegModalOpen] = useState(false);
+  const [campSessions, setCampSessions] = useState<any[]>([]);
+  const [attendanceRefreshKey, setAttendanceRefreshKey] = useState(0);
+  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
   const handleExport = async (format: "csv" | "excel") => {
     if (!id) return;
@@ -108,6 +120,9 @@ const EventDetailsComp: React.FC = () => {
       const res = await getEventDetails(id);
       if (res.success) {
         setEvent(res.data);
+        if (res.data.campSessions) {
+          setCampSessions(res.data.campSessions);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -174,200 +189,251 @@ const EventDetailsComp: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* Banner & Basic Info Wrapper */}
-      <div className="relative rounded-none overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-500">
-        {/* Banner Section - Responsive Height matching Image Ratio */}
-        <div className="w-full relative overflow-hidden group bg-gray-950 flex items-center justify-center min-h-[300px]">
-          {event.bannerImage ? (
-            <img
-              src={`${import.meta.env.VITE_API_BASE_URL}/${event.bannerImage}`}
-              alt={event.title}
-              className="w-full h-auto block select-none group-hover:scale-[1.02] transition-transform duration-[1500ms]"
-            />
-          ) : (
-            <div className="w-full h-96 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Layers size={84} className="text-gray-200 dark:text-gray-700 opacity-50" />
+    <div className="space-y-3.5 pb-6">
+      {/* Sleek Compact Event Header (Minimum Height to prioritize Attendance visibility) */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200">
+        <div className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Event Info */}
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/40 text-[#1d4ed8] dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 border border-blue-100 dark:border-blue-900/50 shadow-sm">
+              <Calendar size={16} />
             </div>
-          )}
-          {/* Fixed Gradient Overlays for Text Readability - Anchored to bottom of container */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
-
-          <div className="absolute bottom-10 left-10 right-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 flex-wrap">
-                <Badge color={(event.status === "UPCOMING" || event.status === "ONGOING") ? "success" : "warning"} variant="light" className=" font-bold text-[9px] px-4 py-1.5 bg-white/10 backdrop-blur-md border-none text-white ring-1 ring-inset ring-white/20">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-sm md:text-base font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
+                  {event.title}
+                </h1>
+                <Badge
+                  color={event.status === "UPCOMING" || event.status === "ONGOING" ? "success" : "warning"}
+                  variant="light"
+                  className="font-bold text-[9px] px-2 py-0.2"
+                >
                   {event.status}
                 </Badge>
-                <Badge color="info" variant="light" className=" font-bold text-[9px] px-4 py-1.5 bg-brand-500/20 backdrop-blur-md border-none text-brand-300 ring-1 ring-inset ring-brand-500/30">
+                <Badge
+                  color="info"
+                  variant="light"
+                  className="font-bold text-[9px] px-2 py-0.2"
+                >
                   {event.category}
                 </Badge>
               </div>
-              <h1 className="text-4xl md:text-xl font-bold  text-white tracking-tighter leading-none">
-                {event.title}
-              </h1>
-              <div className="flex flex-wrap items-center gap-6 text-white/70 text-sm font-bold  ">
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-brand-500" />
-                  <span>{formatDate(event.startDate)} - {formatDate(event.endDate)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-brand-500" />
-                  <span>{event.venueName}</span>
-                </div>
+              <div className="flex items-center gap-2.5 text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                <span className="flex items-center gap-1 font-medium">
+                  <Clock size={11} className="text-brand-500" />
+                  {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                </span>
+                {event.venueName && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <MapPin size={11} className="text-brand-500" />
+                      {event.venueName}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
+          </div>
+
+          {/* Middle: Compact Stats Badges */}
+          <div className="flex items-center gap-2">
+            <div className="px-2.5 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200/70 dark:border-gray-700/60 flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Capacity</span>
+              <span className="text-xs font-bold text-gray-800 dark:text-white">{event.stats.totalSlots}</span>
+            </div>
+            <div className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Registered</span>
+              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{event.stats.registered}</span>
+            </div>
+            <div className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Remaining</span>
+              <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{event.stats.availableSlots}</span>
+            </div>
+          </div>
+
+          {/* Right: Actions & Toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsRegModalOpen(true)}
+              className="px-3 py-1.5 bg-[#1d4ed8] hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all active:scale-95"
+            >
+              <UserPlus size={13} />
+              Register
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsOverviewExpanded(!isOverviewExpanded)}
+              className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs flex items-center gap-1 transition-all border border-gray-200 dark:border-gray-700"
+              title={isOverviewExpanded ? "Hide Logistics & Overview" : "Show Logistics & Overview"}
+            >
+              <span>{isOverviewExpanded ? "Hide Details" : "Event Info"}</span>
+              {isOverviewExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
           </div>
         </div>
 
-        {/* Info Grid Section */}
-        <div className="p-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Detailed Description */}
-          <div className="lg:col-span-12">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-brand-500/10 rounded-none">
-                <FileText size={24} className="text-brand-500" />
+        {/* Collapsible Expanded Details (Only shown when expanded) */}
+        {isOverviewExpanded && (
+          <div className="border-t border-gray-200 dark:border-gray-800 transition-all duration-300">
+            {/* Banner Section if has image */}
+            {event.bannerImage && (
+              <div className="w-full relative overflow-hidden bg-gray-950 max-h-56 flex items-center justify-center">
+                <img
+                  src={`${import.meta.env.VITE_API_BASE_URL}/${event.bannerImage}`}
+                  alt={event.title}
+                  className="w-full h-auto max-h-56 object-cover"
+                />
               </div>
-              <h3 className="text-xl font-bold  tracking-tighter text-gray-800 dark:text-white">Event Details & Description</h3>
-            </div>
-            <p className="text-gray-500 dark:text-gray-400 text-lg font-medium leading-relaxed max-w-4xl ">
-              "{event.description}"
-            </p>
-          </div>
-
-          {/* Metrics Grid */}
-          <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {metrics.map((m, i) => (
-              <div key={i} className="p-8 bg-gray-50 dark:bg-gray-800/10 rounded-none border border-gray-100 dark:border-gray-800/50 flex items-center justify-between group hover:border-brand-500/20 transition-all duration-300">
-                <div>
-                  <span className="text-[11px] font-bold text-gray-400  block mb-2">{m.label}</span>
-                  <span className="text-3xl font-bold  text-gray-800 dark:text-white tracking-tighter scale-110 origin-left inline-block">{m.value}</span>
+            )}
+            
+            {/* Info Grid */}
+            <div className="p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 bg-gray-50/50 dark:bg-gray-800/20">
+              {/* Description */}
+              {event.description && (
+                <div className="lg:col-span-12">
+                  <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Description</h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">{event.description}</p>
                 </div>
-                <div className={`p-4 ${m.bg} ${m.color} rounded-none group-hover:scale-110 transition-transform`}>
-                  <m.icon size={28} />
-                </div>
-              </div>
-            ))}
-          </div>
+              )}
 
-          {/* Logistics Info Card */}
-          <div className="lg:col-span-6 flex flex-col">
-            <div className="h-full p-8 bg-white dark:bg-gray-800/20 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
-              <h4 className="text-sm font-bold  tracking-[0.2em] text-gray-400 border-b border-gray-100 dark:border-gray-800 pb-4">Tournament Logistics</h4>
-
-              <div className="space-y-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900 rounded-none flex items-center justify-center text-brand-500 shadow-sm border border-transparent group-hover:border-brand-500/10">
-                    <MapPin size={20} />
+              {/* Logistics */}
+              <div className="lg:col-span-6 bg-white dark:bg-gray-800 p-3.5 border border-gray-200 dark:border-gray-700 shadow-sm space-y-2">
+                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tournament Logistics</h4>
+                <div className="text-xs space-y-1.5">
+                  <div>
+                    <span className="text-gray-400 block text-[10px]">Address:</span>
+                    <span className="font-semibold text-gray-800 dark:text-white">{event.address || "N/A"}</span>
+                    {event.googleMapLink && (
+                      <a href={event.googleMapLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-brand-500 font-bold hover:underline ml-2">
+                        Map <ExternalLink size={10} />
+                      </a>
+                    )}
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold text-gray-400 ">Address</span>
-                    <span className="text-sm font-bold  text-gray-800 dark:text-white">{event.address}</span>
-                    <a href={event.googleMapLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] text-brand-500 font-bold hover:underline mt-1">
-                      VIEW ON MAP <ExternalLink size={10} />
-                    </a>
+                    <span className="text-gray-400 block text-[10px]">Enrollment Deadline:</span>
+                    <span className="font-semibold text-red-600">{formatDate(event.registrationDeadline)}</span>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-50 dark:bg-gray-900 rounded-none flex items-center justify-center text-brand-500 shadow-sm border border-transparent group-hover:border-brand-500/10">
-                    <Clock size={20} />
+              {/* Support */}
+              <div className="lg:col-span-6 bg-[#031549] text-white p-3.5 shadow-sm space-y-2">
+                <h4 className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Support & Contact</h4>
+                <div className="text-xs space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <PhoneCall size={13} className="text-blue-400" />
+                    <span>{event.contactPhone || "N/A"}</span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] font-bold text-gray-400 ">Enrollment Deadline</span>
-                    <span className="text-sm font-bold  text-gray-800 dark:text-white text-error-500">{formatDate(event.registrationDeadline)}</span>
-                  </div>
+                  {event.website && (
+                    <div className="flex items-center gap-2">
+                      <Globe size={13} className="text-blue-400" />
+                      <span className="truncate">{event.website}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Organizer Support Card */}
-          <div className="lg:col-span-6 flex flex-col">
-            <div className="h-full p-8 bg-brand-600 rounded-none shadow-xl shadow-brand-500/20 text-white relative overflow-hidden group">
-              <div className="relative z-10">
-                <span className="text-[11px] font-bold tracking-[0.2em] opacity-70 ">Organizer Context</span>
-                <h4 className="text-2xl font-bold  mt-2 mb-8 group-hover:translate-x-1 transition-transform">Get Professional Support</h4>
-
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-none flex items-center justify-center border border-white/20">
-                      <PhoneCall size={20} />
-                    </div>
-                    <div>
-                      <span className="block text-[10px] font-bold  opacity-70">Support Hotline</span>
-                      <span className="text-lg font-bold leading-none">{event.contactPhone}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-none flex items-center justify-center border border-white/20">
-                      <Globe size={20} />
-                    </div>
-                    <div>
-                      <span className="block text-[10px] font-bold  opacity-70">Event Portal</span>
-                      <span className="text-sm font-bold leading-none truncate block max-w-[200px]">{event.website}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute -right-12 -top-12 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
-              <div className="absolute left-1/4 -bottom-16 w-32 h-32 bg-black/10 rounded-full blur-2xl group-hover:-translate-x-1 transition-transform duration-700" />
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Registered Players List */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm">
-              <Users size={24} className="text-brand-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold  tracking-tighter text-gray-800 dark:text-white leading-none">Registered Roster</h3>
-              <p className="text-[10px] font-bold text-gray-400  mt-1">Confirmed participants for this program</p>
-            </div>
+      {/* Registered Players List or Camp Attendance Dashboard */}
+      <div className="space-y-3">
+        {/* Navigation Tabs */}
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-1">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab("attendance")}
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold transition-all border-b-2 ${
+                activeTab === "attendance"
+                  ? "border-[#1d4ed8] text-[#1d4ed8] dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20"
+                  : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
+              }`}
+            >
+              <UserCheck2 size={15} />
+              Holiday Camp Attendance & Sessions
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("roster")}
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold transition-all border-b-2 ${
+                activeTab === "roster"
+                  ? "border-[#1d4ed8] text-[#1d4ed8] dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20"
+                  : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
+              }`}
+            >
+              <List size={15} />
+              Participant Roster ({event.stats.registered})
+            </button>
           </div>
-          <div className="flex bg-gray-50 dark:bg-white/5 p-2 rounded-none border border-gray-100 dark:border-white/5 gap-3">
-            <div className="relative">
-              <button
-                onClick={() => setExportOpen(!exportOpen)}
-                className="flex items-center gap-2 px-4 py-1.5 bg-brand-500 rounded-none text-white text-[10px] font-bold  shadow-lg shadow-brand-500/20 active:scale-95 transition-all dropdown-toggle"
-              >
-                <Download size={14} />
-                Export Data
-                <ChevronDown size={12} className={`transition-transform duration-300 ${exportOpen ? 'rotate-180' : ''}`} />
-              </button>
-              <Dropdown
-                isOpen={exportOpen}
-                onClose={() => setExportOpen(false)}
-                className="w-40 p-2 mt-2"
-              >
-                <p className="text-[9px] font-bold text-gray-400 p-2 tracking-tighter border-b border-gray-50 dark:border-gray-800/50 mb-1">Select Format</p>
-                <DropdownItem
-                  onClick={() => handleExport("csv")}
-                  className="flex items-center gap-2 p-2 rounded-none text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <FileText size={14} className="text-brand-500" />
-                  <span className="text-[10px] font-bold  ">CSV Format</span>
-                </DropdownItem>
-                <DropdownItem
-                  onClick={() => handleExport("excel")}
-                  className="flex items-center gap-2 p-2 rounded-none text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Layers size={14} className="text-success-500" />
-                  <span className="text-[10px] font-bold  ">Excel Sheet</span>
-                </DropdownItem>
-              </Dropdown>
-            </div>
 
-            <span className="px-4 py-1.5 text-xs font-bold  text-brand-500 flex items-center gap-2 border-l border-gray-200 dark:border-white/10 ml-1 leading-none">
-              Total: {event.stats.registered} / {event.stats.totalSlots}
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsRegModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#031549] text-white hover:bg-brand-600 text-xs font-bold transition-all shadow-sm"
+          >
+            <UserPlus size={14} />
+            Add Registration
+          </button>
         </div>
+
+        {activeTab === "attendance" && (
+          <HolidayCampAttendanceDashboard key={`${event._id}_${attendanceRefreshKey}`} eventId={event._id} />
+        )}
+
+        {activeTab === "roster" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 shadow-sm">
+                  <Users size={24} className="text-brand-500" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold  tracking-tighter text-gray-800 dark:text-white leading-none">Registered Roster</h3>
+                  <p className="text-[10px] font-bold text-gray-400  mt-1">Confirmed participants for this program</p>
+                </div>
+              </div>
+              <div className="flex bg-gray-50 dark:bg-white/5 p-2 rounded-none border border-gray-100 dark:border-white/5 gap-3">
+                <div className="relative">
+                  <button
+                    onClick={() => setExportOpen(!exportOpen)}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-brand-500 rounded-none text-white text-[10px] font-bold  shadow-lg shadow-brand-500/20 active:scale-95 transition-all dropdown-toggle"
+                  >
+                    <Download size={14} />
+                    Export Data
+                    <ChevronDown size={12} className={`transition-transform duration-300 ${exportOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  <Dropdown
+                    isOpen={exportOpen}
+                    onClose={() => setExportOpen(false)}
+                    className="w-40 p-2 mt-2"
+                  >
+                    <p className="text-[9px] font-bold text-gray-400 p-2 tracking-tighter border-b border-gray-50 dark:border-gray-800/50 mb-1">Select Format</p>
+                    <DropdownItem
+                      onClick={() => handleExport("csv")}
+                      className="flex items-center gap-2 p-2 rounded-none text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <FileText size={14} className="text-brand-500" />
+                      <span className="text-[10px] font-bold  ">CSV Format</span>
+                    </DropdownItem>
+                    <DropdownItem
+                      onClick={() => handleExport("excel")}
+                      className="flex items-center gap-2 p-2 rounded-none text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <Layers size={14} className="text-success-500" />
+                      <span className="text-[10px] font-bold  ">Excel Sheet</span>
+                    </DropdownItem>
+                  </Dropdown>
+                </div>
+
+                <span className="px-4 py-1.5 text-xs font-bold  text-brand-500 flex items-center gap-2 border-l border-gray-200 dark:border-white/10 ml-1 leading-none">
+                  Total: {event.stats.registered} / {event.stats.totalSlots}
+                </span>
+              </div>
+            </div>
 
           <Table>
             <TableHeader>
@@ -387,7 +453,11 @@ const EventDetailsComp: React.FC = () => {
                 </TableRow>
               ) : participants.length > 0 ? (
                 participants.map((p) => (
-                  <TableRow key={p._id} className="group">
+                  <TableRow
+                    key={p._id}
+                    onClick={() => markItemAsRead("eventRegistrations", p._id)}
+                    className="group cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all"
+                  >
                     <TableCell className="px-8">
                       <div className="flex items-center gap-4">
                         <div className="relative">
@@ -478,7 +548,24 @@ const EventDetailsComp: React.FC = () => {
               </div>
             </div>
           )}
+          </div>
+        )}
       </div>
+
+      {/* Holiday Camp Registration Flow Modal */}
+      {event && (
+        <HolidayCampRegistrationModal
+          event={event}
+          sessions={campSessions}
+          isOpen={isRegModalOpen}
+          onClose={() => setIsRegModalOpen(false)}
+          onSuccess={() => {
+            fetchDetails();
+            fetchParticipants();
+            setAttendanceRefreshKey((k) => k + 1);
+          }}
+        />
+      )}
     </div>
   );
 };

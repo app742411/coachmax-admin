@@ -57,3 +57,52 @@ export const exportEventParticipants = async (id: string, format: "csv" | "excel
   });
   return response.data;
 };
+
+// ================= HOLIDAY CAMP EXTENSIONS =================
+
+export const configureCampSessions = async (eventId: string, data: { sessions: any[]; campConfig?: any }) => {
+  const response = await apiClient.post(`/api/admin/events/${eventId}/sessions`, data);
+  return response.data;
+};
+
+export const toggleCampDateAvailability = async (eventId: string, date: string, isAvailable: boolean) => {
+  const response = await apiClient.patch(`/api/admin/events/${eventId}/toggle-date`, { date, isAvailable });
+  return response.data;
+};
+
+export const getEventAttendanceGrid = async (eventId: string) => {
+  const response = await apiClient.get(`/api/admin/events/${eventId}/attendance-grid`);
+  return response.data;
+};
+
+export const markEventSingleAttendance = async (eventId: string, data: { sessionDate: string; campSessionId?: string; playerId: string; status: string; reason?: string }) => {
+  const response = await apiClient.post(`/api/admin/events/${eventId}/attendance/single`, data);
+  return response.data;
+};
+
+export const markEventBulkAttendance = async (eventId: string, data: { sessionDate: string; campSessionId?: string; records: { player: string; status: string }[] }) => {
+  const response = await apiClient.post(`/api/admin/events/${eventId}/attendance/bulk`, data);
+  return response.data;
+};
+
+export const getEventRegistrationDetails = async (registrationId: string) => {
+  const response = await apiClient.get(`/api/admin/events/registrations/${registrationId}`);
+  return response.data;
+};
+
+export const registerForEvent = async (data: { eventId: string; playerId?: string; selectedSessionIds?: string[]; paymentMethod?: string }) => {
+  const response = await apiClient.post(`/api/user/registerForEvent`, data);
+  return response.data;
+};
+
+export const updateEventRegistrationPaymentStatus = async (
+  registrationId: string,
+  paymentStatus: string,
+  extra?: { eventId?: string; playerId?: string }
+) => {
+  const response = await apiClient.patch(`/api/admin/events/registrations/${registrationId}/payment-status`, {
+    paymentStatus,
+    ...extra,
+  });
+  return response.data;
+};

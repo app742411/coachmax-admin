@@ -146,4 +146,17 @@ export const socketService = {
   isConnected: () => {
     return socket ? socket.connected : false;
   },
+
+  getSocket: () => {
+    return socket;
+  },
+
+  on: (event: string, callback: (...args: any[]) => void) => {
+    socket?.on(event, callback);
+  },
+
+  off: (event: string, callback: (...args: any[]) => void) => {
+    socket?.off(event, callback);
+  },
 };
+

@@ -6,7 +6,7 @@ export const useTermEarnings = (
   params?: TermEarningsQueryParams
 ) => {
   return useQuery({
-    queryKey: ["termEarnings", termId, params?.classId, params?.status],
+    queryKey: ["termEarnings", termId, params?.classId, params?.status, params?.compareTermId, params?.stream],
     queryFn: () => {
       if (!termId) return null;
       return getTermEarnings(termId, params);

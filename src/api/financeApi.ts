@@ -15,6 +15,8 @@ export interface BankDetailsData {
 export interface TermEarningsQueryParams {
   classId?: string;
   status?: string;
+  compareTermId?: string;
+  stream?: string;
 }
 
 export const getBankDetails = async () => {
@@ -47,7 +49,7 @@ export const updateBankDetails = async (data: BankDetailsData) => {
 
 /**
  * Fetch Term Earnings Report
- * GET /api/admin/term/:termId/earnings?classId=...&status=...
+ * GET /api/admin/term/:termId/earnings?classId=...&status=...&compareTermId=...
  */
 export const getTermEarnings = async (termId: string, params?: TermEarningsQueryParams) => {
   const cleanParams: Record<string, string> = {};
@@ -56,6 +58,12 @@ export const getTermEarnings = async (termId: string, params?: TermEarningsQuery
   }
   if (params?.status && params.status !== "ALL") {
     cleanParams.status = params.status;
+  }
+  if (params?.compareTermId && params.compareTermId !== "NONE") {
+    cleanParams.compareTermId = params.compareTermId;
+  }
+  if (params?.stream && params.stream !== "ALL") {
+    cleanParams.stream = params.stream;
   }
 
   const response = await apiClient.get(`/api/admin/term/${termId}/earnings`, {

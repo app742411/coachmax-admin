@@ -23,6 +23,7 @@ import DropzoneComponent from "../form/form-elements/DropZone";
 import SuccessPopup from "../SuccessPopup";
 import { LucideIcon } from "lucide-react";
 import { createEvent, getAllEvents, updateEvent } from "../../api/eventApi";
+import apiClient from "../../api/apiClient";
 
 interface SectionHeaderProps {
   icon: LucideIcon;
@@ -54,6 +55,7 @@ interface AddEventFormProps {
 }
 
 import { useNavigate } from "react-router";
+import HolidayCampSessionConfig, { CampSessionRow } from "./HolidayCampSessionConfig";
 
 const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -68,8 +70,8 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
     maxParticipants: "",
     startDate: null as Date | null,
     endDate: null as Date | null,
-    startTime: "",
-    endTime: "",
+    startTime: "08:00 AM",
+    endTime: "04:00 PM",
     venue: "",
     address: "",
     googleMapLink: "",
@@ -84,27 +86,78 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
     eventImg: null as File | null,
   });
 
+  const [campSessions, setCampSessions] = useState<CampSessionRow[]>([]);
+  const [defaultFullPrice, setDefaultFullPrice] = useState<number>(90);
+  const [defaultHalfPrice, setDefaultHalfPrice] = useState<number>(70);
+
+  // Helper to generate dates between startDate and endDate
+  const generateCampDates = (start: Date, end: Date, existingSessions: CampSessionRow[] = []) => {
+    const list: CampSessionRow[] = [];
+    const curr = new Date(start);
+    curr.setUTCHours(0, 0, 0, 0);
+
+    const targetEnd = new Date(end);
+    targetEnd.setUTCHours(0, 0, 0, 0);
+
+    if (curr > targetEnd) return [];
+
+    const existingMap = new Map<string, CampSessionRow>();
+    existingSessions.forEach(s => existingMap.set(s.dateStr, s));
+
+    const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "long", day: "numeric", month: "short" });
+    const dayNameFormatter = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+
+    // Safety cap at 60 days
+    let count = 0;
+    while (curr <= targetEnd && count < 60) {
+      const dateStr = curr.toISOString().split("T")[0];
+      const existing = existingMap.get(dateStr);
+
+      if (existing) {
+        list.push(existing);
+      } else {
+        list.push({
+          dateStr,
+          dayLabel: dayFormatter.format(curr),
+          dayOfWeek: dayNameFormatter.format(curr),
+          isEnabled: true,
+          hasFullDay: true,
+          hasHalfDay: true,
+          fullDayStart: "08:00 AM",
+          fullDayEnd: "04:00 PM",
+          fullDayPrice: defaultFullPrice,
+          halfDayStart: "08:00 AM",
+          halfDayEnd: "02:00 PM",
+          halfDayPrice: defaultHalfPrice,
+        });
+      }
+      curr.setUTCDate(curr.getUTCDate() + 1);
+      count++;
+    }
+    return list;
+  };
+
   useEffect(() => {
     if (eventId) {
       const fetchEvent = async () => {
         try {
-          const res = await getAllEvents(); // Usually you'd have a getById, but the user only gave getAllEvents
+          const res = await getAllEvents();
           const event = res.data.find((e: any) => e._id === eventId);
           if (event) {
             setFormData({
               title: event.title,
               description: event.description,
               category: event.category,
-              maxParticipants: event.maxParticipants.toString(),
+              maxParticipants: event.maxParticipants ? event.maxParticipants.toString() : "",
               startDate: event.startDate ? new Date(event.startDate) : null,
               endDate: event.endDate ? new Date(event.endDate) : null,
-              startTime: event.startTime,
-              endTime: event.endTime,
-              venue: event.venue,
-              address: event.address,
-              googleMapLink: event.googleMapLink,
-              contactPhone: event.contactPhone,
-              website: event.website,
+              startTime: event.startTime || "08:00 AM",
+              endTime: event.endTime || "04:00 PM",
+              venue: event.venueName || event.venue || "",
+              address: event.address || "",
+              googleMapLink: event.googleMapLink || "",
+              contactPhone: event.contactPhone || "",
+              website: event.website || "",
               registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
               eventType: event.eventType || "TOURNAMENT",
               registrationFee: event.registrationFee ? event.registrationFee.toString() : "",
@@ -113,6 +166,57 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
               sponsors: event.sponsors || "",
               eventImg: null,
             });
+
+            if (event.campConfig) {
+              if (event.campConfig.defaultFullDayPrice) setDefaultFullPrice(event.campConfig.defaultFullDayPrice);
+              if (event.campConfig.defaultHalfDayPrice) setDefaultHalfPrice(event.campConfig.defaultHalfDayPrice);
+            }
+
+            // Also check if camp sessions already exist for this event
+            try {
+              const detailsRes = await apiClient.get(`/api/admin/getEventDetails/${eventId}`);
+              if (detailsRes.data?.data?.campSessions && detailsRes.data.data.campSessions.length > 0) {
+                const dbSess = detailsRes.data.data.campSessions;
+                const groupedByDate: Record<string, any> = {};
+
+                dbSess.forEach((s: any) => {
+                  const dStr = new Date(s.sessionDate).toISOString().split("T")[0];
+                  if (!groupedByDate[dStr]) {
+                    groupedByDate[dStr] = {
+                      dateStr: dStr,
+                      dayLabel: new Date(s.sessionDate).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" }),
+                      dayOfWeek: new Date(s.sessionDate).toLocaleDateString("en-US", { weekday: "short" }),
+                      isEnabled: s.isAvailable,
+                      hasFullDay: false,
+                      hasHalfDay: false,
+                      fullDayStart: "08:00 AM",
+                      fullDayEnd: "04:00 PM",
+                      fullDayPrice: 90,
+                      halfDayStart: "08:00 AM",
+                      halfDayEnd: "02:00 PM",
+                      halfDayPrice: 70,
+                    };
+                  }
+                  if (s.sessionType === "FULL_DAY") {
+                    groupedByDate[dStr].hasFullDay = true;
+                    groupedByDate[dStr].fullDayStart = s.startTime;
+                    groupedByDate[dStr].fullDayEnd = s.endTime;
+                    groupedByDate[dStr].fullDayPrice = s.fee;
+                    if (s.isAvailable) groupedByDate[dStr].isEnabled = true;
+                  }
+                  if (s.sessionType === "HALF_DAY") {
+                    groupedByDate[dStr].hasHalfDay = true;
+                    groupedByDate[dStr].halfDayStart = s.startTime;
+                    groupedByDate[dStr].halfDayEnd = s.endTime;
+                    groupedByDate[dStr].halfDayPrice = s.fee;
+                    if (s.isAvailable) groupedByDate[dStr].isEnabled = true;
+                  }
+                });
+                setCampSessions(Object.values(groupedByDate));
+              }
+            } catch (e) {
+              console.error(e);
+            }
           }
         } catch (err) {
           console.error("Error fetching event for edit:", err);
@@ -121,6 +225,17 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
       fetchEvent();
     }
   }, [eventId]);
+
+  const isHolidayCamp = formData.eventType === "CAMP" || formData.eventType === "HOLIDAY CAMP";
+
+  // Re-generate or adjust camp sessions when start/end dates change
+  useEffect(() => {
+    if (isHolidayCamp && formData.startDate && formData.endDate) {
+      if (formData.startDate <= formData.endDate) {
+        setCampSessions(prev => generateCampDates(formData.startDate!, formData.endDate!, prev));
+      }
+    }
+  }, [formData.startDate, formData.endDate, isHolidayCamp]);
 
   const categories = [
     { value: "Sports", label: "Sports" },
@@ -171,11 +286,84 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
         data.append("eventImg", formData.eventImg);
       }
 
+      if (isHolidayCamp) {
+        // Build flat array of sessions from campSessions rows
+        const flatSessions: any[] = [];
+        campSessions.forEach(cs => {
+          if (cs.hasFullDay) {
+            flatSessions.push({
+              sessionDate: cs.dateStr,
+              sessionType: "FULL_DAY",
+              sessionLabel: "Full Day",
+              startTime: cs.fullDayStart || "08:00 AM",
+              endTime: cs.fullDayEnd || "04:00 PM",
+              fee: cs.fullDayPrice || defaultFullPrice,
+              isAvailable: cs.isEnabled,
+            });
+          }
+          if (cs.hasHalfDay) {
+            flatSessions.push({
+              sessionDate: cs.dateStr,
+              sessionType: "HALF_DAY",
+              sessionLabel: "Half Day",
+              startTime: cs.halfDayStart || "08:00 AM",
+              endTime: cs.halfDayEnd || "02:00 PM",
+              fee: cs.halfDayPrice || defaultHalfPrice,
+              isAvailable: cs.isEnabled,
+            });
+          }
+        });
+
+        data.append("sessions", JSON.stringify(flatSessions));
+        data.append(
+          "campConfig",
+          JSON.stringify({
+            defaultFullDayPrice: defaultFullPrice,
+            defaultHalfDayPrice: defaultHalfPrice,
+          })
+        );
+      }
+
       if (eventId) {
         await updateEvent(eventId, data);
+        if (isHolidayCamp) {
+          // Also call configureCampSessions to ensure sessions are synchronized
+          const flatSessions: any[] = [];
+          campSessions.forEach(cs => {
+            if (cs.hasFullDay) {
+              flatSessions.push({
+                sessionDate: cs.dateStr,
+                sessionType: "FULL_DAY",
+                sessionLabel: "Full Day",
+                startTime: cs.fullDayStart || "08:00 AM",
+                endTime: cs.fullDayEnd || "04:00 PM",
+                fee: cs.fullDayPrice || defaultFullPrice,
+                isAvailable: cs.isEnabled,
+              });
+            }
+            if (cs.hasHalfDay) {
+              flatSessions.push({
+                sessionDate: cs.dateStr,
+                sessionType: "HALF_DAY",
+                sessionLabel: "Half Day",
+                startTime: cs.halfDayStart || "08:00 AM",
+                endTime: cs.halfDayEnd || "02:00 PM",
+                fee: cs.halfDayPrice || defaultHalfPrice,
+                isAvailable: cs.isEnabled,
+              });
+            }
+          });
+          await apiClient.post(`/api/admin/events/${eventId}/sessions`, {
+            sessions: flatSessions,
+            campConfig: {
+              defaultFullDayPrice: defaultFullPrice,
+              defaultHalfDayPrice: defaultHalfPrice,
+            },
+          });
+        }
         toast.success("Event updated successfully!");
       } else {
-        await createEvent(data);
+        const createRes = await createEvent(data);
         toast.success("Event profile created successfully!");
       }
       setShowSuccessPopup(true);
@@ -272,21 +460,37 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                 <div>
                   <Label>Event Type</Label>
                   <Select
-                    options={[{ value: "TOURNAMENT", label: "Tournament" }, { value: "LEAGUE", label: "League" }, { value: "CAMP", label: "Camp" }]}
+                    options={[
+                      { value: "TOURNAMENT", label: "Tournament" },
+                      { value: "LEAGUE", label: "League" },
+                      { value: "CAMP", label: "Holiday Camp" }
+                    ]}
                     placeholder="Select Type"
-                    value={formData.eventType}
-                    onChange={(val: string) => setFormData(prev => ({ ...prev, eventType: val }))}
+                    value={formData.eventType === "HOLIDAY CAMP" ? "CAMP" : formData.eventType}
+                    onChange={(val: string) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        eventType: val,
+                        category: val === "CAMP" ? "Camp" : prev.category
+                      }));
+                    }}
                   />
                 </div>
                 <div>
                   <Label>Registration Fee</Label>
                   <Input
                     type="number"
-                    placeholder="e.g., 25"
+                    placeholder={isHolidayCamp ? "Calculated via sessions" : "e.g., 25"}
                     name="registrationFee"
                     value={formData.registrationFee}
                     onChange={handleInputChange}
+                    disabled={isHolidayCamp}
                   />
+                  {isHolidayCamp && (
+                    <span className="text-[10px] text-brand-500 font-semibold mt-1 block">
+                      *For Holiday Camp, pricing is determined per session in Step 2.
+                    </span>
+                  )}
                 </div>
                 <div>
                   <Label>Documents Required</Label>
@@ -377,6 +581,18 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                   />
                 </div>
               </div>
+
+              {/* Holiday Camp Date Selection & Session Pricing Table */}
+              {isHolidayCamp && (
+                <HolidayCampSessionConfig
+                  sessions={campSessions}
+                  onChange={setCampSessions}
+                  defaultFullPrice={defaultFullPrice}
+                  defaultHalfPrice={defaultHalfPrice}
+                  onDefaultFullPriceChange={setDefaultFullPrice}
+                  onDefaultHalfPriceChange={setDefaultHalfPrice}
+                />
+              )}
             </div>
           </FormCard>
         )}

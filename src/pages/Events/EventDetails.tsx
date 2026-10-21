@@ -10,13 +10,15 @@ const EventDetails: React.FC = () => {
     title="CoachMax | Event Comprehensive Intel"
     description="Detailed diagnostics and attendee analytics for the selected tournament."
    />
-   <PageBreadcrumb 
-    pageTitle="Event Intelligence" 
-    items={[
-      { name: "Events", path: "/events" },
-      { name: "Inventory", path: "/events" }
-    ]}
-   />
+   <div className="[&>div]:!mb-2.5">
+     <PageBreadcrumb 
+      pageTitle="Event Intelligence" 
+      items={[
+        { name: "Events", path: "/events" },
+        { name: "Inventory", path: "/events" }
+      ]}
+     />
+   </div>
    <EventDetailsComp />
   </>
  );

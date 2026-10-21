@@ -8,6 +8,7 @@ import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
 import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
 import { useCoachTemporaryPlayers, useDeleteTemporaryPlayer } from "../../hooks/useRegistrationRequests";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 export default function TemporaryPlayersList() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -15,6 +16,16 @@ export default function TemporaryPlayersList() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [medicalFilter, setMedicalFilter] = useState("All");
   const [coachNotePlayer, setCoachNotePlayer] = useState<Player | null>(null);
+  const { markItemAsRead } = useSidebarBadges();
+
+  const handleSelectPlayer = (player: Player) => {
+    const idToMark = (player as any).requestId || player._id;
+    if (idToMark) {
+      markItemAsRead("temporaryPlayers", String(idToMark));
+      if (player._id) markItemAsRead("temporaryPlayers", String(player._id));
+    }
+    setSelectedPlayer(player);
+  };
 
   const { data: playersResponse, isLoading } = useCoachTemporaryPlayers(1, 100);
   const players = playersResponse?.users || [];
@@ -123,8 +134,15 @@ export default function TemporaryPlayersList() {
             <PlayerTable
               players={filteredPlayers}
               selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
-              onSelectPlayer={setSelectedPlayer}
-              onAddCoachNote={setCoachNotePlayer}
+              onSelectPlayer={handleSelectPlayer}
+              onAddCoachNote={(player) => {
+                const idToMark = (player as any).requestId || player._id;
+                if (idToMark) {
+                  markItemAsRead("temporaryPlayers", String(idToMark));
+                  if (player._id) markItemAsRead("temporaryPlayers", String(player._id));
+                }
+                setCoachNotePlayer(player);
+              }}
               onDeletePlayer={isAdmin ? handleDeletePlayer : undefined}
               showStatusColumn={true}
             />

@@ -1,8 +1,10 @@
 import { useParams, useNavigate } from "react-router";
 import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
-import { useAdminPlayerDetails, useCoachNotes } from "../../hooks/usePlayers";
+import { useAdminPlayerDetails, useCoachNotes, useUpdatePlayerPaymentStatus } from "../../hooks/usePlayers";
 import EditPlayerStatsModal from "../../components/players/EditPlayerStatsModal";
+import EditPlayerModal from "../../components/players/EditPlayerModal";
+import PlayerPaymentHistoryModal from "../../components/players/PlayerPaymentHistoryModal";
 import { useAppDispatch } from "../../store";
 import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
@@ -15,7 +17,9 @@ import {
   Activity,
   Heart,
   Clock,
-  MessageSquare
+  MessageSquare,
+  Edit,
+  Receipt
 } from "lucide-react";
 
 const getBadgeStyles = (noteType: string) => {
@@ -48,6 +52,9 @@ export default function PlayerProfilePage() {
   const { data: notesRes, isLoading: loadingNotes } = useCoachNotes(playerId || "");
   const [chatting, setChatting] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
+  const updatePaymentStatusMutation = useUpdatePlayerPaymentStatus();
 
   // Extract variables according to backend JSON envelope structure
   const responseData = detailsRes?.data;
@@ -185,18 +192,25 @@ export default function PlayerProfilePage() {
             <ArrowLeft size={16} />
             <span>BACK TO LIST</span>
           </button>
-          {parent && (
-            <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-none border border-slate-350 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-[#0047FF] transition-colors shadow-xs"
+            >
+              <Edit size={14} />
+              <span>Edit Player</span>
+            </button>
+            {parent && (
               <button
                 onClick={handleChatWithParent}
                 disabled={chatting}
-                className="inline-flex items-center justify-center gap-2 rounded-none bg-[#0047FF] px-5 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-theme-xs disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-none bg-[#0047FF] px-5 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 transition-colors shadow-theme-xs disabled:opacity-50"
               >
                 <MessageSquare size={16} />
                 {chatting ? "Redirecting..." : "Chat with Parent"}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Profile Card Header */}
@@ -328,6 +342,18 @@ export default function PlayerProfilePage() {
           initialStats={statistics}
         />
 
+        <EditPlayerModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          player={player}
+        />
+
+        <PlayerPaymentHistoryModal
+          isOpen={isPaymentHistoryOpen}
+          onClose={() => setIsPaymentHistoryOpen(false)}
+          player={player}
+        />
+
         {/* Double Column Info */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column: Personal and Contact Details */}
@@ -444,6 +470,14 @@ export default function PlayerProfilePage() {
                 <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   Assigned Classes ({assignedClassesInfo.length})
                 </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentHistoryOpen(true)}
+                  className="text-[10px] font-bold text-[#0047FF] hover:underline uppercase flex items-center gap-1"
+                >
+                  <Receipt size={12} />
+                  <span>Full Payment History & Status</span>
+                </button>
               </div>
               {assignedClassesInfo.length > 0 ? (
                 <div className="divide-y divide-slate-50 dark:divide-slate-800/40">
@@ -451,6 +485,7 @@ export default function PlayerProfilePage() {
                     const classId = item.classId || item._id;
                     const className = item.className || item.name || "Class";
                     const status = item.paymentStatus || player?.paymentStatus || "UNPAID";
+                    const st = (status || "UNPAID").toUpperCase();
                     let day = item.dayOfWeek;
                     if (!day && className) {
                       const match = className.match(/^([a-zA-Z]+)/);
@@ -459,10 +494,12 @@ export default function PlayerProfilePage() {
                     return (
                       <div
                         key={idx}
-                        onClick={() => navigate('/program/academy', { state: { classId, day } })}
-                        className="py-3 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
+                        className="py-3 px-2 -mx-2 first:pt-0 last:pb-0 flex justify-between items-center text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded"
                       >
-                        <div>
+                        <div 
+                          className="cursor-pointer"
+                          onClick={() => navigate('/program/academy', { state: { classId, day } })}
+                        >
                           <span className="font-bold text-slate-800 dark:text-slate-200 hover:text-[#0047FF] transition-colors">{className}</span>
                           {(item.dayOfWeek || item.startTime || item.location) && (
                             <span className="text-slate-400 block text-[10px] mt-0.5 font-medium">
@@ -470,29 +507,34 @@ export default function PlayerProfilePage() {
                             </span>
                           )}
                         </div>
-                        <div>
-                          {(() => {
-                            const st = (status || "UNPAID").toUpperCase();
-                            if (st === "PAID" || st === "APPROVED" || st === "ACTIVE") {
-                              return <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[10px] uppercase rounded-none dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400">PAID</span>;
-                            }
-                            if (st === "TRIAL") {
-                              return <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[10px] uppercase rounded-none dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400">TRIAL</span>;
-                            }
-                            if (st === "TBC") {
-                              return <span className="px-2.5 py-0.5 bg-white border border-slate-300 text-slate-800 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 font-bold text-[10px] uppercase rounded-none shadow-xs">TBC</span>;
-                            }
-                            if (st === "HANDSHAKE") {
-                              return <span className="px-2.5 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[10px] uppercase rounded-none dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-400">HANDSHAKE</span>;
-                            }
-                            if (st === "EXTRA" || st === "OTHERS") {
-                              return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">EXTRA</span>;
-                            }
-                            if (st === "SUBSTITUTE") {
-                              return <span className="px-2.5 py-0.5 bg-[#dee08b]/30 border border-[#dee08b] text-[#8a8c23] dark:text-[#dee08b] font-bold text-[10px] uppercase rounded-none">SUBSTITUTE</span>;
-                            }
-                            return <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-[10px] uppercase rounded-none dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">UNPAID</span>;
-                          })()}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={st}
+                            onChange={(e) => {
+                              if (playerId && classId) {
+                                updatePaymentStatusMutation.mutate({
+                                  userId: playerId,
+                                  payload: { paymentStatus: e.target.value, classId: classId.toString() },
+                                });
+                              }
+                            }}
+                            className={`h-6 px-1.5 text-[9px] font-bold uppercase rounded-none border cursor-pointer ${
+                              st === "PAID"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400"
+                                : st === "UNPAID" || st === "OVER_DUE"
+                                ? "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400"
+                                : "bg-slate-50 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300"
+                            }`}
+                          >
+                            <option value="PAID">PAID</option>
+                            <option value="UNPAID">UNPAID</option>
+                            <option value="TRIAL">TRIAL</option>
+                            <option value="OVER_DUE">OVER DUE</option>
+                            <option value="HANDSHAKE">HANDSHAKE</option>
+                            <option value="TBC">TBC</option>
+                            <option value="EXTRA">EXTRA</option>
+                            <option value="SUBSTITUTE">SUBSTITUTE</option>
+                          </select>
                         </div>
                       </div>
                     );

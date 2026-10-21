@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp, Trophy, User } from "lucide-react";
+import { getPlayerStatusTextClass } from "../../../components/common/StatusColorCode";
 
 interface TeamLeaguesViewProps {
   leagues: any[];
@@ -97,7 +98,7 @@ export const TeamLeaguesView: React.FC<TeamLeaguesViewProps> = ({ leagues }) => 
                               <User size={14} className="text-slate-400" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              <div className={`text-xs font-bold truncate ${getPlayerStatusTextClass(p.paymentStatus)}`}>
                                 {playerInfo.fullName || playerInfo.name || "Unknown Player"}
                               </div>
                               <div className="text-[10px] text-slate-500 truncate mt-0.5">

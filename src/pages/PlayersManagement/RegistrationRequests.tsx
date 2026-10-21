@@ -9,6 +9,7 @@ import AssignClassModal from "../../components/players/AssignClassModal";
 import { useRegistrationRequests } from "../../hooks/useRegistrationRequests";
 
 import { useDeletePlayer } from "../../hooks/usePlayers"; // Assuming delete is the same
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 export default function RegistrationRequests() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -23,6 +24,16 @@ export default function RegistrationRequests() {
 
   const deletePlayerMutation = useDeletePlayer();
   const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
+  const { markItemAsRead } = useSidebarBadges();
+
+  const handleSelectPlayer = (player: Player) => {
+    const idToMark = (player as any).requestId || player._id;
+    if (idToMark) {
+      markItemAsRead("verificationRequests", String(idToMark));
+      if (player._id) markItemAsRead("verificationRequests", String(player._id));
+    }
+    setSelectedPlayer(player);
+  };
 
   const handleDeletePlayer = (player: Player) => {
     // using the requestId we mapped earlier
@@ -33,9 +44,12 @@ export default function RegistrationRequests() {
     }
   };
 
-
-
   const handleAssignPlayer = (player: Player) => {
+    const idToMark = (player as any).requestId || player._id;
+    if (idToMark) {
+      markItemAsRead("verificationRequests", String(idToMark));
+      if (player._id) markItemAsRead("verificationRequests", String(player._id));
+    }
     setPlayerToAssign(player);
   };
 
@@ -111,7 +125,7 @@ export default function RegistrationRequests() {
             <PlayerTable
               players={filteredPlayers}
               selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
-              onSelectPlayer={setSelectedPlayer}
+              onSelectPlayer={handleSelectPlayer}
               onDeletePlayer={handleDeletePlayer}
               onAssignClass={handleAssignPlayer}
               showStatusColumn={true}

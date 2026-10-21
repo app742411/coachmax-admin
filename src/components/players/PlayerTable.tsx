@@ -1,86 +1,211 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Player } from "../../types/player";
 import { useAppDispatch } from "../../store";
 import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
-import { ShieldAlert } from "lucide-react";
-import { StatusDot, getStatusConfig } from "../common/StatusColorCode";
+import {
+  ShieldAlert,
+  MessageSquare,
+  FileText,
+  Pencil,
+  UserPlus,
+  Users,
+  Trash2,
+} from "lucide-react";
+import { StatusDot, getStatusConfig, StatusIcon, getPlayerStatusTextClass } from "../common/StatusColorCode";
+import { useUpdatePlayerPaymentStatus } from "../../hooks/usePlayers";
+import PlayerPaymentHistoryModal from "./PlayerPaymentHistoryModal";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 interface PlayerTableProps {
   players: Player[];
   selectedPlayerId: string;
   onSelectPlayer: (player: Player) => void;
+  onEditPlayer?: (player: Player) => void;
   onDeletePlayer?: (player: Player) => void;
   onApprovePlayer?: (player: Player) => void;
   onRejectPlayer?: (player: Player) => void;
   onAssignClass?: (player: Player) => void;
+  onAssignTeam?: (player: Player) => void;
   onGenerateInvoice?: (player: Player) => void;
   onAddCoachNote?: (player: Player) => void;
   showStatusColumn?: boolean;
   showPaymentStatus?: boolean;
+  selectedTerm?: string;
   page?: number;
   limit?: number;
 }
+
+export const resolvePlayerPaymentStatus = (player: Player, selectedTermId?: string): string => {
+  const breakdown = getClassPaymentBreakdown(player, selectedTermId);
+  if (breakdown.length > 0) {
+    if (breakdown.some((s) => s.isUnpaid)) {
+      return "UNPAID";
+    }
+    if (breakdown.every((s) => s.paymentStatus === "PAID" || s.paymentStatus === "ACTIVE" || s.paymentStatus === "APPROVED")) {
+      return "PAID";
+    }
+    if (breakdown.some((s) => s.paymentStatus === "TRIAL")) {
+      return "TRIAL";
+    }
+    if (breakdown.some((s) => s.paymentStatus === "HANDSHAKE")) {
+      return "HANDSHAKE";
+    }
+    return breakdown[0].paymentStatus;
+  }
+
+  if (player.paymentStatus) {
+    return player.paymentStatus.toUpperCase();
+  }
+
+  return "TRIAL";
+};
+
+export interface ClassPaymentBreakdownItem {
+  classId: string;
+  className: string;
+  termName?: string;
+  paymentStatus: string;
+  isUnpaid: boolean;
+}
+
+export const getClassPaymentBreakdown = (player: any, selectedTermId?: string): ClassPaymentBreakdownItem[] => {
+  const assigned = Array.isArray(player.assignedClasses) ? player.assignedClasses : [];
+  const classPaymentStatuses = Array.isArray(player.classPaymentStatuses) ? player.classPaymentStatuses : [];
+
+  const assignedMap = new Map<string, any>();
+  assigned.forEach((c: any) => {
+    const id = (c._id || c.id || c).toString();
+    assignedMap.set(id, c);
+  });
+
+  const list: ClassPaymentBreakdownItem[] = [];
+  const processedClassIds = new Set<string>();
+
+  const matchesTerm = (termVal: any): boolean => {
+    if (!selectedTermId || selectedTermId === "All") return true;
+    if (!termVal) return false;
+    const tid = (termVal._id || termVal.id || termVal).toString();
+    return tid === selectedTermId;
+  };
+
+  classPaymentStatuses.forEach((cps: any) => {
+    const cid = (cps.class?._id || cps.class || "").toString();
+    const assignedDoc = cid ? assignedMap.get(cid) : null;
+    const termObj = assignedDoc?.term || cps.class?.term || player.term;
+
+    if (!matchesTerm(termObj)) {
+      return;
+    }
+
+    const className = assignedDoc?.name || cps.class?.name || (cid ? `Class (${cid.slice(-4)})` : "Class");
+    const termName = termObj?.name || (termObj?.year ? `Term (${termObj.year})` : undefined);
+    const status = (cps.paymentStatus || player.paymentStatus || "UNPAID").toUpperCase();
+
+    if (cid) processedClassIds.add(cid);
+
+    list.push({
+      classId: cid,
+      className,
+      termName,
+      paymentStatus: status,
+      isUnpaid: status === "UNPAID" || status === "OVER_DUE",
+    });
+  });
+
+  assigned.forEach((c: any) => {
+    const cid = (c._id || c.id || "").toString();
+    const termObj = c.term || player.term;
+
+    if (cid && !processedClassIds.has(cid)) {
+      if (!matchesTerm(termObj)) {
+        return;
+      }
+
+      const status = (c.paymentStatus || player.paymentStatus || "UNPAID").toUpperCase();
+      list.push({
+        classId: cid,
+        className: c.name || "Class",
+        termName: termObj?.name || (termObj?.year ? `Term (${termObj.year})` : undefined),
+        paymentStatus: status,
+        isUnpaid: status === "UNPAID" || status === "OVER_DUE",
+      });
+    }
+  });
+
+  return list;
+};
 
 export default function PlayerTable({
   players,
   selectedPlayerId,
   onSelectPlayer,
+  onEditPlayer,
   onDeletePlayer,
   onApprovePlayer,
   onRejectPlayer,
-  onAssignClass: _onAssignClass,
+  onAssignClass,
+  onAssignTeam,
   onGenerateInvoice,
   onAddCoachNote,
   showStatusColumn = false,
-  showPaymentStatus = false,
+  showPaymentStatus = true,
+  selectedTerm = "All",
   page = 1,
   limit = 10,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
+  const [paymentHistoryPlayer, setPaymentHistoryPlayer] = useState<Player | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+
+  const { isItemRead } = useSidebarBadges();
+  const updatePaymentStatusMutation = useUpdatePlayerPaymentStatus();
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const updatePosition = () => {
-    if (!openDropdownId) return;
-    const trigger = document.getElementById(`trigger-${openDropdownId}`);
-    if (!trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    const menuWidth = 160;
-    const menuHeight = 150;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let left = rect.left + window.scrollX - (menuWidth - rect.width);
-    if (left + menuWidth > viewportWidth) {
-      left = viewportWidth - menuWidth - 20;
-    }
-    if (left < 0) left = 10;
-
-    let top = rect.bottom + window.scrollY + 4;
-    let placement: 'top' | 'bottom' = 'bottom';
-
-    if (rect.bottom + menuHeight > viewportHeight && rect.top - menuHeight > 0) {
-      top = rect.top + window.scrollY - menuHeight - 4;
-      placement = 'top';
-    }
-
-    setMenuPosition({ top, left, placement });
-  };
+  useEffect(() => {
+    const handleClose = () => {
+      setOpenDropdownId(null);
+      setMenuPosition(null);
+    };
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
+    return () => {
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
+    };
+  }, []);
 
   const toggleDropdown = (e: React.MouseEvent, playerId: string) => {
     e.stopPropagation();
     if (openDropdownId === playerId) {
       setOpenDropdownId(null);
       setMenuPosition(null);
-    } else {
-      setOpenDropdownId(playerId);
-      setTimeout(updatePosition, 0);
+      return;
     }
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const menuWidth = 224; // w-56
+    const menuHeight = 380;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = rect.right - menuWidth;
+    if (left < 10) left = 10;
+    if (left + menuWidth > viewportWidth - 10) {
+      left = viewportWidth - menuWidth - 10;
+    }
+
+    let top = rect.bottom + 4;
+    if (rect.bottom + menuHeight > viewportHeight && rect.top - menuHeight > 0) {
+      top = rect.top - menuHeight - 4;
+    }
+
+    setMenuPosition({ top, left });
+    setOpenDropdownId(playerId);
   };
 
   const handleChatWithParent = async (player: Player) => {
@@ -123,7 +248,15 @@ export default function PlayerTable({
           <thead>
             <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
               <th className="py-2.5 px-2 w-[45px] min-w-[45px] text-center">S.No</th>
-              {showPaymentStatus && <th className="py-2.5 px-2 min-w-[65px] text-center">Payment Status</th>}
+              {showPaymentStatus && (
+                <th className="py-2.5 px-1 min-w-[42px] w-[42px] max-w-[42px] text-center" title="Payment Status">
+                  <div className="flex items-center justify-center">
+                    <span className="text-sm select-none" title="Payment Status">
+                      💰
+                    </span>
+                  </div>
+                </th>
+              )}
               {showStatusColumn && <th className="py-2.5 px-2 min-w-[65px] text-center">Status</th>}
               <th className="py-2.5 px-2 min-w-[120px]">Player</th>
               <th className="py-2.5 px-2 min-w-[75px]">DOB</th>
@@ -143,30 +276,136 @@ export default function PlayerTable({
             {players.map((player, index) => {
               const serialNo = (page - 1) * limit + index + 1;
               const isRequest = !!(player as any).requestId || !!(player as any).requestType;
-              const paymentStatus = player.paymentStatus || "PENDING";
+              const reqId = (player as any).requestId || player._id;
+              const isUnread =
+                (isRequest && !isItemRead("verificationRequests", reqId) && !isItemRead("verificationRequests", player._id) && (player.status === "PENDING")) ||
+                ((player as any).playerStatus === "PENDING_APPROVAL" && !isItemRead("temporaryPlayers", reqId) && !isItemRead("temporaryPlayers", player._id));
+              const paymentStatus = resolvePlayerPaymentStatus(player, selectedTerm);
               const playerStatus = isRequest ? (player.status || "PENDING") : ((player as any).playerStatus || player.status || "PENDING");
               const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
               const avatar = player.profileImage ? `${baseUrl}/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
+              const isFilteredByTerm = selectedTerm && selectedTerm !== "All";
+
               return (
                 <tr
                   key={player._id}
                   onClick={() => onSelectPlayer(player)}
-                  className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${selectedPlayerId === player._id ? "bg-slate-50 dark:bg-slate-800/40" : ""
-                    }`}
+                  className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${
+                    selectedPlayerId === player._id
+                      ? "bg-slate-50 dark:bg-slate-800/40"
+                      : isUnread
+                      ? "bg-blue-50/20 dark:bg-blue-950/10 font-bold"
+                      : ""
+                  }`}
                 >
                   <td className="py-3 px-2 text-center font-bold text-slate-500 dark:text-slate-400">
                     {serialNo}
                   </td>
                   {showPaymentStatus && (
-                    <td className="py-3 px-2 text-center">
+                    <td
+                      className="py-3 px-1 text-center min-w-[42px] w-[42px] max-w-[42px] relative"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentHistoryPlayer(player);
+                      }}
+                    >
                       {(() => {
-                        const config = getStatusConfig(paymentStatus);
+                        const breakdown = getClassPaymentBreakdown(player, selectedTerm);
+                        const unpaidClasses = breakdown.filter((item) => item.isUnpaid);
+                        const paidClasses = breakdown.filter((item) => !item.isUnpaid);
+
+                        const plainTooltip = [
+                          isFilteredByTerm ? `[FILTERED BY SELECTED TERM]` : '',
+                          `Payment Status: ${paymentStatus}`,
+                          unpaidClasses.length > 0
+                            ? `UNPAID CLASSES:\n${unpaidClasses.map((c) => `• ${c.className}${c.termName ? ` (${c.termName})` : ''} - UNPAID`).join('\n')}`
+                            : '',
+                          paidClasses.length > 0
+                            ? `PAID CLASSES:\n${paidClasses.map((c) => `• ${c.className}${c.termName ? ` (${c.termName})` : ''} - PAID`).join('\n')}`
+                            : '',
+                        ]
+                          .filter(Boolean)
+                          .join('\n\n');
+
+                        const isSpecialStatus = ["TRIAL", "TBC", "EXTRA", "OTHERS", "SUBSTITUTE"].includes(paymentStatus);
+
                         return (
-                          <span className={`inline-flex items-center gap-1.5 font-bold ${config.textClass}`}>
-                            <StatusDot status={paymentStatus} className="w-1.5 h-1.5" />
-                            {config.label}
-                          </span>
-                        );
+                          <div
+                            className="relative inline-flex items-center justify-center group cursor-pointer"
+                            title={isSpecialStatus ? paymentStatus : plainTooltip}
+                          >
+                            <div className="p-1 transition-transform group-hover:scale-125">
+                              <StatusIcon status={paymentStatus} size="w-5 h-5" />
+                            </div>
+
+                            {/* Floating hover breakdown tooltip card */}
+                            {!isSpecialStatus && (
+                              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-[100] hidden group-hover:flex flex-col pointer-events-none w-64 bg-slate-900/95 dark:bg-slate-950/95 text-white p-2.5 shadow-2xl border border-slate-700/80 text-left rounded-none backdrop-blur-xs animate-in fade-in zoom-in-95 duration-150">
+                              {/* Header */}
+                              <div className="flex items-center justify-between pb-1.5 border-b border-slate-700/80 text-[11px] font-bold">
+                                <span className="flex items-center gap-1.5">
+                                  <StatusIcon status={paymentStatus} size="w-3.5 h-3.5" />
+                                  <span className="text-white">{paymentStatus}</span>
+                                </span>
+                                {isFilteredByTerm && (
+                                  <span className="text-[9px] font-semibold text-amber-300 bg-amber-950/80 px-1 py-0.5 border border-amber-700">
+                                    Term Filtered
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Class Breakdown List */}
+                              <div className="py-2 space-y-2 text-[10px]">
+                                {unpaidClasses.length > 0 && (
+                                  <div>
+                                    <div className="text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                      <span>⊖</span>
+                                      <span>Unpaid Classes ({unpaidClasses.length}):</span>
+                                    </div>
+                                    <ul className="mt-1 space-y-1 pl-3 text-slate-300">
+                                      {unpaidClasses.map((c, i) => (
+                                        <li key={i} className="list-disc leading-tight">
+                                          <span className="text-white font-medium">{c.className}</span>
+                                          {c.termName && <span className="text-slate-400 text-[9px]"> ({c.termName})</span>}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {paidClasses.length > 0 && (
+                                  <div>
+                                    <div className="text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                      <span>✔</span>
+                                      <span>Paid Classes ({paidClasses.length}):</span>
+                                    </div>
+                                    <ul className="mt-1 space-y-1 pl-3 text-slate-300">
+                                      {paidClasses.map((c, i) => (
+                                        <li key={i} className="list-disc leading-tight">
+                                          <span className="text-white font-medium">{c.className}</span>
+                                          {c.termName && <span className="text-slate-400 text-[9px]"> ({c.termName})</span>}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {unpaidClasses.length === 0 && paidClasses.length === 0 && (
+                                  <div className="text-slate-400 italic">
+                                    No class payment records for this player.
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Footer hint */}
+                              <div className="pt-1.5 border-t border-slate-700/80 text-[9px] text-slate-400 flex items-center justify-between">
+                                <span>Click icon to open:</span>
+                                <span className="text-blue-400 font-bold">Payment History</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
                       })()}
                     </td>
                   )}
@@ -185,13 +424,19 @@ export default function PlayerTable({
                   )}
                   <td className="py-3 px-2">
                     <div className="flex items-center gap-2">
+                      {isUnread && (
+                        <span
+                          className="w-2 h-2 rounded-full bg-rose-500 shrink-0"
+                          title="Unread Item"
+                        />
+                      )}
                       <img
                         src={avatar}
                         alt={player.fullName}
                         className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-100"
                       />
                       <span
-                        className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[110px] block"
+                        className={`font-bold truncate max-w-[110px] block transition-colors ${getPlayerStatusTextClass(paymentStatus)}`}
                         title={player.fullName}
                       >
                         {player.fullName}
@@ -308,6 +553,7 @@ export default function PlayerTable({
                   </td>
                   <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <button
+                      type="button"
                       id={`trigger-${player._id}`}
                       className={`text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs inline-flex items-center justify-center ${openDropdownId === player._id
                         ? 'border-[#0047FF] bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF]'
@@ -332,109 +578,252 @@ export default function PlayerTable({
       {openDropdownId && menuPosition && (
         <>
           <div
-            className="fixed inset-0 z-40"
-            onClick={() => {
+            className="fixed inset-0 z-[9998]"
+            onClick={(e) => {
+              e.stopPropagation();
               setOpenDropdownId(null);
               setMenuPosition(null);
             }}
           />
           <div
             style={{
-              position: 'absolute',
+              position: 'fixed',
               top: menuPosition.top,
               left: menuPosition.left,
             }}
-            className={`z-50 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 transform transition-all duration-200 origin-top-right rounded-none`}
+            className="z-[9999] w-56 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xl rounded-md overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-100"
           >
             {players.find(p => p._id === openDropdownId) && (() => {
               const player = players.find(p => p._id === openDropdownId)!;
-              const activeStatus = (player as any).playerStatus || player.status;
 
               return (
-                <>
-                  {(activeStatus === "PENDING_APPROVAL" || activeStatus === "PENDING") && onApprovePlayer && (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {/* UPDATE STATUS Section */}
+                  <div className="py-1">
+                    <div className="px-4 pt-1.5 pb-1 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider select-none">
+                      UPDATE STATUS
+                    </div>
+                    <div className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setMenuPosition(null);
+                          updatePaymentStatusMutation.mutate({
+                            userId: player._id,
+                            payload: { paymentStatus: "PAID" },
+                          });
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                      >
+                        <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                          <StatusIcon status="PAID" size="w-4 h-4" />
+                        </div>
+                        <span>PAID</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setMenuPosition(null);
+                          updatePaymentStatusMutation.mutate({
+                            userId: player._id,
+                            payload: { paymentStatus: "HANDSHAKE" },
+                          });
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                      >
+                        <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                          <StatusIcon status="HANDSHAKE" size="w-4 h-4" />
+                        </div>
+                        <span>HANDSHAKE</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setMenuPosition(null);
+                          updatePaymentStatusMutation.mutate({
+                            userId: player._id,
+                            payload: { paymentStatus: "UNPAID" },
+                          });
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                      >
+                        <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                          <StatusIcon status="UNPAID" size="w-4 h-4" />
+                        </div>
+                        <span>APPROVED (UNPAID)</span>
+                      </button>
+
+                      {/* Group 2: Statuses with Colored Text Only (No Icons) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setMenuPosition(null);
+                          updatePaymentStatusMutation.mutate({
+                            userId: player._id,
+                            payload: { paymentStatus: "TRIAL" },
+                          });
+                        }}
+                        className="w-full text-left pl-11 pr-4 py-1.5 text-xs font-bold text-red-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors block"
+                      >
+                        TRIAL
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setMenuPosition(null);
+                          updatePaymentStatusMutation.mutate({
+                            userId: player._id,
+                            payload: { paymentStatus: "TBC" },
+                          });
+                        }}
+                        className="w-full text-left pl-11 pr-4 py-1.5 text-xs font-bold text-[#b7a9d9] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors block"
+                      >
+                        TBC
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdownId(null);
+                          setMenuPosition(null);
+                          updatePaymentStatusMutation.mutate({
+                            userId: player._id,
+                            payload: { paymentStatus: "EXTRA" },
+                          });
+                        }}
+                        className="w-full text-left pl-11 pr-4 py-1.5 text-xs font-bold text-[#d6d11a] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors block"
+                      >
+                        EXTRA
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Chat */}
+                  <div>
                     <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 text-[13px] font-semibold text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onApprovePlayer(player);
                         setOpenDropdownId(null);
+                        setMenuPosition(null);
+                        handleChatWithParent(player);
                       }}
                     >
-                      Approve Player
+                      <MessageSquare size={16} className="text-slate-700 dark:text-slate-300 stroke-[1.8]" />
+                      <span>Chat</span>
                     </button>
-                  )}
-                  {(activeStatus === "PENDING_APPROVAL" || activeStatus === "PENDING") && onRejectPlayer && (
+                  </div>
+
+                  {/* Generate Invoice */}
+                  <div>
                     <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 text-[13px] font-semibold text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onRejectPlayer(player);
                         setOpenDropdownId(null);
+                        setMenuPosition(null);
+                        if (onGenerateInvoice) {
+                          onGenerateInvoice(player);
+                        }
                       }}
                     >
-                      Reject Player
+                      <FileText size={16} className="text-slate-700 dark:text-slate-300 stroke-[1.8]" />
+                      <span>Generate Invoice</span>
                     </button>
-                  )}
-                  {/* {onAssignClass && (
+                  </div>
+
+                  {/* Edit Player */}
+                  <div>
                     <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 text-[13px] font-semibold text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onAssignClass(player);
                         setOpenDropdownId(null);
+                        setMenuPosition(null);
+                        if (onEditPlayer) {
+                          onEditPlayer(player);
+                        }
                       }}
                     >
-                      Assign to Class
+                      <Pencil size={16} className="text-slate-700 dark:text-slate-300 stroke-[1.8]" />
+                      <span>Edit Player</span>
                     </button>
-                  )} */}
-                  <button
-                    className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenDropdownId(null);
-                      handleChatWithParent(player);
-                    }}
-                  >
-                    Chat
-                  </button>
-                  {onGenerateInvoice && (
+                  </div>
+
+                  {/* Add to Class */}
+                  <div>
                     <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50 transition-colors"
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 text-[13px] font-semibold text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onGenerateInvoice(player);
                         setOpenDropdownId(null);
+                        setMenuPosition(null);
+                        if (onAssignClass) {
+                          onAssignClass(player);
+                        }
                       }}
                     >
-                      Generate Invoice
+                      <UserPlus size={16} className="text-slate-700 dark:text-slate-300 stroke-[1.8]" />
+                      <span>Add to Class</span>
                     </button>
-                  )}
-                  {onAddCoachNote && (
+                  </div>
+
+                  {/* Add to Team */}
+                  <div>
                     <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50 transition-colors"
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 text-[13px] font-semibold text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onAddCoachNote(player);
                         setOpenDropdownId(null);
+                        setMenuPosition(null);
+                        if (onAssignTeam) {
+                          onAssignTeam(player);
+                        } else {
+                          navigate("/teams");
+                        }
                       }}
                     >
-                      Add Coach Note
+                      <Users size={16} className="text-slate-700 dark:text-slate-300 stroke-[1.8]" />
+                      <span>Add to Team</span>
                     </button>
-                  )}
-                  {onDeletePlayer && (
+                  </div>
+
+                  {/* Delete Player */}
+                  <div>
                     <button
-                      className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-750"
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50/60 dark:hover:bg-rose-950/20 transition-colors flex items-center gap-3"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setOpenDropdownId(null);
+                        setMenuPosition(null);
                         setDeleteModalPlayer(player);
-                        setOpenDropdownId(null);
                       }}
                     >
-                      Delete Player
+                      <Trash2 size={16} className="text-rose-600 stroke-[1.8]" />
+                      <span>Delete Player</span>
                     </button>
-                  )}
-                </>
+                  </div>
+                </div>
               );
             })()}
           </div>
@@ -477,6 +866,16 @@ export default function PlayerTable({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Payment History & Status Modal */}
+      {paymentHistoryPlayer && (
+        <PlayerPaymentHistoryModal
+          isOpen={!!paymentHistoryPlayer}
+          onClose={() => setPaymentHistoryPlayer(null)}
+          player={paymentHistoryPlayer}
+          initialTermId={selectedTerm}
+        />
       )}
     </div>
   );

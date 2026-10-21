@@ -15,6 +15,7 @@ import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import { chatApi } from "../../services/chatApi";
 import { getPlayerStatusTextClass, StatusIcon, StatusUpdateMenuList } from "../common/StatusColorCode";
+import { AttendanceCellFlag, AttendanceStatusDropdown } from "../common/AttendanceReasonMenu";
 
 interface ClassFullTableProps {
   classId: string;
@@ -27,9 +28,10 @@ interface ClassFullTableProps {
   onToggle?: () => void;
   index?: number;
   hideHeader?: boolean;
+  isHighlighted?: boolean;
 }
 
-export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName, isExpanded = true, onToggle, index, hideHeader = false }: ClassFullTableProps) {
+export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName, isExpanded = true, onToggle, index, hideHeader = false, isHighlighted = false }: ClassFullTableProps) {
   const { data: schedule, isLoading } = useClassFullTable(classId);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -76,7 +78,14 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const [selectedStatus, setSelectedStatus] = useState<string>("TRIAL");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
-  const [openAttendanceMenu, setOpenAttendanceMenu] = useState<{ playerId: string; sessionDate: string; currentStatus: string } | null>(null);
+  const [openAttendanceMenu, setOpenAttendanceMenu] = useState<{
+    playerId: string;
+    sessionDate: string;
+    currentStatus: string;
+    currentReason?: string;
+    markedByParent?: boolean;
+    playerName?: string;
+  } | null>(null);
   const [attendanceMenuPos, setAttendanceMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   const updatePosition = () => {
@@ -322,8 +331,8 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       case "LATE":
         return (
           <div className="flex justify-center text-amber-500">
-            <svg className="w-5 h-5 stroke-current fill-none" strokeWidth="2.5" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="9" />
+            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
             </svg>
           </div>
         );
@@ -337,30 +346,46 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
     }
   };
 
-  const handleToggleAttendance = (playerId: string, sessionDate: string, currentStatus: string, e: React.MouseEvent) => {
+  const handleToggleAttendance = (
+    playerId: string,
+    sessionDate: string,
+    currentStatus: string,
+    e: React.MouseEvent,
+    currentReason?: string,
+    markedByParent?: boolean,
+    playerName?: string
+  ) => {
     e.stopPropagation();
-    if (!currentStatus || currentStatus === "NOT_MARKED") {
-      markSingleMutation.mutate({
-        sessionDate,
-        playerId,
-        status: "PRESENT",
-      });
-      return;
-    }
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setAttendanceMenuPos({
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX,
+    const menuWidth = 220;
+    const menuHeight = 240;
+    let top = rect.bottom + window.scrollY;
+    let left = rect.left + window.scrollX;
+    if (rect.bottom + menuHeight > window.innerHeight) {
+      top = rect.top - menuHeight + window.scrollY;
+    }
+    if (left + menuWidth > window.innerWidth) {
+      left = window.innerWidth - menuWidth - 10;
+    }
+
+    setAttendanceMenuPos({ top, left });
+    setOpenAttendanceMenu({
+      playerId,
+      sessionDate,
+      currentStatus,
+      currentReason: currentReason || "",
+      markedByParent: markedByParent || false,
+      playerName: playerName || "",
     });
-    setOpenAttendanceMenu({ playerId, sessionDate, currentStatus });
   };
 
-  const handleSetAttendanceStatus = (status: string) => {
+  const handleSetAttendanceStatus = (status: string, reason?: string) => {
     if (!openAttendanceMenu) return;
     markSingleMutation.mutate({
       sessionDate: openAttendanceMenu.sessionDate,
       playerId: openAttendanceMenu.playerId,
       status,
+      reason,
     });
     setOpenAttendanceMenu(null);
   };
@@ -439,8 +464,14 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
   return (
     <div
-      className={`relative border overflow-hidden shadow-theme-xs transition-colors duration-200 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 ${assignClassesMutation.isPending ? "opacity-75" : ""
-        }`}
+      id={`class-card-${classId}`}
+      className={`relative border overflow-hidden shadow-theme-xs transition-all duration-300 ${
+        isHighlighted
+          ? "border-[#0047FF] ring-4 ring-blue-500/30 dark:ring-blue-400/30 shadow-xl"
+          : "border-slate-100 dark:border-slate-800"
+      } bg-white dark:bg-slate-900 ${
+        assignClassesMutation.isPending ? "opacity-75" : ""
+      }`}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -561,7 +592,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                   <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1.5 text-center font-bold text-slate-400 text-xs min-w-[35px] w-[35px] max-w-[35px] border-b border-slate-50 dark:border-slate-800/40">
                     {idx + 1}
                   </td>
-                  <td className="sticky left-[35px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40">
+                  <td 
+                    className="sticky left-[35px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2 text-center min-w-[40px] w-[40px] max-w-[40px] border-b border-slate-50 dark:border-slate-800/40"
+                    title={["TRIAL", "TBC", "EXTRA", "OTHERS", "SUBSTITUTE"].includes((row.paymentStatus || "").toUpperCase()) ? (row.paymentStatus || "").toUpperCase() : undefined}
+                  >
                     <StatusIcon status={row.paymentStatus} />
                   </td>
                   <td className="sticky left-[75px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-2.5 min-w-[160px] w-[160px] max-w-[160px] border-b border-slate-50 dark:border-slate-800/40">
@@ -647,12 +681,17 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                   </td>
                   {sessions.map((sessionDate: string) => {
                     const status = row.attendance?.[sessionDate] || "NOT_MARKED";
+                    const attDetail = row.attendanceDetails?.[sessionDate];
+                    const reason = attDetail?.reason || (typeof row.attendance?.[sessionDate] === 'object' ? row.attendance[sessionDate].reason : "");
+                    const markedByParent = attDetail?.markedByParent || false;
+
                     return (
                       <td
                         key={sessionDate}
-                        className="py-2 px-1.5 border-l border-slate-50 dark:border-slate-800/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-                        onClick={(e) => handleToggleAttendance(row.playerId, sessionDate, status, e)}
+                        className="relative py-2 px-1.5 border-l border-slate-50 dark:border-slate-800/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group/cell"
+                        onClick={(e) => handleToggleAttendance(row.playerId, sessionDate, status, e, reason, markedByParent, row.name)}
                       >
+                        <AttendanceCellFlag reason={reason} markedByParent={markedByParent} status={status} />
                         {renderStatusIcon(status)}
                       </td>
                     );
@@ -1086,29 +1125,19 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
         </div>
       </Modal>
 
-      {/* Attendance Dropdown Portal */}
-      {openAttendanceMenu && attendanceMenuPos && createPortal(
-        <div
-          id="portal-attendance-menu"
-          style={{ position: "absolute", top: attendanceMenuPos.top, left: attendanceMenuPos.left }}
-          className="z-[10000] w-36 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-xs font-bold rounded overflow-hidden"
-        >
-          {[
-            { value: "PRESENT", label: "Present", color: "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" },
-            { value: "LATE", label: "Late", color: "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30" },
-            { value: "ABSENT", label: "Absent", color: "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" },
-            { value: "NOT_MARKED", label: "Clear", color: "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" }
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => handleSetAttendanceStatus(opt.value)}
-              className={`w-full text-left px-3 py-2 transition-colors ${opt.color} ${openAttendanceMenu.currentStatus === opt.value ? "bg-slate-50 dark:bg-slate-700" : ""}`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>,
-        document.body
+      {/* Attendance Dropdown Portal with Reason & Flags */}
+      {openAttendanceMenu && attendanceMenuPos && (
+        <AttendanceStatusDropdown
+          isOpen={Boolean(openAttendanceMenu)}
+          position={attendanceMenuPos}
+          currentStatus={openAttendanceMenu.currentStatus}
+          currentReason={openAttendanceMenu.currentReason}
+          markedByParent={openAttendanceMenu.markedByParent}
+          playerName={openAttendanceMenu.playerName}
+          sessionDateStr={openAttendanceMenu.sessionDate}
+          onSelectStatus={handleSetAttendanceStatus}
+          onClose={() => setOpenAttendanceMenu(null)}
+        />
       )}
     </div>
   );

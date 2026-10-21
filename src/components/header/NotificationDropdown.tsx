@@ -6,6 +6,7 @@ import { Link } from "react-router";
 import {
   useNotifications,
   useMarkAllNotificationsRead,
+  useMarkNotificationRead,
   getNotificationRedirectPath,
   getNotificationStyle,
 } from "../../hooks/useNotifications";
@@ -34,6 +35,7 @@ export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { data: notifications = [], isLoading } = useNotifications();
   const markAllRead = useMarkAllNotificationsRead();
+  const markRead = useMarkNotificationRead();
   const navigate = useNavigate();
 
   const unreadCount = Array.isArray(notifications)
@@ -58,6 +60,9 @@ export default function NotificationDropdown() {
 
   const handleNotificationClick = (notification: any) => {
     closeDropdown();
+    if (notification?._id && !notification.isRead) {
+      markRead.mutate(notification._id);
+    }
     const path = getNotificationRedirectPath(notification);
     navigate(path);
   };

@@ -14,6 +14,7 @@ import {
   Clock, 
   ArrowRight
 } from "lucide-react";
+import { getPlayerStatusTextClass } from "../../components/common/StatusColorCode";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -583,7 +584,7 @@ export default function Home() {
                       <td className="py-4 font-bold text-slate-800 dark:text-slate-200">
                         <div className="flex items-center gap-2">
                           <img src={avatarUrl} alt={row.fullName} className="w-6 h-6 rounded-full object-cover border border-slate-100" />
-                          <span>{row.fullName}</span>
+                          <span className={`font-bold transition-colors ${getPlayerStatusTextClass(pStatus)}`}>{row.fullName}</span>
                         </div>
                       </td>
                       {/* Parent */}

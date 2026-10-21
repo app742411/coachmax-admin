@@ -141,12 +141,30 @@ export interface GenerateFixturesResponse {
   };
 }
 
+export interface PopulatedGoalPlayer {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  profileImage?: string;
+}
+
+export interface PopulatedGoalTeam {
+  _id: string;
+  teamName?: string;
+  logo?: string;
+}
+
 export interface MatchGoal {
   id?: string;
-  teamId: string;
-  scorerId: string;
+  _id?: string;
+  teamId?: string;
+  team?: string | PopulatedGoalTeam;
+  scorerId?: string;
+  scorer?: string | PopulatedGoalPlayer;
   assistId?: string;
-  minute: number;
+  assist?: string | PopulatedGoalPlayer | null;
+  minute?: number;
 }
 
 export interface Match {
@@ -207,6 +225,20 @@ export interface TeamStanding {
   points: number;
 }
 
+export interface PlayerLeaderboardEntry {
+  playerId: string;
+  playerName: string;
+  profileImage?: string;
+  teamId: string;
+  teamName: string;
+  teamLogo?: string;
+  goals: number;
+  assists: number;
+  appearances: number;
+  totalPoints: number;
+  goalsPerMatch?: number;
+}
+
 export interface LeagueStats {
   totalTeams: number;
   totalMatches: number;
@@ -237,6 +269,9 @@ export interface LeagueStats {
     teamName: string;
     goals: number;
   }[];
+  topScorers?: PlayerLeaderboardEntry[];
+  topAssists?: PlayerLeaderboardEntry[];
+  topPerformers?: PlayerLeaderboardEntry[];
 }
 
 export interface LeagueGraphs {

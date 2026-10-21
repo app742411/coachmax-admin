@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getNotifications, markAllNotificationsRead } from "../api/adminApi";
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from "../api/adminApi";
 import { getCoachNotifications, markCoachNotificationAsRead } from "../api/coaches";
 
 export interface NotificationData {
@@ -125,3 +125,32 @@ export const useMarkAllNotificationsRead = () => {
     },
   });
 };
+
+export const useMarkNotificationRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const userStr = localStorage.getItem("user");
+      let isCoach = false;
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          if (parsed?.role === "COACH") {
+            isCoach = true;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (isCoach) {
+        return markCoachNotificationAsRead(notificationId);
+      }
+      return markNotificationRead(notificationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+};
+

@@ -1,10 +1,12 @@
 import { useExportUsersCSV } from "../../hooks/usePlayers";
-
+import { useTerms } from "../../hooks/useTerms";
 import Select from "../form/Select";
 
 interface PlayerFiltersProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  termFilter?: string;
+  setTermFilter?: (term: string) => void;
   programFilter: string;
   setProgramFilter: (program: string) => void;
   ageFilter: string;
@@ -18,6 +20,8 @@ interface PlayerFiltersProps {
 export default function PlayerFilters({
   searchQuery,
   setSearchQuery,
+  termFilter = "All",
+  setTermFilter = () => { },
   programFilter,
   setProgramFilter,
   ageFilter,
@@ -28,6 +32,15 @@ export default function PlayerFilters({
   setMedicalFilter = () => { },
 }: PlayerFiltersProps) {
   const exportCSVMutation = useExportUsersCSV();
+  const { terms = [] } = useTerms({ isEvent: "all" });
+
+  const termOptions = [
+    { label: "Term: All", value: "All" },
+    ...(terms || []).map((t) => ({
+      label: t.name ? (t.year ? `${t.name} (${t.year})` : t.name) : "Unnamed Term",
+      value: t._id,
+    })),
+  ];
 
   return (
     <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-5 rounded-none shadow-theme-xs mb-6">
@@ -58,6 +71,14 @@ export default function PlayerFilters({
             </svg>
             <span>{exportCSVMutation.isPending ? "Exporting..." : "Export"}</span>
           </button>
+          <div className="w-full sm:w-44 flex-1 sm:flex-initial min-w-[140px]">
+            <Select
+              value={termFilter}
+              onChange={(val) => setTermFilter(val)}
+              options={termOptions}
+              className="w-full"
+            />
+          </div>
           <div className="w-full sm:w-40 flex-1 sm:flex-initial min-w-[130px]">
             <Select
               value={programFilter}
@@ -70,14 +91,17 @@ export default function PlayerFilters({
               className="w-full"
             />
           </div>
-          <div className="w-full sm:w-40 flex-1 sm:flex-initial min-w-[130px]">
+          <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[120px]">
             <Select
               value={ageFilter}
               onChange={(val) => setAgeFilter(val)}
               options={[
                 { label: "Age Group: All", value: "All" },
+                { label: "U6 - U8", value: "U8" },
                 { label: "U9 - U10", value: "U10" },
-                { label: "U11 - U12", value: "U12" }
+                { label: "U11 - U12", value: "U12" },
+                { label: "U13 - U14", value: "U14" },
+                { label: "U15+", value: "U16" }
               ]}
               className="w-full"
             />
@@ -89,7 +113,9 @@ export default function PlayerFilters({
               options={[
                 { label: "Status: All", value: "All" },
                 { label: "Paid", value: "Paid" },
-                { label: "Unpaid", value: "Unpaid" }
+                { label: "Unpaid", value: "Unpaid" },
+                { label: "Trial", value: "Trial" },
+                { label: "Overdue", value: "Overdue" }
               ]}
               className="w-full"
             />

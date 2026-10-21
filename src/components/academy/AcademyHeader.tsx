@@ -8,6 +8,10 @@ import Select from "../form/Select";
 
 interface AcademyHeaderProps {
   programType?: string;
+  selectedCategoryId?: string;
+  selectedProgramId?: string;
+  selectedYear?: string;
+  selectedTermId?: string;
   onCategoryChange?: (categoryId: string, name?: string) => void;
   onProgramChange?: (programId: string, name?: string) => void;
   onYearChange?: (year: string) => void;
@@ -24,6 +28,10 @@ interface AcademyHeaderProps {
 
 export default function AcademyHeader({
   programType = "Academy",
+  selectedCategoryId,
+  selectedProgramId,
+  selectedYear: selectedYearProp,
+  selectedTermId,
   onCategoryChange,
   onProgramChange,
   onYearChange,
@@ -43,10 +51,10 @@ export default function AcademyHeader({
 
   const [terms, setTerms] = useState<any[]>([]);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedProgram, setSelectedProgram] = useState<string>("");
-  const [selectedYear, setSelectedYear] = useState<string>("");
-  const [selectedTerm, setSelectedTerm] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>(selectedCategoryId || "");
+  const [selectedProgram, setSelectedProgram] = useState<string>(selectedProgramId || "");
+  const [selectedYear, setSelectedYear] = useState<string>(selectedYearProp || "");
+  const [selectedTerm, setSelectedTerm] = useState<string>(selectedTermId || "");
   const [availableYears, setAvailableYears] = useState<string[]>([]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -76,22 +84,50 @@ export default function AcademyHeader({
     };
   }, []);
 
+  // Sync external controlled props
+  useEffect(() => {
+    if (selectedCategoryId && selectedCategoryId !== selectedCategory) {
+      setSelectedCategory(selectedCategoryId);
+    }
+  }, [selectedCategoryId]);
+
+  useEffect(() => {
+    if (selectedProgramId && selectedProgramId !== selectedProgram) {
+      setSelectedProgram(selectedProgramId);
+    }
+  }, [selectedProgramId]);
+
+  useEffect(() => {
+    if (selectedTermId && selectedTermId !== selectedTerm) {
+      setSelectedTerm(selectedTermId);
+    }
+  }, [selectedTermId]);
+
+  useEffect(() => {
+    if (selectedYearProp && selectedYearProp !== selectedYear) {
+      setSelectedYear(selectedYearProp);
+    }
+  }, [selectedYearProp]);
+
   // 1. Sync category when categories load or programType changes
   useEffect(() => {
     if (categories && categories.length > 0) {
-      let matched = state?.categoryId ? categories.find((c: any) => c._id === state.categoryId) : null;
-      if (!matched) {
+      let matched = selectedCategoryId ? categories.find((c: any) => c._id === selectedCategoryId) : null;
+      if (!matched && state?.categoryId) {
+        matched = categories.find((c: any) => c._id === state.categoryId);
+      }
+      if (!matched && !selectedCategoryId) {
         matched = categories.find((c: any) => c.name.toLowerCase() === programType.toLowerCase());
       }
-      if (!matched && categories.length > 0) {
+      if (!matched && categories.length > 0 && !selectedCategoryId) {
         matched = categories[0];
       }
-      if (matched) {
+      if (matched && matched._id !== selectedCategory) {
         setSelectedCategory(matched._id);
         onCategoryChange?.(matched._id, matched.name);
       }
     }
-  }, [categories, programType]);
+  }, [categories, programType, selectedCategoryId]);
 
   // 2. Sync program when selectedCategory or programs list changes
   useEffect(() => {
@@ -101,22 +137,25 @@ export default function AcademyHeader({
       return;
     }
     if (programs && programs.length > 0) {
-      let matchedProg = state?.programId ? programs.find((p: any) => p._id === state.programId) : null;
-      if (!matchedProg && programs.length > 0) {
+      let matchedProg = selectedProgramId ? programs.find((p: any) => p._id === selectedProgramId) : null;
+      if (!matchedProg && state?.programId) {
+        matchedProg = programs.find((p: any) => p._id === state.programId);
+      }
+      if (!matchedProg && programs.length > 0 && !selectedProgramId) {
         matchedProg = programs[0];
       }
       if (matchedProg) {
         setSelectedProgram(matchedProg._id);
         onProgramChange?.(matchedProg._id, matchedProg.name);
-      } else {
+      } else if (!selectedProgramId) {
         setSelectedProgram("");
         onProgramChange?.("", "");
       }
-    } else {
+    } else if (!selectedProgramId) {
       setSelectedProgram("");
       onProgramChange?.("", "");
     }
-  }, [selectedCategory, programs]);
+  }, [selectedCategory, programs, selectedProgramId]);
 
   // 3. Set available years and initial term from all terms
   useEffect(() => {
@@ -124,8 +163,11 @@ export default function AcademyHeader({
       const years = Array.from(new Set(allTerms.map((t: any) => t.year?.toString()).filter(Boolean))).sort() as string[];
       setAvailableYears(years);
 
-      let currentTerm = state?.termId ? allTerms.find((t: any) => t._id === state.termId) : null;
-      if (!currentTerm) {
+      let currentTerm = selectedTermId ? allTerms.find((t: any) => t._id === selectedTermId) : null;
+      if (!currentTerm && state?.termId) {
+        currentTerm = allTerms.find((t: any) => t._id === state.termId);
+      }
+      if (!currentTerm && !selectedTermId) {
         currentTerm = findCurrentTerm(allTerms);
       }
 
@@ -135,7 +177,7 @@ export default function AcademyHeader({
         onTermChange?.(currentTerm._id);
       }
     }
-  }, [allTerms]);
+  }, [allTerms, selectedTermId]);
 
   // Sync terms for year
   useEffect(() => {

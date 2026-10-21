@@ -8,7 +8,8 @@ import PlayerDetailCard from "../../components/players/PlayerDetailCard";
 import AssignClassModal from "../../components/players/AssignClassModal";
 import GenerateInvoiceModal from "../../components/InvoiceManagement/GenerateInvoiceModal";
 import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
-import { usePlayers, useDeletePlayer } from "../../hooks/usePlayers";
+import EditPlayerModal from "../../components/players/EditPlayerModal";
+import { usePlayers, useDeletePlayer, usePlayerStats } from "../../hooks/usePlayers";
 import Pagination from "../../components/common/Pagination";
 import { UserPlus } from "lucide-react";
 
@@ -26,30 +27,47 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function PlayersManagement() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [termFilter, setTermFilter] = useState("All");
   const [programFilter, setProgramFilter] = useState("All");
   const [ageFilter, setAgeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [medicalFilter, setMedicalFilter] = useState("All");
   
-  // Page state for 10-player backend pagination
+  // Pagination state for backend pagination
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // Fetch exactly 10 players per page from the backend
-  const { data: playersResponse, isLoading } = usePlayers(page, 10, debouncedSearchQuery, programFilter, statusFilter);
+  // Fetch dynamic player statistics scoped to selected term
+  const { data: statsResponse } = usePlayerStats(termFilter);
+
+  // Fetch players per page from the backend with all active filters
+  const { data: playersResponse, isLoading } = usePlayers(
+    page,
+    limit,
+    debouncedSearchQuery,
+    programFilter,
+    statusFilter,
+    termFilter,
+    medicalFilter,
+    ageFilter
+  );
   const players = playersResponse?.users || [];
   const totalPages = playersResponse?.totalPages || 1;
   const totalPlayers = playersResponse?.total || 0;
+  const stats = statsResponse?.stats || playersResponse?.stats;
   
   const deletePlayerMutation = useDeletePlayer();
   
   const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
   const [playerForInvoice, setPlayerForInvoice] = useState<Player | null>(null);
   const [coachNotePlayer, setCoachNotePlayer] = useState<Player | null>(null);
+  const [playerToEdit, setPlayerToEdit] = useState<Player | null>(null);
 
-  // Reset page to 1 when filters change to avoid out-of-bound pages
+  // Reset page to 1 when filters or limit change to avoid out-of-bound pages
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, programFilter, statusFilter, ageFilter]);
+  }, [searchQuery, termFilter, programFilter, statusFilter, ageFilter, medicalFilter, limit]);
 
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
@@ -89,23 +107,27 @@ export default function PlayersManagement() {
         {/* Left Side: Stats, Filters, Table */}
         <div className="flex-1 w-full min-w-0">
           <PlayerStatsCards
-            totalCount={156}
-            approvedCount={142}
-            pendingCount={8}
-            rejectedCount={6}
-            eliteCount={32}
-            schoolCount={68}
+            totalCount={stats?.totalCount ?? totalPlayers}
+            approvedCount={stats?.approvedCount ?? 0}
+            pendingCount={stats?.pendingCount ?? 0}
+            rejectedCount={stats?.rejectedCount ?? 0}
+            eliteCount={stats?.eliteCount ?? 0}
+            schoolCount={stats?.schoolCount ?? 0}
           />
 
           <PlayerFilters
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            termFilter={termFilter}
+            setTermFilter={setTermFilter}
             programFilter={programFilter}
             setProgramFilter={setProgramFilter}
             ageFilter={ageFilter}
             setAgeFilter={setAgeFilter}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
+            medicalFilter={medicalFilter}
+            setMedicalFilter={setMedicalFilter}
           />
 
           {isLoading ? (
@@ -117,7 +139,7 @@ export default function PlayersManagement() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">No players found</h3>
               <p className="text-sm text-gray-500 text-center max-w-sm mb-6">
-                {searchQuery || programFilter !== "All" || statusFilter !== "All"
+                {searchQuery || programFilter !== "All" || statusFilter !== "All" || termFilter !== "All" || medicalFilter !== "All" || ageFilter !== "All"
                   ? "We couldn't find any players matching your current filters. Try adjusting your search criteria."
                   : "Get started by inviting players to your academy. They'll receive an email to complete their profile."}
               </p>
@@ -128,30 +150,40 @@ export default function PlayersManagement() {
                 players={players}
                 selectedPlayerId={selectedPlayer ? selectedPlayer._id : ""}
                 onSelectPlayer={setSelectedPlayer}
+                onEditPlayer={setPlayerToEdit}
                 onDeletePlayer={handleDeletePlayer}
                 onAssignClass={handleAssignPlayer}
                 onGenerateInvoice={handleGenerateInvoice}
                 onAddCoachNote={setCoachNotePlayer}
+                showPaymentStatus={true}
+                selectedTerm={termFilter}
                 page={page}
-                limit={10}
+                limit={limit}
               />
 
-              {totalPages > 1 && (
-                <Pagination
-                  page={page}
-                  totalPages={totalPages}
-                  totalItems={totalPlayers}
-                  limit={10}
-                  onPageChange={setPage}
-                />
-              )}
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={totalPlayers}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit);
+                  setPage(1);
+                }}
+                limitOptions={[10, 20, 50, 100]}
+              />
             </>
           )}
         </div>
 
         {/* Right Side: Player Detail Module */}
         {selectedPlayer && (
-          <PlayerDetailCard player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
+          <PlayerDetailCard 
+            player={selectedPlayer} 
+            onClose={() => setSelectedPlayer(null)} 
+            onEditPlayer={setPlayerToEdit}
+          />
         )}
       </div>
 
@@ -173,6 +205,12 @@ export default function PlayersManagement() {
           playerName={coachNotePlayer.fullName}
         />
       )}
+
+      <EditPlayerModal
+        isOpen={!!playerToEdit}
+        onClose={() => setPlayerToEdit(null)}
+        player={playerToEdit}
+      />
     </>
   );
 }

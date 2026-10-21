@@ -151,7 +151,10 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
                 <td className="py-2 px-1.5 text-center font-bold text-slate-400 text-xs">
                   {idx + 1}
                 </td>
-                <td className="py-2 px-2 text-center">
+                <td 
+                  className="py-2 px-2 text-center"
+                  title={["TRIAL", "TBC", "EXTRA", "OTHERS", "SUBSTITUTE"].includes((((row as any).paymentStatus || (row as any).status) || "").toUpperCase()) ? (((row as any).paymentStatus || (row as any).status) || "").toUpperCase() : undefined}
+                >
                   <StatusIcon status={(row as any).paymentStatus || (row as any).status} />
                 </td>
                 <td className="py-2 px-3">

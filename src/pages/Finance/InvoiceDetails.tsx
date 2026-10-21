@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { useParams } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useInvoiceDetails } from "../../hooks/useInvoices";
+import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 const formatDate = (dateString: string) => {
   if (!dateString) return "N/A";
@@ -28,6 +30,13 @@ const formatDateTime = (dateString: string) => {
 export default function InvoiceDetails() {
   const { id } = useParams();
   const { data, isLoading, isError } = useInvoiceDetails(id || "");
+  const { markItemAsRead } = useSidebarBadges();
+
+  useEffect(() => {
+    if (id) {
+      markItemAsRead("unpaidInvoices", id);
+    }
+  }, [id, markItemAsRead]);
 
   if (isLoading) {
     return <div className="p-8 text-center text-gray-500">Loading invoice details...</div>;
