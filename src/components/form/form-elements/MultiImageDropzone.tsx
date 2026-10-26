@@ -1,39 +1,50 @@
 import React, { useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { X, UploadCloud } from "lucide-react";
+import { getUploadAccept, getUploadPolicyDescription, normalizeUploadImage, UploadPolicy, validateUploadFile } from "../../../utils/fileValidation";
+import { getMediaUrl } from "../../../utils/media";
+import ImageCropModal from "../../common/ImageCropModal";
 
 interface MultiImageDropzoneProps {
   onUpload?: (files: File[]) => void;
   maxFiles?: number;
   initialImages?: string[];
   onRemoveInitial?: (imagePath: string) => void;
+  policy?: UploadPolicy;
 }
 
 const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({ 
   onUpload, 
   maxFiles = 5,
   initialImages = [],
-  onRemoveInitial
+  onRemoveInitial,
+  policy = "storeProduct"
 }) => {
   const [files, setFiles] = useState<(File & { preview: string })[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
 
   useEffect(() => {
     // Revoke data uris to avoid memory leaks
     return () => files.forEach(file => URL.revokeObjectURL(file.preview));
   }, [files]);
 
-  const onDrop = (acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles.map(file => Object.assign(file, {
-      preview: URL.createObjectURL(file)
-    }));
-
-    setFiles(prevFiles => {
-      const combined = [...prevFiles, ...newFiles].slice(0, maxFiles - initialImages.length);
-      if (onUpload) {
-        onUpload(combined);
+  const onDrop = async (acceptedFiles: File[]) => {
+    setError(null);
+    const validFiles: File[] = [];
+    for (const file of acceptedFiles) {
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); }
+      catch (reason) { setError(reason instanceof Error ? reason.message : "Could not convert this image."); continue; }
+      const validationError = await validateUploadFile(normalized, policy, { checkDimensions: false });
+      if (validationError) {
+        setError(validationError);
+        continue;
       }
-      return combined;
-    });
+      validFiles.push(normalized);
+    }
+    if (validFiles.length === 0) return;
+    setCropQueue(validFiles.slice(0, Math.max(0, maxFiles - initialImages.length - files.length)));
   };
 
   const removeFile = (fileToRemove: File & { preview: string }, e: React.MouseEvent) => {
@@ -50,12 +61,11 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "image/png": [],
-      "image/jpeg": [],
-      "image/webp": [],
-      "image/svg+xml": [],
+    onDropRejected: (rejections) => {
+      const reason = rejections[0]?.errors[0];
+      setError(reason?.code === "file-too-large" ? `Image is too large. ${getUploadPolicyDescription(policy)}` : `Unsupported file type. ${getUploadPolicyDescription(policy)}`);
     },
+    accept: getUploadAccept(policy),
     maxFiles: remainingSlots > 0 ? remainingSlots : 0,
     multiple: true
   });
@@ -63,11 +73,7 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
   const hasReachedMax = totalCount >= maxFiles;
 
   const getImageUrl = (imagePath: string) => {
-    if (imagePath.startsWith("http") || imagePath.startsWith("/images/")) {
-      return imagePath;
-    }
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-    return `${baseUrl.replace(/\/$/, '')}/${imagePath.replace(/^\//, '')}`;
+    return getMediaUrl(imagePath);
   };
 
   return (
@@ -93,14 +99,25 @@ const MultiImageDropzone: React.FC<MultiImageDropzoneProps> = ({
               {isDragActive ? "Drop Images Here" : "Drag & Drop Images"}
             </h4>
             <p className="text-center text-xs text-gray-500 dark:text-gray-400 max-w-xs">
-              Upload up to {maxFiles} images. (PNG, JPG, WEBP, SVG)
+              Upload up to {maxFiles} images. (JPEG, PNG, WebP, HEIC, HEIF)
             </p>
+            <p className="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">{getUploadPolicyDescription(policy)}</p>
             <p className="mt-2 text-xs font-semibold text-brand-500">
               {remainingSlots} slots remaining
             </p>
           </div>
         </div>
       )}
+      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {cropQueue[0] && <ImageCropModal file={cropQueue[0]} policy={policy} onCancel={() => setCropQueue([])} onCrop={(cropped) => {
+        const localFile = Object.assign(cropped, { preview: URL.createObjectURL(cropped) });
+        setFiles((previous) => {
+          const combined = [...previous, localFile].slice(0, maxFiles - initialImages.length);
+          onUpload?.(combined);
+          return combined;
+        });
+        setCropQueue((queue) => queue.slice(1));
+      }} />}
 
       {/* Previews Grid */}
       {totalCount > 0 && (

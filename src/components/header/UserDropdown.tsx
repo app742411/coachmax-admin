@@ -3,6 +3,7 @@ import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { useNavigate } from "react-router";
 import { useLogout, useProfile } from "../../hooks/useAuth";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,10 +53,8 @@ export default function UserDropdown() {
   const currentUser = (profileData?.data as any)?.user || (profileData?.data as any) || localUser;
   const displayName = currentUser?.name || "Super Admin";
   const displayEmail = currentUser?.email || "admin@coachmax.com";
-  let avatarSrc = (profileData?.data as any)?.user?.profileImage || (profileData?.data as any)?.profileImage || "/images/logo/cm-logo2.png";
-  if (avatarSrc && avatarSrc !== "/images/logo/cm-logo2.png" && !avatarSrc.startsWith('http')) {
-    avatarSrc = `${import.meta.env.VITE_API_BASE_URL || ""}/${avatarSrc.replace(/^\/+/, "")}`;
-  }
+  const rawAvatar = (profileData?.data as any)?.user?.profileImage || (profileData?.data as any)?.profileImage;
+  const avatarSrc = getMediaUrl(rawAvatar, getMediaFallback(displayName));
 
   return (
     <div className="relative">
@@ -64,7 +63,7 @@ export default function UserDropdown() {
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
-          <img src={avatarSrc} alt="User" className="w-full h-full object-cover" />
+          <img src={avatarSrc} alt={displayName} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(displayName); }} />
         </span>
 
         <span className="block mr-1 font-medium text-theme-sm">{displayName}</span>

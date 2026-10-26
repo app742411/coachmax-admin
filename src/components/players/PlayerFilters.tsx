@@ -1,5 +1,7 @@
 import { useExportUsersCSV } from "../../hooks/usePlayers";
 import { useTerms } from "../../hooks/useTerms";
+import { useCategories } from "../../hooks/useCategories";
+import { useProgramsByCategory } from "../../hooks/usePrograms";
 import Select from "../form/Select";
 
 interface PlayerFiltersProps {
@@ -9,6 +11,9 @@ interface PlayerFiltersProps {
   setTermFilter?: (term: string) => void;
   programFilter: string;
   setProgramFilter: (program: string) => void;
+  subProgramFilter?: string;
+  setSubProgramFilter?: (program: string) => void;
+  filterPlayers?: any[];
   ageFilter: string;
   setAgeFilter: (age: string) => void;
   statusFilter: string;
@@ -24,6 +29,9 @@ export default function PlayerFilters({
   setTermFilter = () => { },
   programFilter,
   setProgramFilter,
+  subProgramFilter = "All",
+  setSubProgramFilter = () => { },
+  filterPlayers: filterPlayersProp,
   ageFilter,
   setAgeFilter,
   statusFilter,
@@ -33,6 +41,53 @@ export default function PlayerFilters({
 }: PlayerFiltersProps) {
   const exportCSVMutation = useExportUsersCSV();
   const { terms = [] } = useTerms({ isEvent: "all" });
+  const { categories = [] } = useCategories({ isEvent: "all" });
+  const filterPlayers = filterPlayersProp || [];
+
+  const selectedCategory = categories.find(
+    (category) => category.name?.toLowerCase() === programFilter.toLowerCase()
+  );
+  const { programs: categoryPrograms = [] } = useProgramsByCategory(selectedCategory?._id);
+
+  const subProgramOptions = Array.from(
+    new Map(categoryPrograms.map((program) => [program._id, program.name])).entries()
+  ).sort(([, first], [, second]) => String(first).localeCompare(String(second)));
+
+  const programTypeOptions = [
+    { label: "Program Type: All", value: "All" },
+    ...categories
+      .filter((category) => category.name)
+      .map((category) => ({ label: category.name, value: category.name })),
+  ];
+
+  const ageOptions = Array.from(
+    new Set(
+      filterPlayers
+        .map((player) => {
+          if (!player.dob) return null;
+          const dob = new Date(player.dob);
+          if (Number.isNaN(dob.getTime())) return null;
+          const today = new Date();
+          let age = today.getFullYear() - dob.getFullYear();
+          const birthdayPassed =
+            today.getMonth() > dob.getMonth() ||
+            (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate());
+          if (!birthdayPassed) age -= 1;
+          return age >= 0 ? age : null;
+        })
+        .filter((age): age is number => age !== null)
+    )
+  ).sort((first, second) => first - second);
+
+  const ageSelectOptions = filterPlayersProp
+    ? ageOptions.map((age) => ({ label: `U${age}`, value: `U${age}` }))
+    : [
+      { label: "U6 - U8", value: "U8" },
+      { label: "U9 - U10", value: "U10" },
+      { label: "U11 - U12", value: "U12" },
+      { label: "U13 - U14", value: "U14" },
+      { label: "U15+", value: "U16" },
+    ];
 
   const termOptions = [
     { label: "Term: All", value: "All" },
@@ -82,26 +137,34 @@ export default function PlayerFilters({
           <div className="w-full sm:w-40 flex-1 sm:flex-initial min-w-[130px]">
             <Select
               value={programFilter}
-              onChange={(val) => setProgramFilter(val)}
-              options={[
-                { label: "Program Type: All", value: "All" },
-                { label: "School", value: "School" },
-                { label: "Academy", value: "Academy" }
-              ]}
+              onChange={(val) => {
+                setProgramFilter(val);
+                setSubProgramFilter("All");
+              }}
+              options={programTypeOptions}
               className="w-full"
             />
           </div>
+          {filterPlayersProp && programFilter !== "All" && (
+            <div className="w-full sm:w-40 flex-1 sm:flex-initial min-w-[130px]">
+              <Select
+                value={subProgramFilter}
+                onChange={(val) => setSubProgramFilter(val)}
+                options={[
+                  { label: "Sub Program: All", value: "All" },
+                  ...subProgramOptions.map(([value, label]) => ({ label: String(label), value: String(value) })),
+                ]}
+                className="w-full"
+              />
+            </div>
+          )}
           <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[120px]">
             <Select
               value={ageFilter}
               onChange={(val) => setAgeFilter(val)}
               options={[
                 { label: "Age Group: All", value: "All" },
-                { label: "U6 - U8", value: "U8" },
-                { label: "U9 - U10", value: "U10" },
-                { label: "U11 - U12", value: "U12" },
-                { label: "U13 - U14", value: "U14" },
-                { label: "U15+", value: "U16" }
+                ...ageSelectOptions,
               ]}
               className="w-full"
             />
@@ -112,10 +175,12 @@ export default function PlayerFilters({
               onChange={(val) => setStatusFilter(val)}
               options={[
                 { label: "Status: All", value: "All" },
-                { label: "Paid", value: "Paid" },
-                { label: "Unpaid", value: "Unpaid" },
-                { label: "Trial", value: "Trial" },
-                { label: "Overdue", value: "Overdue" }
+                { label: "PAID", value: "PAID" },
+                { label: "HANDSHAKE", value: "HANDSHAKE" },
+                { label: "APPROVED (UNPAID)", value: "UNPAID" },
+                { label: "TRIAL", value: "TRIAL" },
+                { label: "TBC", value: "TBC" },
+                { label: "EXTRA", value: "EXTRA" },
               ]}
               className="w-full"
             />

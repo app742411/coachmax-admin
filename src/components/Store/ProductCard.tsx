@@ -3,6 +3,7 @@ import { Edit3, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-
 import { Link } from "react-router";
 import { useDeleteStoreProduct } from "../../hooks/useProducts";
 import { toast } from "react-hot-toast";
+import { getMediaUrl, MEDIA_PLACEHOLDER } from "../../utils/media";
 
 interface ProductCardProps {
   product: any;
@@ -17,7 +18,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
 
   const images = product.images && product.images.length > 0
     ? product.images
-    : ["/images/placeholder-image.png"];
+    : [MEDIA_PLACEHOLDER];
 
   const handlePrevImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -32,11 +33,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
   };
 
   const getImageUrl = (imagePath: string) => {
-    if (imagePath.startsWith("http") || imagePath.startsWith("/images/")) {
-      return imagePath;
-    }
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-    return `${baseUrl.replace(/\/$/, '')}/${imagePath.replace(/^\//, '')}`;
+    return getMediaUrl(imagePath);
   };
 
   const handleDeleteConfirm = () => {

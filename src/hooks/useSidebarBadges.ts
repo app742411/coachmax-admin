@@ -20,7 +20,6 @@ export const PATH_TO_BADGE_KEY: Record<string, keyof SidebarBadges> = {
   "/new-registration-request": "verificationRequests",
   "/temporary-players-list": "temporaryPlayers",
   "/program/academy": "unallocatedPlayers",
-  "/programs-2": "unallocatedPlayers",
   "/events": "eventRegistrations",
   "/invoices": "unpaidInvoices",
   "/transactions": "pendingPayments",

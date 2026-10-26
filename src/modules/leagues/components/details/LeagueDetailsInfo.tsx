@@ -4,6 +4,10 @@ import { League, LeagueType } from "../../types/league";
 import { useUpdateLeague } from "../../hooks/useLeague";
 import { useLeaguePermissions } from "../../hooks/useLeaguePermissions";
 import Button from "../../../../components/ui/button/Button";
+import toast from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../../../utils/fileValidation";
+import { getMediaUrl } from "../../../../utils/media";
+import ImageCropModal from "../../../../components/common/ImageCropModal";
 
 interface LeagueDetailsInfoProps {
   league: League;
@@ -19,8 +23,7 @@ const getImageUrl = (path?: string | null) => {
   ) {
     return path;
   }
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-  return `${baseUrl}/${path.replace(/^\//, "")}`;
+  return getMediaUrl(path);
 };
 
 export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) => {
@@ -33,6 +36,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
     league.logo ? getImageUrl(league.logo) : null
   );
   const [logoError, setLogoError] = useState(false);
+  const [logoCropFile, setLogoCropFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     name: league.name || "",
@@ -103,16 +107,15 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
     }
   }, [league]);
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setLogoFile(file);
-      setLogoError(false);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); }
+      catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "logo", { checkDimensions: false });
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setLogoCropFile(normalized);
     }
   };
 
@@ -257,7 +260,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                     disabled={!canEdit}
                     onChange={handleLogoChange}
                     className="hidden"
@@ -284,6 +287,15 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
                     </button>
                   )}
                 </div>
+      {logoCropFile && <ImageCropModal file={logoCropFile} policy="logo" onCancel={() => {
+        setLogoCropFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }} onCrop={(cropped) => {
+        setLogoFile(cropped);
+        setLogoPreview(URL.createObjectURL(cropped));
+        setLogoError(false);
+        setLogoCropFile(null);
+      }} />}
               </div>
             </div>
           </div>

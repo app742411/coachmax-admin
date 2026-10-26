@@ -6,13 +6,10 @@ import { getFixturesByLeague, createFixture, updateFixture, deleteFixture, getAl
 import { toast } from "react-hot-toast";
 import { Calendar as CalendarIcon, MapPin, User, Swords, ChevronDown, ChevronUp, Trophy } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import { getMediaUrl } from "../../utils/media";
 
 const getImageUrl = (path: string | undefined | null) => {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${baseUrl}${cleanPath}`;
+  return getMediaUrl(path) || null;
 };
 
 const getDataArray = (res: any) => {

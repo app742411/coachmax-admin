@@ -7,6 +7,7 @@ import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
 import toast from "react-hot-toast";
+import { getMediaUrl } from "../../utils/media";
 
 const formatDate = (dateString: string) => {
   if (!dateString) return "N/A";
@@ -236,7 +237,7 @@ export default function Transactions() {
                       <td className="py-4 px-3">
                         {txn.paymentScreenshot ? (
                           <a
-                            href={`${import.meta.env.VITE_API_BASE_URL}/${txn.paymentScreenshot}`}
+                            href={getMediaUrl(txn.paymentScreenshot)}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => {

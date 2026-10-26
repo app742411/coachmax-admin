@@ -1,5 +1,6 @@
 import { UnallocatedPlayer } from "../../types/academy";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface UnallocatedPlayersCardProps {
   players: UnallocatedPlayer[];
@@ -23,6 +24,7 @@ export default function UnallocatedPlayersCard({
   onNavigateToTarget
 }: UnallocatedPlayersCardProps) {
   const { markItemAsRead } = useSidebarBadges();
+  const orderedPlayers = sortPlayersByPaymentStatus(players, (player) => player.paymentStatus);
   return (
     <div className="bg-white border border-slate-200 dark:border-slate-700 dark:bg-slate-900 p-4 rounded-none shadow-sm mb-5 flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -48,7 +50,7 @@ export default function UnallocatedPlayersCard({
             No unallocated players
           </div>
         ) : (
-          players.map((p) => {
+          orderedPlayers.map((p) => {
             const primaryClass = p.primaryClass || (p.preferredClasses && p.preferredClasses.length > 0 ? p.preferredClasses[0] : null);
 
             return (

@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../ui/modal";
 import { UnallocatedPlayer } from "../../types/academy";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface PlayersListModalProps {
   isOpen: boolean;
@@ -13,6 +15,48 @@ interface PlayersListModalProps {
 
 export default function PlayersListModal({ isOpen, onClose, title, players, onAssignPlayer, onNavigateToTarget }: PlayersListModalProps) {
   const { markItemAsRead } = useSidebarBadges();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm("");
+      setPage(1);
+    }
+  }, [isOpen, title]);
+
+  const filteredPlayers = useMemo(() => {
+    const orderedPlayers = sortPlayersByPaymentStatus(players, (player) => player.paymentStatus);
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return orderedPlayers;
+    return orderedPlayers.filter((player) => {
+      const searchable = [
+        player.name,
+        player.details,
+        player.categoryName,
+        player.fullProgramName,
+        player.termName,
+        ...(player.preferredClasses || []).flatMap((item) => [item.name, item.dayOfWeek, item.startTime, item.location]),
+        ...(player.assignedClasses || []).flatMap((item) => [item.name, item.dayOfWeek, item.startTime, item.location]),
+        ...(player.assignedTeams || []).flatMap((item) => [item.name, item.ageGroup]),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return searchable.includes(query);
+    });
+  }, [players, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / pageSize));
+  const visiblePlayers = filteredPlayers.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-3xl mx-auto">
       <div className="bg-white dark:bg-slate-900 shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -35,15 +79,29 @@ export default function PlayersListModal({ isOpen, onClose, title, players, onAs
           </button>
         </div>
 
+        <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+            </svg>
+            <input
+              value={searchTerm}
+              onChange={(event) => handleSearchChange(event.target.value)}
+              placeholder="Search by player, class, program or team..."
+              className="w-full h-10 pl-9 pr-3 text-xs border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded focus:outline-none focus:border-[#0047FF]"
+            />
+          </div>
+        </div>
+
         {/* Content */}
-        <div className="p-6 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-950/50">
-          {players.length === 0 ? (
+        <div className="flex-1 min-h-0 p-6 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-950/50">
+          {visiblePlayers.length === 0 ? (
             <div className="text-center py-12 text-slate-500 font-medium">
-              No players found in this list.
+              {searchTerm ? "No players match your search." : "No players found in this list."}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {players.map((p) => (
+              {visiblePlayers.map((p) => (
                 <div
                   key={p.id}
                   onClick={() => {
@@ -101,11 +159,35 @@ export default function PlayersListModal({ isOpen, onClose, title, players, onAs
                         )}
                         {p.preferredClasses && p.preferredClasses.length > 0 && (
                           <div className="flex items-start gap-1.5 text-xs pt-1">
-                            <span className="text-slate-400 min-w-[60px] pt-0.5">Classes:</span>
+                            <span className="text-slate-400 min-w-[60px] pt-0.5">Requested:</span>
                             <div className="flex flex-wrap gap-1">
                               {p.preferredClasses.map(c => (
                                 <span key={c.id} className="inline-block bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[10px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">
-                                  {c.dayOfWeek.substring(0, 3)} {c.startTime}
+                                  {c.name || `${c.dayOfWeek.substring(0, 3)} ${c.startTime}`}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {p.assignedClasses && p.assignedClasses.length > 0 && (
+                          <div className="flex items-start gap-1.5 text-xs pt-1">
+                            <span className="text-slate-400 min-w-[60px] pt-0.5">Classes:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {p.assignedClasses.map((assignedClass) => (
+                                <span key={assignedClass._id || `${assignedClass.name}-${assignedClass.startTime}`} className="inline-block bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-semibold">
+                                  {assignedClass.name || `${assignedClass.dayOfWeek || ""} ${assignedClass.startTime || ""}`.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {p.assignedTeams && p.assignedTeams.length > 0 && (
+                          <div className="flex items-start gap-1.5 text-xs pt-1">
+                            <span className="text-slate-400 min-w-[60px] pt-0.5">Teams:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {p.assignedTeams.map((team) => (
+                                <span key={team.id || team.name} className="inline-block bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded font-semibold">
+                                  {team.name}{team.ageGroup ? ` · ${team.ageGroup}` : ""}
                                 </span>
                               ))}
                             </div>
@@ -154,12 +236,24 @@ export default function PlayersListModal({ isOpen, onClose, title, players, onAs
                           </button>
                         )}
                       </div>
+
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+
+        <div className="px-6 py-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-3">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            {filteredPlayers.length === 0 ? "0 results" : `Showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, filteredPlayers.length)} of ${filteredPlayers.length}`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="px-3 py-1.5 text-[10px] font-bold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded disabled:opacity-40">Previous</button>
+            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">Page {page} of {totalPages}</span>
+            <button type="button" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))} className="px-3 py-1.5 text-[10px] font-bold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded disabled:opacity-40">Next</button>
+          </div>
         </div>
         
       </div>

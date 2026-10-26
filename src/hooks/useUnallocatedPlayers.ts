@@ -1,10 +1,11 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getUnallocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
+import { getMediaUrl, getMediaFallback } from "../utils/media";
+import { sortPlayersByPaymentStatus } from "../utils/paymentStatus";
 
 const mapUnallocatedToCard = (data: any): UnallocatedPlayer => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  const avatar = data.profileImage ? `${baseUrl}/${data.profileImage.replace(/^\/+/, "")}` : `https://ui-avatars.com/api/?name=${data.fullName || "Player"}`;
+  const avatar = getMediaUrl(data.profileImage, getMediaFallback(data.fullName || "Player"));
   
   // Extract details (e.g. Gender, Age) cleanly without showing raw "Unknown"
   const details = data.gender && data.gender !== "Unknown" ? data.gender : (data.dateOfBirth ? `DOB: ${new Date(data.dateOfBirth).toLocaleDateString("en-GB")}` : "Player");
@@ -91,7 +92,10 @@ export const useUnallocatedPlayers = (
     queryFn: async () => {
       const response = await getUnallocatedPlayers(category, program, search, page, limit);
       if (response) {
-        const players = (response.data || []).map(mapUnallocatedToCard);
+        const players = sortPlayersByPaymentStatus<UnallocatedPlayer>(
+          (response.data || []).map(mapUnallocatedToCard),
+          (player) => player.paymentStatus
+        );
         const total = response.pagination?.total ?? response.total ?? players.length;
         const totalPages = response.pagination?.totalPages ?? Math.ceil(total / limit);
         const hasMore = response.pagination?.hasMore ?? (page < totalPages);

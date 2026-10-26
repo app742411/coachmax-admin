@@ -31,6 +31,20 @@ export interface UnallocatedPlayer {
   programId?: string;
   registrationRequestId?: string;
   paymentStatus?: string;
+  assignedClasses?: Array<{
+    _id?: string;
+    name?: string;
+    dayOfWeek?: string;
+    startTime?: string;
+    endTime?: string;
+    venue?: string;
+    location?: string;
+  }>;
+  assignedTeams?: Array<{
+    id?: string;
+    name: string;
+    ageGroup?: string;
+  }>;
   termName?: string;
   termId?: string;
   isEvent?: boolean;

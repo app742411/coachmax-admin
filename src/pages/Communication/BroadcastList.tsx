@@ -10,7 +10,6 @@ import { broadcastApi } from "../../services/broadcastApi";
 import { BroadcastCard } from "../../components/chat/BroadcastCard";
 import { Megaphone, RotateCw, Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { getCoachGetClasses } from "../../api/coaches";
 
 export const BroadcastList: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -21,13 +20,18 @@ export const BroadcastList: React.FC = () => {
 
   const loadRooms = async () => {
     try {
-      const res = await getCoachGetClasses();
+      // Only list actual broadcast rooms. Falling back to a class ID makes the
+      // room-message endpoint receive a class ID and produces a misleading
+      // "room not found" state before a class chat has been created.
+      const res = await broadcastApi.getBroadcastRooms();
       if (res.success && Array.isArray(res.data)) {
         const mapped = res.data
           .map((cls: any) => ({
-            classId: cls.broadcastChatRoomId || cls.broadcastRoomId || cls._id || cls.classId,
-            className: cls.name || cls.className || "Class Broadcast",
-          }));
+            classId: cls._id || cls.broadcastChatRoomId || cls.broadcastRoomId,
+            className: cls.name || cls.className || cls.context?.className || cls.scopeLabel || "Broadcast",
+            type: cls.eventId || cls.eventSessionDate ? "EVENT" : cls.teamId ? "TEAM" : "CLASS",
+          }))
+          .filter((room: any) => room.classId);
         dispatch(setBroadcastRooms(mapped));
         if (mapped.length > 0 && !activeClassId) {
           dispatch(setActiveClassId(mapped[0].classId));

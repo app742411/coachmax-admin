@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp, Trophy, User } from "lucide-react";
 import { getPlayerStatusTextClass } from "../../../components/common/StatusColorCode";
+import { sortPlayersByPaymentStatus } from "../../../utils/paymentStatus";
 
 interface TeamLeaguesViewProps {
   leagues: any[];
@@ -33,7 +34,11 @@ export const TeamLeaguesView: React.FC<TeamLeaguesViewProps> = ({ leagues }) => 
         {validLeagues.map((leagueEnrollment: any) => {
           const isExpanded = expandedLeague === leagueEnrollment._id;
           const leagueInfo = leagueEnrollment.league || {};
-          const players = leagueEnrollment.players || [];
+          const players = sortPlayersByPaymentStatus(
+            leagueEnrollment.players || [],
+            (player: any) => player.paymentStatus,
+            (player: any) => player.player?.fullName || player.fullName || player.name
+          );
 
           return (
             <div key={leagueEnrollment._id} className="border-b border-slate-200 dark:border-slate-800 last:border-0">

@@ -6,6 +6,8 @@ import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import { useProfile, useUpdateProfile } from "../../hooks/useAuth";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 interface UserInfoFormValues {
   firstName: string;
@@ -22,6 +24,7 @@ export default function UserInfoCard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const user = profileData?.data;
 
@@ -57,14 +60,24 @@ export default function UserInfoCard() {
     if (!isOpen) {
       setImagePreview(null);
       setImageFile(null);
+      setImageError(null);
     }
   }, [isOpen]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { setImageError(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "profile");
+      if (validationError) {
+        setImageError(validationError);
+        e.target.value = "";
+        return;
+      }
+      setImageError(null);
+      setImageFile(normalized);
+      setImagePreview(URL.createObjectURL(normalized));
     }
   };
 
@@ -87,10 +100,7 @@ export default function UserInfoCard() {
   const displayFirstName = nameParts[0] || "";
   const displayLastName = nameParts.slice(1).join(" ") || "";
   const displayEmail = user?.email || "admin@coachmax.com";
-  let currentAvatar = user?.profileImage || "/images/logo/cm-logo2.png";
-  if (currentAvatar && currentAvatar !== "/images/logo/cm-logo2.png" && !currentAvatar.startsWith('http')) {
-    currentAvatar = `${import.meta.env.VITE_API_BASE_URL || ""}/${currentAvatar.replace(/^\/+/, "")}`;
-  }
+  const currentAvatar = getMediaUrl(user?.profileImage, getMediaFallback(user?.name || "Super Admin"));
 
   if (isLoading) {
     return (
@@ -233,8 +243,9 @@ export default function UserInfoCard() {
                       Change Photo
                     </button>
                     <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                      JPG, PNG or WebP. Max 5MB.
+                      JPEG, PNG, WebP, HEIC/HEIF · max 5MB
                     </p>
+                    {imageError && <p className="mt-1 text-xs font-medium text-red-600">{imageError}</p>}
                     {imagePreview && (
                       <button
                         type="button"
@@ -248,7 +259,7 @@ export default function UserInfoCard() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                     className="hidden"
                     onChange={handleImageChange}
                   />

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { Link } from "react-router";
 import apiClient from "../../api/apiClient";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { formatDateOnly } from "../../utils/dateTime";
 
 interface DashboardData {
   coach: {
@@ -70,13 +72,7 @@ const CoachDashboard: React.FC = () => {
         {/* Profile Card (Left) */}
         <div className="lg:w-[30%] p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col items-center lg:items-start text-center lg:text-left">
           <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden mb-4 border-2 border-gray-100 flex-shrink-0 mx-auto lg:mx-0">
-            {user.profileImage ? (
-              <img src={`/${user.profileImage}`} alt={user.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400">
-                {user.name?.charAt(0)}
-              </span>
-            )}
+            <img src={getMediaUrl(user.profileImage, getMediaFallback(user.name))} alt={user.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(user.name); }} />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-1">{user.name}</h2>
           <p className="text-sm text-gray-500 mb-2">{user.email}</p>
@@ -213,7 +209,6 @@ const CoachDashboard: React.FC = () => {
             ) : (
               <div className="space-y-6">
                 {data?.todaysClasses?.map((cls, idx) => {
-                  const dateObj = new Date(cls.sessionDate);
                   return (
                     <div key={idx} className="flex gap-6">
                       {/* Left: Time and Blue Line */}
@@ -261,7 +256,7 @@ const CoachDashboard: React.FC = () => {
                           )}
                           <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                            {dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {formatDateOnly(cls.sessionDate, { day: 'numeric', month: 'short', year: 'numeric' })}
                           </div>
                         </div>
                       </div>
@@ -285,14 +280,13 @@ const CoachDashboard: React.FC = () => {
             ) : (
               <div className="flex flex-col">
                 {data?.upcomingSessions?.map((cls, idx) => {
-                  const dateObj = new Date(cls.sessionDate);
                   return (
                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center p-5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors gap-4 sm:gap-6">
                       
                       {/* Date & Day */}
                       <div className="w-16 flex-shrink-0 flex flex-col text-sm">
-                        <span className="font-bold text-blue-600 uppercase tracking-wider">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                        <span className="font-bold text-gray-900 mt-0.5">{dateObj.getDate()} {dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</span>
+                        <span className="font-bold text-blue-600 uppercase tracking-wider">{formatDateOnly(cls.sessionDate, { weekday: 'short' })}</span>
+                        <span className="font-bold text-gray-900 mt-0.5">{formatDateOnly(cls.sessionDate, { day: 'numeric', month: 'short' }).toUpperCase()}</span>
                       </div>
 
                       {/* Title & Time */}

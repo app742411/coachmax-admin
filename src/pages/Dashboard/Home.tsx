@@ -15,6 +15,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { getPlayerStatusTextClass } from "../../components/common/StatusColorCode";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -567,7 +568,7 @@ export default function Home() {
             <tbody>
               {recentActivity.recentPlayers && recentActivity.recentPlayers.length > 0 ? (
                 recentActivity.recentPlayers.map((row: any, idx: number) => {
-                  const avatarUrl = row.profileImage ? `/${row.profileImage}` : `https://ui-avatars.com/api/?name=${row.fullName}`;
+                  const avatarUrl = getMediaUrl(row.profileImage, getMediaFallback(row.fullName));
                   const pStatus = row.paymentStatus || "TRIAL";
                   const activeStat = row.playerStatus || "ACTIVE";
                   
@@ -583,7 +584,7 @@ export default function Home() {
                       {/* Player */}
                       <td className="py-4 font-bold text-slate-800 dark:text-slate-200">
                         <div className="flex items-center gap-2">
-                          <img src={avatarUrl} alt={row.fullName} className="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                          <img src={avatarUrl} alt={row.fullName} className="w-6 h-6 rounded-full object-cover border border-slate-100" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(row.fullName); }} />
                           <span className={`font-bold transition-colors ${getPlayerStatusTextClass(pStatus)}`}>{row.fullName}</span>
                         </div>
                       </td>

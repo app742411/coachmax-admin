@@ -8,6 +8,7 @@ import PlayerPaymentHistoryModal from "./PlayerPaymentHistoryModal";
 import { ShieldAlert, Edit, Receipt } from "lucide-react";
 import RatingEditor from "./RatingEditor";
 import { StatusBadge } from "../common/StatusColorCode";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 const getBadgeStyles = (noteType: string) => {
   switch (noteType) {
@@ -93,8 +94,7 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, onEdi
   const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
   const updatePaymentStatusMutation = useUpdatePlayerPaymentStatus();
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  const avatar = player.profileImage ? `${baseUrl}/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
+  const avatar = getMediaUrl(player.profileImage, getMediaFallback(player.fullName));
 
   // Safe date parsing to avoid "Invalid Date" values
   const dob = player.dob ? new Date(player.dob) : null;

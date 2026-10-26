@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Download, Search, ChevronDown, ArrowUpDown, RefreshCw } from "lucide-react";
 import { TeamStanding } from "../../types/league";
 import { useLeagueLadder, useRecalculateLadder } from "../../hooks/useLeagueLadder";
+import { getMediaUrl } from "../../../../utils/media";
 
 interface LadderTableProps {
   leagueId: string;
@@ -10,9 +11,7 @@ interface LadderTableProps {
 
 const getLogoUrl = (url?: string) => {
   if (!url) return "";
-  if (url.startsWith("http")) return url;
-  const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
-  return `${baseUrl}/${url.replace(/^\//, "")}`;
+  return getMediaUrl(url);
 };
 
 const TeamLogoCrest: React.FC<{ logo?: string; name: string }> = ({ logo, name }) => {

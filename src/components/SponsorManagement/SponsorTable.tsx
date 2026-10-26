@@ -12,6 +12,7 @@ import { Sponsor, deleteSponsor, toggleBannerStatus } from "../../api/sponsorApi
 import toast from "react-hot-toast";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import SponsorDetailsModal from "./SponsorDetailsModal";
+import { getMediaUrl, MEDIA_PLACEHOLDER } from "../../utils/media";
 
 interface SponsorTableProps {
  sponsors: Sponsor[];
@@ -87,11 +88,11 @@ const SponsorTable: React.FC<SponsorTableProps> = ({ sponsors, loading, onEdit, 
         >
          <TableCell className="px-5">
           <img
-           src={`${import.meta.env.VITE_API_BASE_URL}/${sponsor.image}`}
+           src={getMediaUrl(sponsor.image, MEDIA_PLACEHOLDER)}
            alt={sponsor.title}
            className="h-12 w-24 object-cover rounded-none border border-gray-100 dark:border-white/10 shadow-sm"
            onError={(e) => {
-            (e.target as HTMLImageElement).src = "/images/placeholder/placeholder.jpg";
+            (e.target as HTMLImageElement).src = MEDIA_PLACEHOLDER;
            }}
           />
          </TableCell>

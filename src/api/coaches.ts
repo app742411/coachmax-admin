@@ -121,8 +121,12 @@ export const addCoachNote = async (data: { playerId: string; classId?: string; n
   return response.data;
 };
 
-export const getCoachNotes = async (playerId: string, page = 1, limit = 20): Promise<any> => {
-  const response = await apiClient.get(`/api/coach/notes/player/${playerId}?page=${page}&limit=${limit}`);
+export const getCoachNotes = async (playerId: string, page = 1, limit = 20, scope?: { termId?: string; year?: string; noTerm?: boolean }): Promise<any> => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (scope?.termId) params.set("termId", scope.termId);
+  if (scope?.year) params.set("year", scope.year);
+  if (scope?.noTerm) params.set("noTerm", "true");
+  const response = await apiClient.get(`/api/coach/notes/player/${playerId}?${params.toString()}`);
   return response.data;
 };
 

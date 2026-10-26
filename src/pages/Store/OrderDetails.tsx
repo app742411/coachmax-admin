@@ -4,6 +4,7 @@ import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useOrderDetails, useUpdateOrderStatus } from "../../hooks/useOrders";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
+import { getMediaUrl } from "../../utils/media";
 
 export default function OrderDetails() {
   const { id } = useParams<{ id: string }>();
@@ -152,7 +153,7 @@ export default function OrderDetails() {
               <div className="space-y-6">
                 {order.items.map((item: any, idx: number) => {
                   const productImage = item.product?.images?.[0] 
-                    ? `${import.meta.env.VITE_API_BASE_URL}/${item.product.images[0]}`
+                    ? getMediaUrl(item.product.images[0])
                     : null;
 
                   return (

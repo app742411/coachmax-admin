@@ -15,6 +15,7 @@ import {
   FileText
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 interface PlayerPaymentHistoryModalProps {
   isOpen: boolean;
@@ -178,10 +179,7 @@ export default function PlayerPaymentHistoryModal({
     }
   };
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  const avatar = fetchedPlayer?.profileImage
-    ? `${baseUrl}/${fetchedPlayer.profileImage}`
-    : `https://ui-avatars.com/api/?name=${fetchedPlayer?.fullName || "Player"}`;
+  const avatar = getMediaUrl(fetchedPlayer?.profileImage, getMediaFallback(fetchedPlayer?.fullName || "Player"));
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">

@@ -16,6 +16,7 @@ import {
 import toast from "react-hot-toast";
 import EditNewsModal from "../../components/ContentManagement/EditNewsModal";
 import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
+import { getMediaUrl } from "../../utils/media";
 
 const NewsDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -93,9 +94,7 @@ const NewsDetails: React.FC = () => {
   // Resolve Image URL
   let imageUrl = "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=600&auto=format&fit=crop";
   if (newsItem.images && newsItem.images.length > 0) {
-    const imgPath = newsItem.images[0].replace(/\\/g, '/');
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || "";
-    imageUrl = imgPath.startsWith("http") ? imgPath : `${baseUrl}/${imgPath.replace(/^\//, '')}`;
+    imageUrl = getMediaUrl(newsItem.images[0].replace(/\\/g, "/"), imageUrl);
   }
 
   const formattedDate = new Date(newsItem.publishedAt || newsItem.createdAt).toLocaleDateString("en-US", {

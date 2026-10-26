@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Player } from "../../types/player";
-import { useAppDispatch } from "../../store";
-import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
 import {
   ShieldAlert,
-  MessageSquare,
   FileText,
   Pencil,
   UserPlus,
@@ -17,6 +14,10 @@ import { StatusDot, getStatusConfig, StatusIcon, getPlayerStatusTextClass } from
 import { useUpdatePlayerPaymentStatus } from "../../hooks/usePlayers";
 import PlayerPaymentHistoryModal from "./PlayerPaymentHistoryModal";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import ChatActionButton from "../chat/ChatActionButton";
+import { chatApi } from "../../services/chatApi";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface PlayerTableProps {
   players: Player[];
@@ -164,7 +165,6 @@ export default function PlayerTable({
   const updatePaymentStatusMutation = useUpdatePlayerPaymentStatus();
 
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const handleClose = () => {
@@ -208,37 +208,11 @@ export default function PlayerTable({
     setOpenDropdownId(playerId);
   };
 
-  const handleChatWithParent = async (player: Player) => {
-    const parentId = player.parentId?._id || player.parentId;
-    if (!parentId) {
-      alert("No parent contact information found for this player.");
-      return;
-    }
-
-    try {
-      const res = await apiClient.post("/api/coach/chat/direct", { parentId });
-      if (res.data && res.data.success && res.data.data) {
-        const roomId = res.data.data._id;
-        dispatch(setActiveRoomId(roomId));
-
-        const userStr = localStorage.getItem("user");
-        let isCoach = false;
-        if (userStr) {
-          try {
-            const parsed = JSON.parse(userStr);
-            isCoach = parsed?.role === "COACH";
-          } catch (e) {
-            console.error(e);
-          }
-        }
-        navigate(isCoach ? "/messages" : "/communication");
-      } else {
-        alert(res.data?.message || "Failed to start conversation.");
-      }
-    } catch (error: any) {
-      console.error("Chat redirection error:", error);
-      alert(error?.response?.data?.message || "Failed to start direct conversation.");
-    }
+  const openParentChat = (player: Player) => {
+    const parentId = player.parentId?._id;
+    return parentId
+      ? chatApi.openDirectChat(String(parentId))
+      : Promise.reject(new Error("No parent contact information found for this player."));
   };
 
   return (
@@ -273,7 +247,7 @@ export default function PlayerTable({
             </tr>
           </thead>
           <tbody>
-            {players.map((player, index) => {
+            {sortPlayersByPaymentStatus(players, (player) => resolvePlayerPaymentStatus(player, selectedTerm)).map((player, index) => {
               const serialNo = (page - 1) * limit + index + 1;
               const isRequest = !!(player as any).requestId || !!(player as any).requestType;
               const reqId = (player as any).requestId || player._id;
@@ -282,8 +256,7 @@ export default function PlayerTable({
                 ((player as any).playerStatus === "PENDING_APPROVAL" && !isItemRead("temporaryPlayers", reqId) && !isItemRead("temporaryPlayers", player._id));
               const paymentStatus = resolvePlayerPaymentStatus(player, selectedTerm);
               const playerStatus = isRequest ? (player.status || "PENDING") : ((player as any).playerStatus || player.status || "PENDING");
-              const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-              const avatar = player.profileImage ? `${baseUrl}/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
+              const avatar = getMediaUrl(player.profileImage, getMediaFallback(player.fullName));
               const isFilteredByTerm = selectedTerm && selectedTerm !== "All";
 
               return (
@@ -714,19 +687,12 @@ export default function PlayerTable({
 
                   {/* Chat */}
                   <div>
-                    <button
-                      type="button"
+                    <ChatActionButton
+                      contextLabel={player.fullName || "Parent"}
+                      ensureRoom={() => openParentChat(player)}
+                      buttonText="Chat"
                       className="w-full text-left px-4 py-2.5 text-[13px] font-semibold text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenDropdownId(null);
-                        setMenuPosition(null);
-                        handleChatWithParent(player);
-                      }}
-                    >
-                      <MessageSquare size={16} className="text-slate-700 dark:text-slate-300 stroke-[1.8]" />
-                      <span>Chat</span>
-                    </button>
+                    />
                   </div>
 
                   {/* Generate Invoice */}

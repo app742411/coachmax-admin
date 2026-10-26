@@ -5,6 +5,7 @@ import { assignPlayerToTeam } from "../../api/adminApi";
 import apiClient from "../../api/apiClient";
 import { toast } from "react-hot-toast";
 import { Search, Users, Check, X, Shield, UserCheck, SlidersHorizontal, Layers } from "lucide-react";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 interface AssignPlayerToTeamModalProps {
   isOpen: boolean;
@@ -273,16 +274,8 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagu
     });
   };
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-
-  const getAvatarUrl = (profileImage: string | null | undefined) => {
-    if (!profileImage) return null;
-    if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) {
-      return profileImage;
-    }
-    const cleanBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-    const cleanPath = profileImage.startsWith("/") ? profileImage : `/${profileImage}`;
-    return `${cleanBase}${cleanPath}`;
+  const getAvatarUrl = (profileImage: string | null | undefined, name = "Player") => {
+    return getMediaUrl(profileImage, getMediaFallback(name));
   };
 
   const getStatusBadge = (statusKey?: string) => {
@@ -412,7 +405,7 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagu
               filteredPlayers.map((player: any) => {
                 const isSelected = selectedPlayerIds.includes(player._id);
                 const playerName = player.fullName || `${player.firstName || ''} ${player.lastName || ''}`.trim() || "Unnamed Player";
-                const avatarSrc = getAvatarUrl(player.profileImage);
+                const avatarSrc = getAvatarUrl(player.profileImage, playerName);
                 const categoryName = player.category?.name || player.category || "";
                 const termName = player.term?.name || player.term || "";
                 const programs = player.programs || [];
@@ -447,7 +440,7 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagu
                           className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
                           onError={(e) => {
                             e.currentTarget.onerror = null;
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName)}&background=0A1930&color=fff`;
+                            e.currentTarget.src = getMediaFallback(playerName);
                           }}
                         />
                       ) : (

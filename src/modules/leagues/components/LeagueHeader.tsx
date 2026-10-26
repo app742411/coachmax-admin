@@ -7,6 +7,9 @@ import { Modal } from "../../../components/ui/modal";
 import Button from "../../../components/ui/button/Button";
 import { useUpdateLeague } from "../hooks/useLeague";
 import { useRecalculateLadder } from "../hooks/useLeagueLadder";
+import { getMediaUrl } from "../../../utils/media";
+import ChatActionButton from "../../../components/chat/ChatActionButton";
+import { chatApi } from "../../../services/chatApi";
 
 interface LeagueHeaderProps {
   league: League;
@@ -65,10 +68,7 @@ export const LeagueHeader: React.FC<LeagueHeaderProps> = ({ league, onRefresh })
   };
 
   const getImageUrl = (path?: string) => {
-    if (!path) return null;
-    if (path.startsWith("http") || path.startsWith("data:") || path.startsWith("blob:")) return path;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
-    return `${baseUrl}/${path.replace(/^\//, "")}`;
+    return getMediaUrl(path) || null;
   };
 
   return (
@@ -140,6 +140,12 @@ export const LeagueHeader: React.FC<LeagueHeaderProps> = ({ league, onRefresh })
 
         {/* Right Side: Action Buttons */}
         <div className="flex items-center gap-2.5 self-start md:self-auto">
+          <ChatActionButton
+            contextLabel={league.name}
+            buttonText="League Chat"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-white bg-brand-600 border border-brand-600 rounded-lg hover:bg-brand-700 shadow-sm transition-all cursor-pointer"
+            ensureRoom={() => chatApi.openLeagueChat(league._id)}
+          />
           {canEdit && (
             <button
               onClick={() => setIsEditModalOpen(true)}
@@ -162,6 +168,12 @@ export const LeagueHeader: React.FC<LeagueHeaderProps> = ({ league, onRefresh })
 
             {isDropdownOpen && (
               <div className="absolute right-0 top-11 w-44 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100 text-xs">
+                <ChatActionButton
+                  contextLabel={league.name}
+                  buttonText="Open League Chat"
+                  className="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 text-slate-700 dark:text-slate-200 font-semibold"
+                  ensureRoom={() => chatApi.openLeagueChat(league._id)}
+                />
                 {canEdit && (
                   <button
                     onClick={() => {

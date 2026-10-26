@@ -9,6 +9,7 @@ import { Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import DatePicker from "../form/date-picker";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import TermCalendar from "./TermCalendar";
+import { dateOnlyToLocalDate } from "../../utils/dateTime";
 
 const TermManagement: React.FC = () => {
     const [showCalendar, setShowCalendar] = useState(true);
@@ -25,13 +26,18 @@ const TermManagement: React.FC = () => {
         year: new Date().getFullYear(),
         startDate: "",
         endDate: "",
-        isEvent: false,
     });
 
     const parseToLocalDate = (dateStr: string): Date | null => {
         if (!dateStr) return null;
         
-        // If it has 'T' or 'Z', parse as full ISO date-time and use local timezone
+        const isoDate = dateStr.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+        if (isoDate) {
+            const localDate = dateOnlyToLocalDate(isoDate);
+            if (localDate) return localDate;
+        }
+
+        // Real timestamp values retain normal timezone conversion.
         if (dateStr.includes("T") || dateStr.includes("Z")) {
             const d = new Date(dateStr);
             if (!isNaN(d.getTime())) return d;
@@ -117,7 +123,6 @@ const TermManagement: React.FC = () => {
             year: new Date().getFullYear(),
             startDate: "",
             endDate: "",
-            isEvent: false,
         });
         setIsEditing(false);
         setSelectedId(null);
@@ -139,7 +144,6 @@ const TermManagement: React.FC = () => {
             year: term.year || new Date().getFullYear(),
             startDate: cleanDate(term.startDate),
             endDate: cleanDate(term.endDate),
-            isEvent: !!term.isEvent,
         });
         setIsEditing(true);
         setSelectedId(term._id);
@@ -182,7 +186,6 @@ const TermManagement: React.FC = () => {
             year: formData.year,
             startDate: formattedStart,
             endDate: formattedEnd,
-            isEvent: formData.isEvent,
         };
 
         if (isEditing && selectedId) {
@@ -380,18 +383,6 @@ const TermManagement: React.FC = () => {
                             defaultDate={formData.endDate}
                             onChange={(_, dateStr) => handleDateChange("endDate", dateStr)}
                         />
-                    </div>
-                    <div className="mb-4">
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                name="isEvent"
-                                checked={formData.isEvent}
-                                onChange={(e) => setFormData(prev => ({ ...prev, isEvent: e.target.checked }))}
-                                className="w-4 h-4 text-[#031549] border-gray-300 rounded-none focus:ring-[#031549]"
-                            />
-                            <span className="text-xs font-semibold text-gray-700">Holiday Program / Event</span>
-                        </label>
                     </div>
                     <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
                         <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>

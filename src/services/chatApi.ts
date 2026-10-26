@@ -21,6 +21,17 @@ export interface SendClassBroadcastPayload {
   dayOfWeek?: string;
 }
 
+export interface SendEventDayBroadcastPayload {
+  sessionDate: string;
+  campSessionId?: string;
+  text: string;
+}
+
+export interface PreviewEventDayBroadcastPayload {
+  sessionDate: string;
+  campSessionId?: string;
+}
+
 export const chatApi = {
   getRooms: async () => {
     const url = isCoachOrAdmin() ? "/api/coach/chat/rooms" : "/api/user/chat/rooms";
@@ -49,6 +60,26 @@ export const chatApi = {
       });
       return response.data;
     }
+  },
+
+  openDirectChat: async (parentId: string, context: { classId?: string; teamId?: string; leagueId?: string; termId?: string; programId?: string } = {}) => {
+    const response = await apiClient.post("/api/coach/chat/direct", { parentId, ...context });
+    return response.data;
+  },
+
+  openClassChat: async (classId: string) => {
+    const response = await apiClient.post(`/api/coach/chat/class/${classId}/open`);
+    return response.data;
+  },
+
+  openTeamChat: async (teamId: string) => {
+    const response = await apiClient.post(`/api/coach/chat/team/${teamId}/open`);
+    return response.data;
+  },
+
+  openEventDayChat: async (eventId: string, payload: PreviewEventDayBroadcastPayload) => {
+    const response = await apiClient.post(`/api/coach/chat/event-day/${eventId}/open`, payload);
+    return response.data;
   },
 
   sendMessage: async (
@@ -122,6 +153,29 @@ export const chatApi = {
 
   broadcastToClass: async (classId: string, text: string) => {
     const response = await apiClient.post(`/api/coach/chat/broadcast/${classId}`, { text });
+    return response.data;
+  },
+
+  /** Broadcast only to parents registered for the selected event calendar day. */
+  broadcastToEventDay: async (eventId: string, payload: SendEventDayBroadcastPayload) => {
+    const response = await apiClient.post(`/api/coach/chat/event-day/${eventId}`, payload);
+    return response.data;
+  },
+
+  previewEventDayBroadcast: async (eventId: string, payload: PreviewEventDayBroadcastPayload) => {
+    const response = await apiClient.get(`/api/coach/chat/event-day/${eventId}/preview`, { params: payload });
+    return response.data;
+  },
+
+  /** Broadcast only to parents of players assigned to the selected team. */
+  broadcastToTeam: async (teamId: string, text: string) => {
+    const response = await apiClient.post(`/api/coach/chat/team/${teamId}`, { text });
+    return response.data;
+  },
+
+  /** Open the term-scoped parent conversation for a league. */
+  openLeagueChat: async (leagueId: string) => {
+    const response = await apiClient.post(`/api/coach/chat/league/${leagueId}/open`);
     return response.data;
   },
 };

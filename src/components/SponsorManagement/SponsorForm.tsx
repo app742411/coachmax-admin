@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import DropzoneComponent from "../form/form-elements/DropZone";
 import { LucideIcon } from "lucide-react";
 import { createSponsor, updateSponsor, Sponsor } from "../../api/sponsorApi";
+import { getMediaUrl } from "../../utils/media";
 
 interface SectionHeaderProps {
  icon: LucideIcon;
@@ -160,10 +161,11 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSuccess, editingSponsor, on
 
      <div className="col-span-2">
       <Label>Banner Image {editingSponsor && "(Leave empty to keep current)"}</Label>
-      <DropzoneComponent 
+      <DropzoneComponent
+        policy="sponsorBanner"
        key={resetKey} 
        onUpload={handleFileChange} 
-       previewUrl={editingSponsor?.image ? `${import.meta.env.VITE_API_BASE_URL}/${editingSponsor.image}` : undefined}
+       previewUrl={getMediaUrl(editingSponsor?.image) || undefined}
       />
      </div>
     </div>

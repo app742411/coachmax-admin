@@ -3,8 +3,6 @@ import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { useAppDispatch } from "../../store";
-import { setActiveRoomId } from "../../store/slices/chatSlice";
 import apiClient from "../../api/apiClient";
 import { useTerms } from "../../hooks/useTerms";
 import { useClassFullTable, useMarkSingleAttendance, useMarkBulkAttendance, useAssignClassesToPlayer, useRemoveClassFromPlayer, useClassesForAssign, useTransferClass } from "../../hooks/usePlayers";
@@ -14,8 +12,13 @@ import GenerateInvoiceModal from "../InvoiceManagement/GenerateInvoiceModal";
 import PlayerDetailCard from "../players/PlayerDetailCard";
 import AddCoachNoteModal from "../CoachManagement/AddCoachNoteModal";
 import { chatApi } from "../../services/chatApi";
+import ChatActionButton from "../chat/ChatActionButton";
 import { getPlayerStatusTextClass, StatusIcon, StatusUpdateMenuList } from "../common/StatusColorCode";
 import { AttendanceCellFlag, AttendanceStatusDropdown } from "../common/AttendanceReasonMenu";
+import { Copy, Pencil, Trash2 } from "lucide-react";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { formatDateOnly } from "../../utils/dateTime";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface ClassFullTableProps {
   classId: string;
@@ -29,47 +32,22 @@ interface ClassFullTableProps {
   index?: number;
   hideHeader?: boolean;
   isHighlighted?: boolean;
+  onEditClass?: (classId: string) => void;
+  onDuplicateClass?: (classId: string) => void;
+  onDeleteClass?: (classId: string) => void;
+  onCreateClassChat?: (classId: string) => void;
 }
 
-export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName, isExpanded = true, onToggle, index, hideHeader = false, isHighlighted = false }: ClassFullTableProps) {
+export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName, isExpanded = true, onToggle, index, hideHeader = false, isHighlighted = false, onEditClass, onDuplicateClass, onDeleteClass, onCreateClassChat }: ClassFullTableProps) {
   const { data: schedule, isLoading } = useClassFullTable(classId);
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-
-  const handleChatWithParent = async (row: any) => {
-    const parentId = row.parent?.id || row.parent?._id || row.parentId;
-    if (!parentId) {
-      alert("Parent ID not found for this player.");
-      return;
-    }
-
-    try {
-      const res = await apiClient.post("/api/coach/chat/direct", { parentId });
-      if (res.data && res.data.success && res.data.data) {
-        const roomId = res.data.data._id;
-        dispatch(setActiveRoomId(roomId));
-
-        // Determine destination route based on role
-        const userStr = localStorage.getItem("user");
-        let isCoach = false;
-        if (userStr) {
-          try {
-            const parsed = JSON.parse(userStr);
-            isCoach = parsed?.role === "COACH";
-          } catch (e) {
-            console.error(e);
-          }
-        }
-        navigate(isCoach ? "/messages" : "/communication");
-      } else {
-        alert(res.data?.message || "Failed to start conversation.");
-      }
-    } catch (error: any) {
-      console.error("Chat redirection error:", error);
-      alert(error?.response?.data?.message || "Failed to start direct conversation.");
-    }
+  const openParentChat = (row: any) => {
+    const rawParent = row.parent?.id || row.parent?._id || row.parentId || row.parent;
+    const parentId = typeof rawParent === "object" ? rawParent?._id || rawParent?.id : rawParent;
+    return parentId
+      ? chatApi.openDirectChat(String(parentId), { classId })
+      : Promise.reject(new Error("Parent ID not found for this player."));
   };
-
   const markSingleMutation = useMarkSingleAttendance(classId);
   const markBulkMutation = useMarkBulkAttendance(classId);
   const assignClassesMutation = useAssignClassesToPlayer();
@@ -239,48 +217,6 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   const [invoicePlayer, setInvoicePlayer] = useState<any | null>(null);
   const [coachNotePlayer, setCoachNotePlayer] = useState<{ playerId: string; name: string; classId?: string } | null>(null);
 
-  const handleClassChat = async () => {
-    try {
-      // Use broadcastChatRoomId directly from the schedule data (returned by getClassFullTable)
-      let roomId = schedule?.broadcastChatRoomId || "";
-
-      // If no room exists yet, create one via broadcast API
-      if (!roomId) {
-        const broadcastRes = await chatApi.broadcastToClass(classId, "Broadcast channel active");
-        if (broadcastRes && broadcastRes.success) {
-          toast.success(broadcastRes.message || "Broadcast message sent successfully");
-          if (broadcastRes.data?.room?._id) {
-            roomId = broadcastRes.data.room._id;
-          }
-        } else if (broadcastRes && !broadcastRes.success) {
-          toast.error(broadcastRes.message || "Failed to send broadcast");
-        }
-      }
-
-      if (roomId) {
-        dispatch(setActiveRoomId(roomId));
-      } else {
-        dispatch(setActiveRoomId(classId));
-      }
-
-      const userStr = localStorage.getItem("user");
-      let isCoach = false;
-      if (userStr) {
-        try {
-          const parsed = JSON.parse(userStr);
-          isCoach = parsed?.role === "COACH";
-        } catch (e) {
-          console.error(e);
-        }
-      }
-      navigate(isCoach ? "/messages" : "/communication");
-    } catch (error) {
-      console.error("Error setting up class broadcast:", error);
-      dispatch(setActiveRoomId(classId));
-      navigate("/messages");
-    }
-  };
-
   const handleUpdateStatus = async (userId: string, paymentStatus: string) => {
     try {
       const payload: any = { paymentStatus };
@@ -308,7 +244,10 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
   // Map API response to the table format
   const sessions = schedule.sessions || [];
-  const players = schedule.players || [];
+  const players = sortPlayersByPaymentStatus(
+    schedule.players || [],
+    (player: any) => player.paymentStatus || player.status
+  );
 
   const renderStatusIcon = (status: string) => {
     switch (status) {
@@ -403,10 +342,9 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
   };
 
   const formatDateLabel = (dateStr: string) => {
-    const d = new Date(dateStr);
     return {
-      day: d.toLocaleDateString('en-US', { weekday: 'short' }),
-      date: `${d.getDate()}/${d.getMonth() + 1 < 10 ? '0' + (d.getMonth() + 1) : d.getMonth() + 1}`
+      day: formatDateOnly(dateStr, { weekday: 'short' }),
+      date: formatDateOnly(dateStr, { day: 'numeric', month: '2-digit' })
     };
   };
 
@@ -483,7 +421,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       {/* Table Header Bar */}
       {!hideHeader && (
         <div
-          className={`bg-[#031549] text-white px-5 py-2.5 flex flex-wrap gap-4 items-center justify-between ${onToggle ? 'cursor-pointer select-none' : ''}`}
+          className={`relative bg-[#031549] text-white px-5 py-2.5 flex flex-wrap gap-4 items-center justify-between ${onToggle ? 'cursor-pointer select-none' : ''}`}
           onClick={onToggle}
         >
           <div className="flex flex-wrap items-center gap-5 text-xs font-semibold flex-1">
@@ -519,28 +457,73 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
               </span>
             </div>
             {players.length > 0 && (
+              <ChatActionButton
+                contextLabel={schedule?.name || "Class"}
+                ensureRoom={() => chatApi.openClassChat(classId)}
+                buttonText="Class Chat"
+                className="flex items-center gap-1.5 border border-white/20 hover:bg-white/10 text-white px-3 py-1.5 rounded-[4px] text-[10px] font-semibold transition-all active:scale-95 cursor-pointer ml-2 shadow-sm"
+              />
+            )}
+          </div>
+          <div className="ml-2 pl-3 border-l border-white/10 shrink-0 flex items-center gap-1">
+            {onEditClass && (
               <button
+                type="button"
+                aria-label="Edit class"
+                title="Edit class"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleClassChat();
+                  onEditClass(classId);
                 }}
-                className="flex items-center gap-1.5 border border-white/20 hover:bg-white/10 text-white px-3 py-1.5 rounded-[4px] text-[10px] font-semibold transition-all active:scale-95 cursor-pointer ml-2 shadow-sm"
-                title="Text Class Parents"
+                className="inline-flex items-center justify-center w-7 h-7 text-slate-200 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/20 transition-colors rounded"
               >
-                <svg className="w-3.5 h-3.5 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <Pencil size={15} />
+              </button>
+            )}
+            {onDuplicateClass && (
+              <button
+                type="button"
+                aria-label="Duplicate class"
+                title="Duplicate class"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicateClass(classId);
+                }}
+                className="inline-flex items-center justify-center w-7 h-7 text-slate-200 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/20 transition-colors rounded"
+              >
+                <Copy size={15} />
+              </button>
+            )}
+            {onDeleteClass && (
+              <button
+                type="button"
+                aria-label="Delete class"
+                title="Delete class"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteClass(classId);
+                }}
+                className="inline-flex items-center justify-center w-7 h-7 text-rose-300 hover:text-rose-100 hover:bg-rose-500/20 border border-transparent hover:border-rose-300/30 transition-colors rounded"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+            {onToggle && (
+              <button
+                type="button"
+                aria-label={isExpanded ? "Collapse class" : "Expand class"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggle();
+                }}
+                className="inline-flex items-center justify-center w-7 h-7 hover:bg-white/10 rounded"
+              >
+                <svg className={`w-5 h-5 text-slate-300 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
-                {schedule?.broadcastChatRoomId ? "Text Class" : "Chat Active"}
               </button>
             )}
           </div>
-          {onToggle && (
-            <div className="ml-2 pl-4 border-l border-white/10 shrink-0">
-              <svg className={`w-5 h-5 text-slate-300 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          )}
         </div>
       )}
 
@@ -602,12 +585,12 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                     <div className="flex items-center gap-2 min-w-0 max-w-full">
                       {row.profileImage ? (
                         <img
-                          src={row.profileImage.startsWith('http') ? row.profileImage : `${import.meta.env.VITE_API_BASE_URL}/${row.profileImage}`}
+                          src={getMediaUrl(row.profileImage, getMediaFallback(row.name))}
                           alt={row.name}
                           className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
                           onError={(e) => {
                             e.currentTarget.onerror = null;
-                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name)}`;
+                            e.currentTarget.src = getMediaFallback(row.name);
                           }}
                         />
                       ) : (
@@ -661,14 +644,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                     </div>
                   </td>
                   <td className="sticky left-[235px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1.5 text-center font-semibold text-slate-500 min-w-[75px] w-[75px] max-w-[75px] border-b border-slate-50 dark:border-slate-800/40 text-xs">
-                    {row.dob ? (() => {
-                      const d = new Date(row.dob);
-                      if (isNaN(d.getTime())) return "-";
-                      const day = String(d.getDate()).padStart(2, "0");
-                      const month = String(d.getMonth() + 1).padStart(2, "0");
-                      const year = d.getFullYear();
-                      return `${day}/${month}/${year}`;
-                    })() : "-"}
+                    {row.dob ? formatDateOnly(row.dob, { day: "2-digit", month: "2-digit", year: "numeric" }) || "-" : "-"}
                   </td>
                   <td className="sticky left-[310px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1 text-center min-w-[50px] w-[50px] max-w-[50px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
                     {row.isMedicalCondition ? (
@@ -753,16 +729,12 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                                 >
                                   Add Coach Note
                                 </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenMenuId(null);
-                                    handleChatWithParent(row);
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-1"
-                                >
-                                  Chat
-                                </button>
+                                <ChatActionButton
+                                  contextLabel={row.name || row.playerName || "Parent"}
+                                  ensureRoom={() => openParentChat(row)}
+                                  buttonText="Chat with Parent"
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1"
+                                />
                               </div>
                             );
                           }
@@ -777,16 +749,12 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                                 }}
                               />
                               <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenMenuId(null);
-                                    handleChatWithParent(row);
-                                  }}
+                                <ChatActionButton
+                                  contextLabel={row.name || row.playerName || "Parent"}
+                                  ensureRoom={() => openParentChat(row)}
+                                  buttonText="Chat with Parent"
                                   className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                >
-                                  Chat
-                                </button>
+                                />
                               </div>
                               <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
                                 <button

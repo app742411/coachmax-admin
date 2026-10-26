@@ -530,6 +530,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
               </div>
               <MultiImageDropzone
                 maxFiles={5}
+                policy="storeProduct"
                 initialImages={existingImages}
                 onRemoveInitial={(url) => setExistingImages(prev => prev.filter(img => img !== url))}
                 onUpload={(files: File[]) => setImages(files)}

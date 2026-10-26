@@ -4,6 +4,8 @@ import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { getBankDetails, updateBankDetails, BankDetailsData } from "../../api/financeApi";
 import toast from "react-hot-toast";
 import PaymentSettings from "../../components/finance/PaymentSettings";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { getMediaUrl } from "../../utils/media";
 
 
 export default function BankDetails() {
@@ -54,7 +56,7 @@ export default function BankDetails() {
     fetchDetails();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
@@ -62,7 +64,15 @@ export default function BankDetails() {
     } else if (type === "file") {
       const files = (e.target as HTMLInputElement).files;
       if (files && files.length > 0) {
-        setFormData((prev) => ({ ...prev, qrCodeImage: files[0] }));
+        let normalized: File;
+        try { normalized = await normalizeUploadImage(files[0]); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); return; }
+        const validationError = await validateUploadFile(normalized, "qrCode");
+        if (validationError) {
+          toast.error(validationError);
+          (e.target as HTMLInputElement).value = "";
+          return;
+        }
+        setFormData((prev) => ({ ...prev, qrCodeImage: normalized }));
       }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -125,8 +135,9 @@ export default function BankDetails() {
               </div>
               <div className="col-span-1 md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">QR Code Image</label>
-                <input type="file" name="qrCodeImage" accept="image/*" onChange={handleChange} className="w-full rounded-none border border-gray-300 bg-transparent px-4 py-3 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900" />
-                {existingQrUrl && <img src={`${import.meta.env.VITE_API_BASE_URL}/${existingQrUrl}`} alt="QR Code" className="mt-2 h-20 object-cover" />}
+                <input type="file" name="qrCodeImage" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={handleChange} className="w-full rounded-none border border-gray-300 bg-transparent px-4 py-3 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900" />
+                <p className="mt-1 text-xs text-gray-500">JPEG, PNG, WebP, HEIC/HEIF · max 2MB</p>
+                {existingQrUrl && <img src={getMediaUrl(existingQrUrl)} alt="QR Code" className="mt-2 h-20 object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaUrl(); }} />}
               </div>
             </div>
             <div className="flex justify-end pt-4">

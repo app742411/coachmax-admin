@@ -22,6 +22,7 @@ import Button from "../../../../components/ui/button/Button";
 import { useQuery } from "@tanstack/react-query";
 import { getAllTeams } from "../../../../api/adminApi";
 import { toast } from "react-hot-toast";
+import { getMediaUrl } from "../../../../utils/media";
 
 interface TeamsGridProps {
   leagueId: string;
@@ -272,11 +273,7 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
                       <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden font-bold text-xs text-slate-700 dark:text-slate-200">
                         {team.logo ? (
                           <img
-                            src={
-                              team.logo.startsWith("http")
-                                ? team.logo
-                                : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")}/${team.logo.replace(/^\//, "")}`
-                            }
+                            src={getMediaUrl(team.logo)}
                             alt={teamName}
                             onError={(e) => {
                               // Hide image on error to display fallback

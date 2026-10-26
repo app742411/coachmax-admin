@@ -122,7 +122,8 @@ const AddGalleryForm = () => {
     <FormCard>
       <SectionHeader icon={Layers} title="Upload Assets" />
       <div className="space-y-4">
-       <DropzoneComponent 
+       <DropzoneComponent
+         policy="gallery"
         onUpload={(files: File[]) => setFormData(prev => ({...prev, images: files as any}))} 
        />
        <div className="flex items-center gap-2 p-3 bg-brand-50/50 dark:bg-brand-500/5 rounded-none text-brand-600 dark:text-brand-400">

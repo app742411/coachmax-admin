@@ -8,10 +8,14 @@ import { getAllTerms } from "../../api/terms";
 import { useTerms } from "../../hooks/useTerms";
 import { findCurrentTerm } from "../../hooks/useCurrentTerm";
 import { toast } from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { getMediaUrl } from "../../utils/media";
 import { User, Shield, Image as ImageIcon, Search } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "./AssignPlayerToTeamModal";
 import AddTemporaryPlayersModal from "./AddTemporaryPlayersModal";
+import TeamBroadcastButton from "../teams/TeamBroadcastButton";
+import { todayDateOnly, toDateOnly } from "../../utils/dateTime";
 
 const TeamManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +23,7 @@ const TeamManagement: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
@@ -71,7 +76,7 @@ const TeamManagement: React.FC = () => {
   const [scheduleMode, setScheduleMode] = useState<"ROUNDS" | "TERM">("ROUNDS");
   const [roundCount, setRoundCount] = useState<number | string>(1);
   const [sessionDates, setSessionDates] = useState<string[]>([
-    new Date().toISOString().split("T")[0],
+    todayDateOnly(),
   ]);
   const [, setCustomSchedules] = useState<{ dayOfWeek: string; startTime: string; endTime: string }[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -93,11 +98,7 @@ const TeamManagement: React.FC = () => {
   // Unused handlers removed for TS6133
 
   const getImageUrl = (path: string | undefined | null) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${baseUrl}${cleanPath}`;
+    return getMediaUrl(path) || null;
   };
 
   const getDataArray = (res: any) => {
@@ -155,6 +156,7 @@ const TeamManagement: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
+    setValidationErrors([]);
     setFormData({
       teamName: "",
       coach: "",
@@ -176,7 +178,7 @@ const TeamManagement: React.FC = () => {
     setCustomSchedules([{ dayOfWeek: "Monday", startTime: "17:00", endTime: "18:30" }]);
     setScheduleMode("ROUNDS");
     setRoundCount(1);
-    setSessionDates([new Date().toISOString().split("T")[0]]);
+    setSessionDates([todayDateOnly()]);
     setSelectedPlayerIdsForAdd([]);
     setSelectedPlayerStatusesForAdd({});
     setPlayerSearchQueryForAdd("");
@@ -188,6 +190,7 @@ const TeamManagement: React.FC = () => {
   };
 
   const handleOpenEdit = (team: any) => {
+    setValidationErrors([]);
     const feeVal = team.fee || team.teamFee || "";
     const yearVal = team.year || team.term?.year || new Date().getFullYear();
     setFormData({
@@ -222,18 +225,18 @@ const TeamManagement: React.FC = () => {
       setScheduleMode("ROUNDS");
       const formattedDates = (team.sessionDates || []).map((d: string) => {
         try {
-          return d.includes("T") ? d.split("T")[0] : d;
+          return toDateOnly(d);
         } catch {
           return d;
         }
       });
-      const validDates = formattedDates.length > 0 ? formattedDates : [new Date().toISOString().split("T")[0]];
+      const validDates = formattedDates.length > 0 ? formattedDates : [todayDateOnly()];
       setSessionDates(validDates);
       setRoundCount(team.round || validDates.length || 1);
     } else {
       setScheduleMode("TERM");
       setRoundCount(1);
-      setSessionDates([new Date().toISOString().split("T")[0]]);
+      setSessionDates([todayDateOnly()]);
     }
 
     setSelectedFile(null);
@@ -247,20 +250,42 @@ const TeamManagement: React.FC = () => {
     setDeleteModalId(id);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedFile(file);
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "logo");
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setSelectedFile(normalized);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(normalized);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: string[] = [];
+    if (!formData.teamName.trim()) errors.push("Team name is required.");
+    if (!formData.teamType) errors.push("Select a team category.");
+    if (!formData.ageGroup.trim()) errors.push("Age group is required.");
+    if (!formData.term) errors.push("Select an academic term.");
+    if (!formData.coach) errors.push("Select an assigned head coach.");
+    if (scheduleMode === "ROUNDS") {
+      const validDates = sessionDates.filter(Boolean);
+      const rounds = Number(roundCount);
+      if (!Number.isInteger(rounds) || rounds < 1) errors.push("Round count must be at least 1.");
+      if (validDates.length === 0) errors.push("Add at least one session date.");
+      else if (Number.isInteger(rounds) && rounds > 0 && validDates.length !== rounds) {
+        errors.push(`Add one session date for each round (${validDates.length} of ${rounds} selected).`);
+      }
+    }
+    setValidationErrors(errors);
+    if (errors.length) return;
+
     const payload = new FormData();
     payload.append("teamName", formData.teamName);
     if (formData.coach) payload.append("coach", formData.coach);
@@ -561,6 +586,9 @@ const TeamManagement: React.FC = () => {
                           >
                             {(team.teamType === "EXTERNAL" || team.isExternal === true) ? "+ Temp Players" : "Assign Players"}
                           </button>
+                          <div className="border-t border-slate-100 px-2 py-1.5 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
+                            <TeamBroadcastButton teamId={team._id} teamName={team.teamName} className="w-full justify-center" />
+                          </div>
                           <button
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
                             onClick={(e) => {
@@ -592,7 +620,13 @@ const TeamManagement: React.FC = () => {
             <p className="text-xs text-slate-500 font-medium">Configure team details, coaches, schedule, and venue information.</p>
           </div>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form noValidate onSubmit={handleSubmit} className="space-y-6">
+          {validationErrors.length > 0 && (
+            <div role="alert" aria-live="polite" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+              <p className="font-bold">Please fix these required fields:</p>
+              <ul className="mt-1 list-disc pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-8 space-y-4">
               {/* Basic Info */}
@@ -778,10 +812,10 @@ const TeamManagement: React.FC = () => {
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                 onChange={handleFileChange}
               />
-              <span className="text-[10px] text-gray-400 mt-3 text-center">Supports PNG, JPG, WEBP</span>
+              <span className="text-[10px] text-gray-400 mt-3 text-center">JPEG, PNG, WebP, HEIC/HEIF · max 2MB</span>
             </div>
           </div>
 

@@ -1,45 +1,53 @@
 import { useState, useEffect } from "react";
 import ComponentCard from "../../common/ComponentCard";
 import { useDropzone } from "react-dropzone";
+import { getCropOutputSize, getUploadAccept, getUploadPolicyDescription, normalizeUploadImage, UploadPolicy, validateUploadFile } from "../../../utils/fileValidation";
+import ImageCropModal from "../../common/ImageCropModal";
 
 interface DropzoneComponentProps {
   onUpload?: (files: File[]) => void;
   previewUrl?: string | null;
+  policy?: UploadPolicy;
 }
 
-const DropzoneComponent: React.FC<DropzoneComponentProps> = ({ onUpload, previewUrl }) => {
+const DropzoneComponent: React.FC<DropzoneComponentProps> = ({ onUpload, previewUrl, policy = "gallery" }) => {
   const [preview, setPreview] = useState<string | null>(previewUrl || null);
+  const [error, setError] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const cropSize = getCropOutputSize(policy);
 
   useEffect(() => {
     setPreview(previewUrl || null);
   }, [previewUrl]);
 
-  const onDrop = (acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
-      const objectUrl = URL.createObjectURL(file);
-      setPreview(objectUrl);
+  const onDrop = async (acceptedFiles: File[]) => {
+    setError(null);
+    if (acceptedFiles.length === 0) return;
+    let imageFile: File;
+    try { imageFile = await normalizeUploadImage(acceptedFiles[0]); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not convert this image."); return; }
+    const validationError = await validateUploadFile(imageFile, policy, { checkDimensions: false });
+    if (validationError) {
+      setError(validationError);
+      return;
     }
-    if (onUpload) {
-      onUpload(acceptedFiles);
-    }
+    setCropFile(imageFile);
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "image/png": [],
-      "image/jpeg": [],
-      "image/webp": [],
-      "image/svg+xml": [],
+    onDropRejected: (rejections) => {
+      const reason = rejections[0]?.errors[0];
+      setError(reason?.code === "file-too-large" ? `Image is too large. ${getUploadPolicyDescription(policy)}` : `${uploadPoliciesLabel(policy)} only. ${getUploadPolicyDescription(policy)}`);
     },
+    accept: getUploadAccept(policy),
     multiple: false
   });
 
   return (
     <ComponentCard title="Dropzone">
       <div className="transition border border-gray-300 border-dashed cursor-pointer dark:hover:border-brand-500 dark:border-gray-700 rounded-none hover:border-brand-500">
-        <form
+        <div
           {...getRootProps()}
           className={`dropzone rounded-none   border-dashed border-gray-300 p-7 lg:p-10
         ${
@@ -54,8 +62,8 @@ const DropzoneComponent: React.FC<DropzoneComponentProps> = ({ onUpload, preview
           <input {...getInputProps()} />
 
           {preview ? (
-            <div className="relative w-full h-48 rounded-none overflow-hidden group">
-              <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+            <div className="relative w-full max-h-[420px] rounded-none overflow-hidden group bg-slate-950" style={{ aspectRatio: `${cropSize.width} / ${cropSize.height}` }}>
+              <img src={preview} alt="Image crop preview" className="w-full h-full object-contain" />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <span className="text-white font-bold text-sm">Click or Drag to Replace</span>
               </div>
@@ -87,7 +95,7 @@ const DropzoneComponent: React.FC<DropzoneComponentProps> = ({ onUpload, preview
               </h4>
 
               <span className=" text-center mb-5 block w-full max-w-[290px] text-sm text-gray-700 dark:text-gray-400">
-                Drag and drop your PNG, JPG, WebP, SVG images here or browse
+                Drag and drop your {uploadPoliciesLabel(policy)} here or browse
               </span>
 
               <span className="font-medium underline text-theme-sm text-brand-500">
@@ -95,10 +103,30 @@ const DropzoneComponent: React.FC<DropzoneComponentProps> = ({ onUpload, preview
               </span>
             </div>
           )}
-        </form>
+        </div>
+        <div className="px-7 pb-4 text-center text-xs text-gray-500 dark:text-gray-400">
+          {getUploadPolicyDescription(policy)}
+        </div>
+        {error && <p className="px-7 pb-4 text-center text-sm font-medium text-red-600">{error}</p>}
       </div>
+      {cropFile && <ImageCropModal file={cropFile} policy={policy} onCancel={() => setCropFile(null)} onCrop={(cropped) => {
+        const objectUrl = URL.createObjectURL(cropped);
+        setPreview(objectUrl);
+        setCropFile(null);
+        onUpload?.([cropped]);
+      }} />}
     </ComponentCard>
   );
+};
+
+const uploadPoliciesLabel = (policy: UploadPolicy) => {
+  const labels: Record<UploadPolicy, string> = {
+    profile: "JPEG, PNG, WebP, HEIC, or HEIF images", logo: "JPEG, PNG, WebP, HEIC, or HEIF images", eventBanner: "JPEG, PNG, WebP, HEIC, or HEIF images",
+    sponsorBanner: "JPEG, PNG, WebP, HEIC, or HEIF images", news: "JPEG, PNG, WebP, HEIC, or HEIF images", gallery: "JPEG, PNG, WebP, HEIC, or HEIF images",
+    storeProduct: "JPEG, PNG, WebP, HEIC, or HEIF images", qrCode: "JPEG, PNG, WebP, HEIC, or HEIF images", paymentProof: "JPEG, PNG, WebP, HEIC, HEIF, or PDF files",
+    document: "JPEG, PNG, WebP, HEIC, HEIF, or PDF files", chatImage: "JPEG, PNG, WebP, HEIC, HEIF, or GIF images", chatVideo: "MP4, WebM, or MOV videos",
+  };
+  return labels[policy];
 };
 
 export default DropzoneComponent;

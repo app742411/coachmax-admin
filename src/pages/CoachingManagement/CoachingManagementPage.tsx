@@ -30,7 +30,7 @@ const CoachingManagementPage: React.FC = () => {
   const [catEditing, setCatEditing] = useState(false);
   const [catEditId, setCatEditId] = useState<string | null>(null);
   const [catDeleteId, setCatDeleteId] = useState<string | null>(null);
-  const [catForm, setCatForm] = useState({ name: "", isEvent: false });
+  const [catForm, setCatForm] = useState({ name: "" });
 
   const [progModalOpen, setProgModalOpen] = useState(false);
   const [progEditing, setProgEditing] = useState(false);
@@ -138,7 +138,7 @@ const CoachingManagementPage: React.FC = () => {
   };
 
   const handleCatAdd = () => {
-    setCatForm({ name: "", isEvent: false });
+    setCatForm({ name: "" });
     setCatEditing(false);
     setCatEditId(null);
     setCatModalOpen(true);
@@ -146,7 +146,7 @@ const CoachingManagementPage: React.FC = () => {
 
   const handleCatEdit = (e: React.MouseEvent, cat: any) => {
     e.stopPropagation();
-    setCatForm({ name: cat.name, isEvent: !!cat.isEvent });
+    setCatForm({ name: cat.name });
     setCatEditing(true);
     setCatEditId(cat._id);
     setCatModalOpen(true);
@@ -158,12 +158,7 @@ const CoachingManagementPage: React.FC = () => {
   };
 
   const handleCatNameChange = (val: string) => {
-    const isHoliday = val.toLowerCase().includes("holiday");
-    setCatForm(prev => ({
-      ...prev,
-      name: val,
-      isEvent: isHoliday ? true : prev.isEvent
-    }));
+    setCatForm({ name: val });
   };
 
   const handleCatSubmit = (e: React.FormEvent) => {
@@ -408,17 +403,6 @@ const CoachingManagementPage: React.FC = () => {
               placeholder="e.g. Academy"
               required
             />
-          </div>
-          <div className="mb-4">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={catForm.isEvent}
-                onChange={(e) => setCatForm(prev => ({ ...prev, isEvent: e.target.checked }))}
-                className="w-4 h-4 text-[#031549] border-gray-300 rounded-none focus:ring-[#031549]"
-              />
-              <span className="text-xs font-semibold text-gray-700">Holiday Program</span>
-            </label>
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
             <Button variant="outline" onClick={() => setCatModalOpen(false)}>Cancel</Button>

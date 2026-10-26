@@ -1,15 +1,16 @@
 import { useParams, useNavigate } from "react-router";
 import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
-import { useAdminPlayerDetails, useCoachNotes, useUpdatePlayerPaymentStatus } from "../../hooks/usePlayers";
+import { useAdminPlayerDetails, useUpdatePlayerPaymentStatus } from "../../hooks/usePlayers";
 import EditPlayerStatsModal from "../../components/players/EditPlayerStatsModal";
 import EditPlayerModal from "../../components/players/EditPlayerModal";
 import PlayerPaymentHistoryModal from "../../components/players/PlayerPaymentHistoryModal";
-import { useAppDispatch } from "../../store";
-import { setActiveRoomId } from "../../store/slices/chatSlice";
-import apiClient from "../../api/apiClient";
-import toast from "react-hot-toast";
+import PlayerHistoryDashboard from "../../components/players/PlayerHistoryDashboard";
+import FamilyPlayerSwitcher from "../../components/players/FamilyPlayerSwitcher";
+import { chatApi } from "../../services/chatApi";
+import ChatActionButton from "../../components/chat/ChatActionButton";
 import RatingEditor from "../../components/players/RatingEditor";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 import {
   ArrowLeft,
   ShieldAlert,
@@ -17,40 +18,15 @@ import {
   Activity,
   Heart,
   Clock,
-  MessageSquare,
   Edit,
   Receipt
 } from "lucide-react";
 
-const getBadgeStyles = (noteType: string) => {
-  switch (noteType) {
-    case "POSITIVE_PERFORMANCE":
-      return "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800";
-    case "DEVELOPMENT_AREA":
-      return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800";
-    case "ARRIVED_LATE":
-      return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800";
-    case "BEHAVIOUR_CONCERN":
-      return "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800";
-    case "INJURY":
-      return "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800";
-    case "MEDICAL_INCIDENT":
-      return "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800";
-    case "PARENT_DISCUSSION":
-      return "bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800";
-    default:
-      return "bg-yellow-100 text-yellow-850 border-yellow-300 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-850";
-  }
-};
-
 export default function PlayerProfilePage() {
   const { playerId } = useParams<{ playerId: string }>();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   const { data: detailsRes, isLoading: loadingDetails } = useAdminPlayerDetails(playerId);
-  const { data: notesRes, isLoading: loadingNotes } = useCoachNotes(playerId || "");
-  const [chatting, setChatting] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
@@ -60,8 +36,6 @@ export default function PlayerProfilePage() {
   const responseData = detailsRes?.data;
   const player = responseData?.player;
   const parent = responseData?.parent || player?.parentId;
-  const overallAttendance = responseData?.overallAttendance;
-  const notes = notesRes?.data || [];
 
   // Extract assigned classes with per-class payment status
   const assignedClassesInfo: any[] =
@@ -110,47 +84,10 @@ export default function PlayerProfilePage() {
     );
   }
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  const avatar = player.profileImage ? `${baseUrl}/${player.profileImage}` : `https://ui-avatars.com/api/?name=${player.fullName}`;
+  const avatar = getMediaUrl(player.profileImage, getMediaFallback(player.fullName));
   const dob = player.dob ? new Date(player.dob) : null;
   const age = dob ? new Date().getFullYear() - dob.getFullYear() : null;
   const dobString = dob ? dob.toLocaleDateString() : null;
-
-  const handleChatWithParent = async () => {
-    const parentId = parent?._id || player.parentId?._id || player.parentId;
-    if (!parentId || typeof parentId !== "string") {
-      toast.error("Parent ID not found for this player.");
-      return;
-    }
-
-    try {
-      setChatting(true);
-      const res = await apiClient.post("/api/coach/chat/direct", { parentId });
-      if (res.data && res.data.success && res.data.data) {
-        const roomId = res.data.data._id;
-        dispatch(setActiveRoomId(roomId));
-
-        const userStr = localStorage.getItem("user");
-        let isCoach = false;
-        if (userStr) {
-          try {
-            const parsed = JSON.parse(userStr);
-            isCoach = parsed?.role === "COACH";
-          } catch (e) {
-            console.error(e);
-          }
-        }
-        navigate(isCoach ? "/messages" : "/communication");
-      } else {
-        toast.error(res.data?.message || "Failed to start conversation.");
-      }
-    } catch (error: any) {
-      console.error("Chat redirection error:", error);
-      toast.error(error?.response?.data?.message || "Failed to start direct conversation.");
-    } finally {
-      setChatting(false);
-    }
-  };
 
   const statistics = player.statistics || {};
   const statCards = [
@@ -201,17 +138,17 @@ export default function PlayerProfilePage() {
               <span>Edit Player</span>
             </button>
             {parent && (
-              <button
-                onClick={handleChatWithParent}
-                disabled={chatting}
-                className="inline-flex items-center justify-center gap-2 rounded-none bg-[#0047FF] px-5 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 transition-colors shadow-theme-xs disabled:opacity-50"
-              >
-                <MessageSquare size={16} />
-                {chatting ? "Redirecting..." : "Chat with Parent"}
-              </button>
+              <ChatActionButton
+                contextLabel={player.fullName || "Parent"}
+                buttonText="Chat with Parent"
+                className="inline-flex items-center justify-center gap-2 rounded-none bg-[#0047FF] px-5 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 transition-colors shadow-theme-xs"
+                ensureRoom={() => chatApi.openDirectChat(String(parent?._id || parent))}
+              />
             )}
           </div>
         </div>
+
+        <FamilyPlayerSwitcher children={responseData?.familyPlayers || []} selectedId={player._id} />
 
         {/* Profile Card Header */}
         <div className="bg-white border border-slate-100 rounded-none shadow-theme-xs dark:bg-slate-900 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -334,6 +271,8 @@ export default function PlayerProfilePage() {
           </div>
         </div>
 
+        <PlayerHistoryDashboard data={responseData || {}} player={player} />
+
         <EditPlayerStatsModal
           isOpen={isStatsModalOpen}
           onClose={() => setIsStatsModalOpen(false)}
@@ -355,9 +294,9 @@ export default function PlayerProfilePage() {
         />
 
         {/* Double Column Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Left Column: Personal and Contact Details */}
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 content-start">
 
             {/* Personal Information */}
             <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-6 shadow-theme-xs space-y-4">
@@ -606,106 +545,7 @@ export default function PlayerProfilePage() {
             </div>
           </div>
 
-          {/* Right Column: Skill Ratings and Notes */}
-          <div className="space-y-6">
 
-            {/* Attendance overview metrics */}
-            {overallAttendance && (
-              <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-6 shadow-theme-xs space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pb-2 border-b border-slate-50 dark:border-slate-800/40">
-                  Attendance Overview
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1.5">
-                      <span className="text-slate-450">Attendance Rate</span>
-                      <span className="text-brand-500">{overallAttendance.percentage || 0}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2">
-                      <div
-                        className="bg-brand-500 h-2 transition-all duration-500"
-                        style={{ width: `${overallAttendance.percentage || 0}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 pt-2 text-xs font-semibold">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/30">
-                      <span className="text-slate-400 text-[10px] block uppercase font-bold tracking-wide">Total Sessions</span>
-                      <span className="text-base font-bold text-slate-800 dark:text-white mt-1 block">{overallAttendance.totalSessions || 0}</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/30">
-                      <span className="text-slate-400 text-[10px] block uppercase font-bold tracking-wide">Attended</span>
-                      <span className="text-base font-bold text-slate-800 dark:text-white mt-1 block">{overallAttendance.attendedCount || 0}</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/30">
-                      <span className="text-slate-400 text-[10px] block uppercase font-bold tracking-wide">Present</span>
-                      <span className="text-base font-bold text-emerald-600 mt-1 block">{overallAttendance.presentCount || 0}</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/30">
-                      <span className="text-slate-400 text-[10px] block uppercase font-bold tracking-wide">Absent</span>
-                      <span className="text-base font-bold text-rose-500 mt-1 block">{overallAttendance.absentCount || 0}</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/30">
-                      <span className="text-slate-400 text-[10px] block uppercase font-bold tracking-wide">Late Arrival</span>
-                      <span className="text-base font-bold text-amber-500 mt-1 block">{overallAttendance.lateCount || 0}</span>
-                    </div>
-                    {overallAttendance.trialCount > 0 && (
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-100/50 dark:border-slate-800/30">
-                        <span className="text-slate-400 text-[10px] block uppercase font-bold tracking-wide">Trial Count</span>
-                        <span className="text-base font-bold text-indigo-500 mt-1 block">{overallAttendance.trialCount || 0}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Coach Notes performance logs */}
-            <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-6 shadow-theme-xs space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pb-2 border-b border-slate-50 dark:border-slate-800/40">
-                Coach Performance Notes
-              </h3>
-              {loadingNotes ? (
-                <div className="py-8 text-center">
-                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-brand-500 border-r-transparent" />
-                </div>
-              ) : notes.length === 0 ? (
-                <div className="py-10 text-center text-slate-400 text-xs italic">
-                  No performance notes logged for this player yet.
-                </div>
-              ) : (
-                <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
-                  {notes.map((note: any) => (
-                    <div
-                      key={note._id}
-                      className="relative p-4 bg-[#FEF9C3] dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/50 shadow-sm rounded-none space-y-2 pt-6"
-                    >
-                      <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-red-500/80 rounded-full shadow-inner" />
-
-                      <div className="flex items-center justify-between text-[9px] font-bold">
-                        <span className={`px-2 py-0.5 border uppercase font-bold text-[8px] rounded-none ${getBadgeStyles(note.noteType)}`}>
-                          {note.noteType?.replace("_", " ")}
-                        </span>
-                        <span className="text-slate-500 dark:text-yellow-400/60">
-                          {new Date(note.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-850 dark:text-slate-200 font-semibold leading-relaxed">
-                        {note.description}
-                      </p>
-                      {note.createdBy && (
-                        <div className="text-[9px] text-slate-500 dark:text-yellow-400/50 font-medium text-right italic">
-                          — Coach {note.createdBy.name || note.createdBy.email}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-          </div>
         </div>
       </div>
     </>

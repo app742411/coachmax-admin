@@ -15,12 +15,14 @@ import { MessageBubble } from "../../components/chat/MessageBubble";
 import { TypingIndicator } from "../../components/chat/TypingIndicator";
 import { ChatHeader } from "../../components/chat/ChatHeader";
 import { toast } from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 
 interface ChatWindowProps {
   roomId: string;
+  onClose?: () => void;
 }
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId }) => {
+export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose }) => {
   const dispatch = useAppDispatch();
   const messages = useAppSelector((state) => state.chat.messages);
   const loading = useAppSelector((state) => state.chat.loadingMessages);
@@ -91,7 +93,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId }) => {
 
   const roomTitle = getRoomTitle();
   const partnerSubtitle = room?.isPartnerOnline ? "🟢 Online now" : "Offline";
-  const partnerRole = room?.type === "BROADCAST" ? "Broadcast" : partner?.refModel || "User";
+  const partnerAccountRole = String((partner?.user as any)?.role || "").toUpperCase();
+  const partnerRole = room?.type === "BROADCAST"
+    ? (room.eventId || room.eventSessionDate ? "Event Day" : room.leagueId ? "League Chat" : room.teamId ? "Team Chat" : "Class Chat")
+    : partnerAccountRole === "SUPER_ADMIN" ? "Super Admin"
+      : partnerAccountRole === "ADMIN" ? "Admin"
+        : partnerAccountRole === "COACH" ? "Coach"
+          : partner?.refModel || "User";
+  const roomContext = room?.type === "BROADCAST"
+    ? [
+        room.context?.className || (room.classId && typeof room.classId === "object" ? room.classId.name : ""),
+        room.context?.teamName || (room.teamId && typeof room.teamId === "object" ? (room.teamId.teamName || (room.teamId as any).name) : ""),
+        room.context?.eventTitle || (room.eventId && typeof room.eventId === "object" ? (room.eventId.title || (room.eventId as any).name) : ""),
+        room.eventSessionDate,
+        room.context?.programName,
+        room.context?.termName,
+        room.context?.dayOfWeek,
+        room.context?.startTime && room.context?.endTime ? `${room.context.startTime}–${room.context.endTime}` : room.context?.startTime,
+      ].filter(Boolean).join(" · ") || room?.scopeLabel || room?.name || "Broadcast"
+    : undefined;
+  const partnerProfileImage = partner?.user?.profileImage;
 
   // Fetch messages when roomId changes
   useEffect(() => {
@@ -243,10 +264,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId }) => {
     handleSend(msg.text, msg._id, null);
   };
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      toast.success(`File attached: ${e.target.files[0].name}`);
+      let file = e.target.files[0];
+      const isVideo = file.type.toLowerCase().startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name);
+      const policy = isVideo ? "chatVideo" : "chatImage";
+      if (!isVideo) {
+        try { file = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      }
+      const validationError = await validateUploadFile(file, policy);
+      if (validationError) {
+        toast.error(validationError);
+        e.target.value = "";
+        return;
+      }
+      setSelectedFile(file);
+      toast.success(`File attached: ${file.name}`);
     }
   };
 
@@ -258,7 +291,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId }) => {
         subtitle={partnerSubtitle}
         roleText={partnerRole}
         isOnline={room?.isPartnerOnline}
-        onBack={() => dispatch(setActiveRoomId(""))}
+        profileImage={partnerProfileImage}
+        contextLabel={roomContext}
+        onBack={onClose || (() => dispatch(setActiveRoomId("")))}
       />
 
       {/* Messages log */}
@@ -303,6 +338,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ roomId }) => {
           type="file"
           ref={fileInputRef}
           onChange={onFileChange}
+          accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.gif,.mp4,.webm,.mov,image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,video/mp4,video/webm,video/quicktime"
           className="hidden"
         />
         <button

@@ -1,10 +1,13 @@
 import React from "react";
+import { getMediaFallback, getMediaUrl } from "../../utils/media";
 
 interface ChatHeaderProps {
   title: string;
   subtitle: string;
   roleText?: string;
   isOnline?: boolean;
+  profileImage?: string;
+  contextLabel?: string;
   onBack?: () => void;
 }
 
@@ -13,9 +16,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   subtitle,
   roleText,
   isOnline,
+  profileImage,
+  contextLabel,
   onBack,
 }) => {
-  const initials = title.charAt(0).toUpperCase() || "?";
+  const fallback = getMediaFallback(title);
 
   return (
     <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
@@ -32,9 +37,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </button>
         )}
         <div className="relative">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-base tracking-wide shadow-inner">
-            {initials}
-          </div>
+          <img
+            src={profileImage ? getMediaUrl(profileImage, fallback) : fallback}
+            alt={`${title} avatar`}
+            className="w-11 h-11 rounded-full object-cover border border-blue-100 dark:border-slate-700 shadow-inner"
+            onError={(event) => { event.currentTarget.src = fallback; }}
+          />
           {isOnline && (
             <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 absolute -bottom-0.5 -right-0.5 animate-pulse"></div>
           )}
@@ -51,6 +59,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               subtitle
             )}
           </p>
+          {contextLabel && (
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-[320px]" title={contextLabel}>
+              {contextLabel}
+            </p>
+          )}
         </div>
       </div>
 

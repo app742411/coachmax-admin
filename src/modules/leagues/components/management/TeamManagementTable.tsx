@@ -30,7 +30,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllTeams, createTeam, getAllCoaches, getAvailablePlayers } from "../../../../api/adminApi";
 import { getAllTerms } from "../../../../api/terms";
 import { toast } from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../../../utils/fileValidation";
+import { getMediaUrl } from "../../../../utils/media";
+import { sortPlayersByPaymentStatus } from "../../../../utils/paymentStatus";
 import TeamFullTable from "../../../../components/teams/TeamFullTable";
+import TeamBroadcastButton from "../../../../components/teams/TeamBroadcastButton";
 import AssignPlayerToTeamModal from "../../../../components/management/AssignPlayerToTeamModal";
 import { useNavigate } from "react-router";
 
@@ -149,15 +153,19 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
     setPlayerSearchQueryForAdd("");
   };
 
-  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedLogoFile(file);
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "logo");
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setSelectedLogoFile(normalized);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewLogoImage(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(normalized);
     }
   };
 
@@ -550,9 +558,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                               {team.logo ? (
                                 <img
                                   src={
-                                    team.logo.startsWith("http")
-                                      ? team.logo
-                                      : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")}/${team.logo.replace(/^\//, "")}`
+                                    getMediaUrl(team.logo)
                                   }
                                   alt={tName}
                                   onError={(e) => {
@@ -726,6 +732,9 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                           className="border-b-4 border-slate-200 dark:border-slate-800 w-full"
                         >
                           <div className="bg-white dark:bg-slate-900 rounded-none border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden ring-1 ring-slate-100 dark:ring-slate-800">
+                            <div className="flex justify-end border-b border-slate-100 px-4 py-2 dark:border-slate-800">
+                              <TeamBroadcastButton teamId={team._id} teamName={tName} />
+                            </div>
                             <TeamFullTable
                               teamId={team._id}
                               leagueId={leagueId}
@@ -829,8 +838,9 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                             <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden font-bold text-[10px] text-slate-700 dark:text-slate-200">
                               {t.teamLogo || t.logo ? (
                                 <img
-                                  src={(t.teamLogo || t.logo).startsWith("http") ? (t.teamLogo || t.logo) : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")}/${(t.teamLogo || t.logo).replace(/^\//, "")}`}
+                                  src={getMediaUrl(t.teamLogo || t.logo)}
                                   alt="Logo"
+                                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaUrl(); }}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
@@ -1038,10 +1048,10 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                     type="file"
                     ref={fileInputRef}
                     className="hidden"
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                     onChange={handleLogoFileChange}
                   />
-                  <span className="text-[10px] text-gray-400 mt-3 text-center">Supports PNG, JPG, WEBP</span>
+                  <span className="text-[10px] text-gray-400 mt-3 text-center">JPEG, PNG, WebP, HEIC/HEIF · max 2MB</span>
                 </div>
               </div>
 
@@ -1101,7 +1111,11 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
 
                   {/* Player List */}
                   <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-slate-900 custom-scrollbar">
-                    {availablePlayers
+                    {sortPlayersByPaymentStatus(
+                      availablePlayers,
+                      (player: any) => player.paymentStatus,
+                      (player: any) => player.fullName || player.name
+                    )
                       .filter((p: any) => {
                         const name = p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.name || "";
                         return name.toLowerCase().includes(playerSearchQueryForAdd.toLowerCase());

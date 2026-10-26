@@ -5,10 +5,16 @@ import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import { getAllLeagues, createLeague, updateLeague, deleteLeague, getAllTeams, getAllTerms } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import ImageCropModal from "../common/ImageCropModal";
+import { getMediaUrl } from "../../utils/media";
 import { Trophy, Calendar, Image as ImageIcon, Users, Search, X, Settings2, Zap } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import { useTerms } from "../../hooks/useTerms";
 import { findCurrentTerm } from "../../hooks/useCurrentTerm";
+import { addDateOnlyDays, formatDateOnly, todayDateOnly, toDateOnly } from "../../utils/dateTime";
+import { chatApi } from "../../services/chatApi";
+import ChatActionButton from "../chat/ChatActionButton";
 
 const WEEKDAYS = [
   { label: "Mon", full: "Monday", dayIndex: 1 },
@@ -26,21 +32,19 @@ const getDatesForWeekday = (startDateStr: string, endDateStr: string, targetDayI
   const [eYear, eMonth, eDay] = endDateStr.split("-").map(Number);
   if (!sYear || !sMonth || !sDay || !eYear || !eMonth || !eDay) return [];
 
-  const start = new Date(sYear, sMonth - 1, sDay);
-  const end = new Date(eYear, eMonth - 1, eDay);
+  const start = startDateStr;
+  const end = endDateStr;
   if (start > end) return [];
 
   const result: string[] = [];
-  const current = new Date(start);
+  let current = start;
 
   while (current <= end) {
-    if (current.getDay() === targetDayIndex) {
-      const y = current.getFullYear();
-      const m = String(current.getMonth() + 1).padStart(2, "0");
-      const d = String(current.getDate()).padStart(2, "0");
-      result.push(`${y}-${m}-${d}`);
+    const dayIndex = new Date(`${current}T12:00:00Z`).getUTCDay();
+    if (dayIndex === targetDayIndex) {
+      result.push(current);
     }
-    current.setDate(current.getDate() + 1);
+    current = addDateOnlyDays(current, 1);
   }
   return result;
 };
@@ -53,6 +57,7 @@ const LeagueManagement: React.FC = () => {
   const endDateRef = useRef<HTMLInputElement>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
@@ -111,13 +116,14 @@ const LeagueManagement: React.FC = () => {
 
   // sessionDates: one date per round — synced to formData.numberOfRounds
   const [sessionDates, setSessionDates] = useState<string[]>([
-    new Date().toISOString().split("T")[0],
+    todayDateOnly(),
   ]);
 
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [cropLogoFile, setCropLogoFile] = useState<File | null>(null);
 
   // Sync sessionDates array length whenever numberOfRounds changes
   const handleRoundsChange = (val: number) => {
@@ -128,9 +134,8 @@ const LeagueManagement: React.FC = () => {
       if (rounds > next.length) {
         while (next.length < rounds) {
           try {
-            const lastD = new Date(next[next.length - 1] || new Date().toISOString().split("T")[0]);
-            lastD.setDate(lastD.getDate() + 7);
-            next.push(lastD.toISOString().split("T")[0]);
+            const lastD = next[next.length - 1] || todayDateOnly();
+            next.push(addDateOnlyDays(lastD, 7));
           } catch {
             next.push("");
           }
@@ -179,10 +184,8 @@ const LeagueManagement: React.FC = () => {
       if (match) return match[0];
     }
     try {
-      const dateObj = new Date(d);
-      if (!isNaN(dateObj.getTime())) {
-        return dateObj.toISOString().split("T")[0];
-      }
+      const normalized = toDateOnly(d);
+      if (normalized) return normalized;
     } catch {
       return "";
     }
@@ -218,9 +221,7 @@ const LeagueManagement: React.FC = () => {
         const arr: string[] = [];
         for (let i = 0; i < rounds; i++) {
           try {
-            const d = new Date(termStart);
-            d.setDate(d.getDate() + i * 7);
-            arr.push(d.toISOString().split("T")[0]);
+            arr.push(addDateOnlyDays(termStart, i * 7));
           } catch {
             arr.push(termStart);
           }
@@ -258,11 +259,7 @@ const LeagueManagement: React.FC = () => {
   }, []);
 
   const getImageUrl = (path: string | undefined | null) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${baseUrl}${cleanPath}`;
+    return getMediaUrl(path) || null;
   };
 
   const { data: leaguesData, isLoading: loading } = useQuery({
@@ -302,6 +299,7 @@ const LeagueManagement: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
+    setValidationErrors([]);
     const currentYear = new Date().getFullYear().toString();
     setFormData({
       name: "",
@@ -328,7 +326,7 @@ const LeagueManagement: React.FC = () => {
       fee: 0,
       venue: "",
     });
-    setSessionDates([new Date().toISOString().split("T")[0]]);
+    setSessionDates([todayDateOnly()]);
     setSelectedTeamIds([]);
     setTeamSearchQuery("");
     setSelectedFile(null);
@@ -341,9 +339,10 @@ const LeagueManagement: React.FC = () => {
   };
 
   const handleOpenEdit = (league: any) => {
+    setValidationErrors([]);
     const rounds = league.numberOfRounds ?? 1;
     const termId = typeof league.term === "object" ? league.term?._id : (league.term || league.termId || "");
-    const yearVal = league.year || league.term?.year || (league.term?.startDate ? new Date(league.term.startDate).getFullYear().toString() : new Date().getFullYear().toString());
+    const yearVal = league.year || league.term?.year || (league.term?.startDate ? toDateOnly(league.term.startDate).slice(0, 4) : new Date().getFullYear().toString());
 
     setFormData({
       name: league.name || "",
@@ -374,17 +373,15 @@ const LeagueManagement: React.FC = () => {
     // Restore sessionDates from league, formatted as YYYY-MM-DD
     if (Array.isArray(league.sessionDates) && league.sessionDates.length > 0) {
       const formatted = league.sessionDates.map((d: string) => {
-        try { return d.includes("T") ? d.split("T")[0] : d; } catch { return d; }
+        try { return toDateOnly(d); } catch { return d; }
       });
       setSessionDates(formatted);
     } else {
-      const today = new Date().toISOString().split("T")[0];
+    const today = todayDateOnly();
       const arr: string[] = [];
       for (let i = 0; i < rounds; i++) {
         try {
-          const d = new Date(today);
-          d.setDate(d.getDate() + i * 7);
-          arr.push(d.toISOString().split("T")[0]);
+          arr.push(addDateOnlyDays(today, i * 7));
         } catch { arr.push(""); }
       }
       setSessionDates(arr);
@@ -414,11 +411,15 @@ const LeagueManagement: React.FC = () => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedFile(file);
-      setPreviewImage(URL.createObjectURL(file));
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); }
+      catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "logo", { checkDimensions: false });
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setCropLogoFile(normalized);
     }
   };
 
@@ -448,28 +449,28 @@ const LeagueManagement: React.FC = () => {
   };
 
   const validateStep1 = () => {
-    if (!formData.name.trim()) {
-      toast.error("Please enter a League Name");
-      return false;
-    }
-    if (!formData.term) {
-      toast.error("Please select an Academic Term");
-      return false;
-    }
-    return true;
+    const errors: string[] = [];
+    if (!formData.name.trim()) errors.push("League name is required.");
+    if (!formData.term) errors.push("Select an academic term.");
+    if (!formData.type) errors.push("Select a league type.");
+    setValidationErrors(errors);
+    return errors.length === 0;
   };
 
   const validateStep2 = () => {
+    const errors: string[] = [];
     const validDates = sessionDates.filter(Boolean);
     if (validDates.length < formData.numberOfRounds) {
-      toast.error(`Please select a session date for all ${formData.numberOfRounds} round(s).`);
-      return false;
+      errors.push(`Select a session date for all ${formData.numberOfRounds} round(s).`);
     }
-    if (formData.fee === "" || isNaN(Number(formData.fee)) || Number(formData.fee) < 0) {
-      toast.error("Please enter a valid numeric value for the League Fee.");
-      return false;
+    if (formData.fee === "" || !Number.isFinite(Number(formData.fee)) || Number(formData.fee) < 0) {
+      errors.push("Enter a valid league fee of 0 or more.");
     }
-    return true;
+    if (formData.numberOfRounds < 1 || !Number.isInteger(Number(formData.numberOfRounds))) {
+      errors.push("Round count must be a whole number of at least 1.");
+    }
+    setValidationErrors(errors);
+    return errors.length === 0;
   };
 
   const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
@@ -496,7 +497,7 @@ const LeagueManagement: React.FC = () => {
     // Validate sessionDates — must match numberOfRounds
     const validDates = sessionDates.filter(Boolean);
     if (validDates.length < formData.numberOfRounds) {
-      toast.error(`Please select a session date for all ${formData.numberOfRounds} round(s).`);
+      setValidationErrors([`Select a session date for all ${formData.numberOfRounds} round(s).`]);
       setCurrentStep(2);
       return;
     }
@@ -512,6 +513,7 @@ const LeagueManagement: React.FC = () => {
       if (!effectiveEnd) effectiveEnd = sorted[sorted.length - 1];
     }
 
+    setValidationErrors([]);
     const payload = new FormData();
     payload.append("name", formData.name);
     if (formData.year) payload.append("year", formData.year);
@@ -589,7 +591,7 @@ const LeagueManagement: React.FC = () => {
       const lYear = String(
         league.year ||
         league.term?.year ||
-        (league.startDate ? new Date(league.startDate).getFullYear() : "") ||
+        (league.startDate ? toDateOnly(league.startDate).slice(0, 4) : "") ||
         ""
       );
       const inSeason = league.season ? String(league.season).includes(selectedFilterYear) : false;
@@ -769,8 +771,8 @@ const LeagueManagement: React.FC = () => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex flex-col gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                        <span className="flex items-center gap-1.5"><Calendar size={12} className="text-brand-500" /> Start: {league.startDate ? new Date(league.startDate).toLocaleDateString() : "TBD"}</span>
-                        <span className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /> End: {league.endDate ? new Date(league.endDate).toLocaleDateString() : "TBD"}</span>
+                        <span className="flex items-center gap-1.5"><Calendar size={12} className="text-brand-500" /> Start: {league.startDate ? formatDateOnly(league.startDate) : "TBD"}</span>
+                        <span className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /> End: {league.endDate ? formatDateOnly(league.endDate) : "TBD"}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
@@ -788,7 +790,7 @@ const LeagueManagement: React.FC = () => {
                       </button>
 
                       {openDropdownId === league._id && (
-                        <div className="absolute right-8 top-10 w-36 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute right-8 top-10 w-44 bg-white dark:bg-slate-800 rounded-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                           <button
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                             onClick={(e) => {
@@ -799,6 +801,12 @@ const LeagueManagement: React.FC = () => {
                           >
                             View Details
                           </button>
+                          <ChatActionButton
+                            contextLabel={league.name}
+                            buttonText="League Chat"
+                            className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700/60 inline-flex items-center gap-2"
+                            ensureRoom={() => chatApi.openLeagueChat(league._id)}
+                          />
                           <button
                             className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0047FF] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-t border-slate-100 dark:border-slate-700/60"
                             onClick={(e) => {
@@ -907,6 +915,12 @@ const LeagueManagement: React.FC = () => {
           }}
           className="space-y-6"
         >
+          {validationErrors.length > 0 && (
+            <div role="alert" aria-live="polite" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+              <p className="font-bold">Please fix these required fields:</p>
+              <ul className="mt-1 list-disc pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
+            </div>
+          )}
           {/* STEP 1: Basic Information & Logo */}
           {currentStep === 1 && (
             <div className="space-y-5 animate-in fade-in duration-200">
@@ -1064,7 +1078,7 @@ const LeagueManagement: React.FC = () => {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                       onChange={handleFileChange}
                       className="hidden"
                       id="modal-league-logo"
@@ -1090,7 +1104,7 @@ const LeagueManagement: React.FC = () => {
                       )}
                     </div>
                     <span className="text-[11px] text-slate-400">
-                      PNG, JPG, or SVG recommended. Displays in header, ladder, and standings.
+                      JPEG, PNG, WebP, HEIC/HEIF · max 2MB. Displays in header, ladder, and standings.
                     </span>
                   </div>
                 </div>
@@ -1406,9 +1420,7 @@ const LeagueManagement: React.FC = () => {
                   let formattedDay = "";
                   if (dateVal) {
                     try {
-                      const [y, m, d] = dateVal.split("-").map(Number);
-                      const dt = new Date(y, m - 1, d);
-                      formattedDay = dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+                      formattedDay = formatDateOnly(dateVal, { weekday: "short", day: "numeric", month: "short" });
                     } catch {}
                   }
 
@@ -1724,6 +1736,15 @@ const LeagueManagement: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {cropLogoFile && <ImageCropModal file={cropLogoFile} policy="logo" onCancel={() => {
+        setCropLogoFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }} onCrop={(cropped) => {
+        setSelectedFile(cropped);
+        setPreviewImage(URL.createObjectURL(cropped));
+        setCropLogoFile(null);
+      }} />}
 
       <ConfirmDeleteModal
         isOpen={!!deleteModalId}

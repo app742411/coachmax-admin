@@ -1,4 +1,5 @@
 import { UnallocatedPlayer } from "../../types/academy";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface AllocatedPlayersCardProps {
   players: UnallocatedPlayer[];
@@ -19,6 +20,7 @@ export default function AllocatedPlayersCard({
   onAssignPlayer,
   onViewAll
 }: AllocatedPlayersCardProps) {
+  const orderedPlayers = sortPlayersByPaymentStatus(players, (player) => player.paymentStatus);
   const renderStars = (count: number) => {
     return (
       <div className="flex gap-0.5 text-amber-500">
@@ -61,7 +63,7 @@ export default function AllocatedPlayersCard({
             No allocated players
           </div>
         ) : (
-          players.map((p) => (
+          orderedPlayers.map((p) => (
             <div
               key={p.id}
               className="flex gap-3 items-start justify-between cursor-move hover:border-blue-200 dark:hover:border-blue-900/50 hover:shadow-md transition-all p-2.5 rounded-md border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/50"
@@ -93,6 +95,22 @@ export default function AllocatedPlayersCard({
                     {p.details}
                   </span>
                   <div className="mt-1">{renderStars(p.rating)}</div>
+                  {p.assignedClasses && p.assignedClasses.length > 0 && (
+                    <div className="mt-1.5 space-y-0.5 text-[9px] leading-tight">
+                      <div className="font-bold uppercase tracking-wide text-slate-400">Class</div>
+                      <div className="font-semibold text-slate-600 dark:text-slate-300">
+                        {p.assignedClasses.map((assignedClass) => assignedClass.name || `${assignedClass.dayOfWeek || ""} ${assignedClass.startTime || ""}`.trim()).filter(Boolean).join(", ")}
+                      </div>
+                    </div>
+                  )}
+                  {p.assignedTeams && p.assignedTeams.length > 0 && (
+                    <div className="mt-1.5 space-y-0.5 text-[9px] leading-tight">
+                      <div className="font-bold uppercase tracking-wide text-slate-400">Team</div>
+                      <div className="font-semibold text-slate-600 dark:text-slate-300">
+                        {p.assignedTeams.map((team) => team.name).filter(Boolean).join(", ")}
+                      </div>
+                    </div>
+                  )}
                   {onAssignPlayer && (
                     <button
                       type="button"

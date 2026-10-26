@@ -7,6 +7,7 @@ import { EventInput, DateSelectArg, EventClickArg } from "@fullcalendar/core";
 import { Modal } from "../components/ui/modal";
 import { useModal } from "../hooks/useModal";
 import PageMeta from "../components/common/PageMeta";
+import { addDateOnlyDays, todayDateOnly, toDateOnly } from "../utils/dateTime";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
@@ -39,20 +40,20 @@ const Calendar: React.FC = () => {
       {
         id: "1",
         title: "Event Conf.",
-        start: new Date().toISOString().split("T")[0],
+        start: todayDateOnly(),
         extendedProps: { calendar: "Danger" },
       },
       {
         id: "2",
         title: "Meeting",
-        start: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+        start: addDateOnlyDays(todayDateOnly(), 1),
         extendedProps: { calendar: "Success" },
       },
       {
         id: "3",
         title: "Workshop",
-        start: new Date(Date.now() + 172800000).toISOString().split("T")[0],
-        end: new Date(Date.now() + 259200000).toISOString().split("T")[0],
+        start: addDateOnlyDays(todayDateOnly(), 2),
+        end: addDateOnlyDays(todayDateOnly(), 3),
         extendedProps: { calendar: "Primary" },
       },
     ]);
@@ -69,8 +70,8 @@ const Calendar: React.FC = () => {
     const event = clickInfo.event;
     setSelectedEvent(event as unknown as CalendarEvent);
     setEventTitle(event.title);
-    setEventStartDate(event.start?.toISOString().split("T")[0] || "");
-    setEventEndDate(event.end?.toISOString().split("T")[0] || "");
+    setEventStartDate((event as any).startStr || toDateOnly(event.start));
+    setEventEndDate((event as any).endStr || toDateOnly(event.end));
     setEventLevel(event.extendedProps.calendar);
     openModal();
   };

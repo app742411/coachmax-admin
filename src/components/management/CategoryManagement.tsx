@@ -17,7 +17,7 @@ const CategoryManagement: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: "", isEvent: false });
+  const [formData, setFormData] = useState({ name: "" });
 
   const { categories, isLoading: loading } = useCategories();
 
@@ -26,14 +26,14 @@ const CategoryManagement: React.FC = () => {
   const deleteMutation = useDeleteCategory();
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", isEvent: false });
+    setFormData({ name: "" });
     setIsEditing(false);
     setSelectedId(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (cat: any) => {
-    setFormData({ name: cat.name || "", isEvent: !!cat.isEvent });
+    setFormData({ name: cat.name || "" });
     setIsEditing(true);
     setSelectedId(cat._id);
     setIsModalOpen(true);
@@ -56,12 +56,7 @@ const CategoryManagement: React.FC = () => {
   };
 
   const handleNameChange = (val: string) => {
-    const isHoliday = val.toLowerCase().includes("holiday");
-    setFormData(prev => ({
-      ...prev,
-      name: val,
-      isEvent: isHoliday ? true : prev.isEvent
-    }));
+    setFormData({ name: val });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -156,17 +151,6 @@ const CategoryManagement: React.FC = () => {
               placeholder="e.g. Academy"
               required
             />
-          </div>
-          <div className="mb-4">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={formData.isEvent}
-                onChange={(e) => setFormData(prev => ({ ...prev, isEvent: e.target.checked }))}
-                className="w-4 h-4 text-[#031549] border-gray-300 rounded-none focus:ring-[#031549]"
-              />
-              <span className="text-xs font-semibold text-gray-700">Holiday Program</span>
-            </label>
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>

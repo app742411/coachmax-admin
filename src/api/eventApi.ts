@@ -7,7 +7,7 @@ const ENDPOINTS = {
   GET_EVENT_DETAILS: "/api/admin/getEventDetails",
   GET_EVENT_PARTICIPANTS: "/api/admin/getEventParticipants",
   EXPORT_EVENT_PARTICIPANTS: "/api/admin/exportEventParticipants",
-  DELETE_EVENT: "/api/admin/updateEventStatus",
+  DELETE_EVENT: "/api/admin/deleteEvent",
 };
 
 export const getAllEvents = async () => {
@@ -21,20 +21,14 @@ export const getEventDetails = async (id: string) => {
 };
 
 export const createEvent = async (data: any) => {
-  const response = await apiClient.post(ENDPOINTS.CREATE_EVENT, data, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  });
+  // apiClient clears the JSON default for FormData so the browser can add
+  // the multipart boundary required by Multer.
+  const response = await apiClient.post(ENDPOINTS.CREATE_EVENT, data);
   return response.data;
 };
 
 export const updateEvent = async (id: string, data: any) => {
-  const response = await apiClient.put(`${ENDPOINTS.UPDATE_EVENT}/${id}`, data, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  });
+  const response = await apiClient.put(`${ENDPOINTS.UPDATE_EVENT}/${id}`, data);
   return response.data;
 };
 
@@ -47,6 +41,11 @@ export const getEventParticipants = async (id: string, page: number, limit: numb
   const response = await apiClient.get(`${ENDPOINTS.GET_EVENT_PARTICIPANTS}/${id}`, {
     params: { page, limit }
   });
+  return response.data;
+};
+
+export const removeEventRegistration = async (registrationId: string) => {
+  const response = await apiClient.delete(`/api/admin/events/registrations/${registrationId}`);
   return response.data;
 };
 
@@ -67,6 +66,11 @@ export const configureCampSessions = async (eventId: string, data: { sessions: a
 
 export const toggleCampDateAvailability = async (eventId: string, date: string, isAvailable: boolean) => {
   const response = await apiClient.patch(`/api/admin/events/${eventId}/toggle-date`, { date, isAvailable });
+  return response.data;
+};
+
+export const updateCampDayNote = async (eventId: string, date: string, note: string) => {
+  const response = await apiClient.patch(`/api/admin/events/${eventId}/day-note`, { date, note });
   return response.data;
 };
 

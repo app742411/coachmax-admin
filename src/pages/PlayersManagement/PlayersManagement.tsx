@@ -9,7 +9,7 @@ import AssignClassModal from "../../components/players/AssignClassModal";
 import GenerateInvoiceModal from "../../components/InvoiceManagement/GenerateInvoiceModal";
 import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
 import EditPlayerModal from "../../components/players/EditPlayerModal";
-import { usePlayers, useDeletePlayer, usePlayerStats } from "../../hooks/usePlayers";
+import { usePlayers, useDeletePlayer, usePlayerStats, usePlayerFilterOptions } from "../../hooks/usePlayers";
 import Pagination from "../../components/common/Pagination";
 import { UserPlus } from "lucide-react";
 
@@ -29,6 +29,7 @@ export default function PlayersManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [termFilter, setTermFilter] = useState("All");
   const [programFilter, setProgramFilter] = useState("All");
+  const [subProgramFilter, setSubProgramFilter] = useState("All");
   const [ageFilter, setAgeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [medicalFilter, setMedicalFilter] = useState("All");
@@ -40,6 +41,7 @@ export default function PlayersManagement() {
 
   // Fetch dynamic player statistics scoped to selected term
   const { data: statsResponse } = usePlayerStats(termFilter);
+  const { data: filterOptions = [] } = usePlayerFilterOptions();
 
   // Fetch players per page from the backend with all active filters
   const { data: playersResponse, isLoading } = usePlayers(
@@ -50,7 +52,8 @@ export default function PlayersManagement() {
     statusFilter,
     termFilter,
     medicalFilter,
-    ageFilter
+    ageFilter,
+    subProgramFilter
   );
   const players = playersResponse?.users || [];
   const totalPages = playersResponse?.totalPages || 1;
@@ -67,7 +70,7 @@ export default function PlayersManagement() {
   // Reset page to 1 when filters or limit change to avoid out-of-bound pages
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, termFilter, programFilter, statusFilter, ageFilter, medicalFilter, limit]);
+  }, [searchQuery, termFilter, programFilter, subProgramFilter, statusFilter, ageFilter, medicalFilter, limit]);
 
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
@@ -122,6 +125,9 @@ export default function PlayersManagement() {
             setTermFilter={setTermFilter}
             programFilter={programFilter}
             setProgramFilter={setProgramFilter}
+            subProgramFilter={subProgramFilter}
+            setSubProgramFilter={setSubProgramFilter}
+            filterPlayers={filterOptions}
             ageFilter={ageFilter}
             setAgeFilter={setAgeFilter}
             statusFilter={statusFilter}
@@ -139,7 +145,7 @@ export default function PlayersManagement() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">No players found</h3>
               <p className="text-sm text-gray-500 text-center max-w-sm mb-6">
-                {searchQuery || programFilter !== "All" || statusFilter !== "All" || termFilter !== "All" || medicalFilter !== "All" || ageFilter !== "All"
+                {searchQuery || programFilter !== "All" || subProgramFilter !== "All" || statusFilter !== "All" || termFilter !== "All" || medicalFilter !== "All" || ageFilter !== "All"
                   ? "We couldn't find any players matching your current filters. Try adjusting your search criteria."
                   : "Get started by inviting players to your academy. They'll receive an email to complete their profile."}
               </p>

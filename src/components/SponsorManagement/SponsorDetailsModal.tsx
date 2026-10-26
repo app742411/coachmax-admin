@@ -13,6 +13,7 @@ import {
   XCircle
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { getMediaUrl, MEDIA_PLACEHOLDER } from "../../utils/media";
 
 interface SponsorDetailsModalProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ const SponsorDetailsModal: React.FC<SponsorDetailsModalProps> = ({ isOpen, onClo
   };
 
   const isActive = sponsor.isActive === "active" || sponsor.isActive === "Active" || sponsor.isActive === true;
-  const imageSrc = sponsor.image ? `${import.meta.env.VITE_API_BASE_URL}/${sponsor.image}` : "";
+  const imageSrc = getMediaUrl(sponsor?.image);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl p-0 overflow-hidden rounded-none border border-slate-200 dark:border-slate-700 shadow-2xl">
@@ -76,7 +77,7 @@ const SponsorDetailsModal: React.FC<SponsorDetailsModalProps> = ({ isOpen, onClo
                 alt={sponsor.title}
                 className="max-h-48 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/images/placeholder/placeholder.jpg";
+                  (e.target as HTMLImageElement).src = MEDIA_PLACEHOLDER;
                 }}
               />
             ) : (

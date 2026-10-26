@@ -20,10 +20,11 @@ export const usePlayers = (
   status?: string,
   term?: string,
   medical?: string,
-  ageGroup?: string
+  ageGroup?: string,
+  subProgram?: string
 ) => {
   return useQuery<PlayersResponse, Error>({
-    queryKey: ["players", page, limit, search, program, status, term, medical, ageGroup],
+    queryKey: ["players", page, limit, search, program, status, term, medical, ageGroup, subProgram],
     queryFn: () => {
       const userStr = localStorage.getItem("user");
       let isCoach = false;
@@ -41,8 +42,28 @@ export const usePlayers = (
       if (isCoach) {
         return getCoachUniquePlayers(page, limit, search, program, status);
       }
-      return getPlayers(page, limit, search, program, status, term, medical, ageGroup);
+      return getPlayers(page, limit, search, program, status, term, medical, ageGroup, subProgram);
     },
+  });
+};
+
+export const usePlayerFilterOptions = () => {
+  return useQuery({
+    queryKey: ["playerFilterOptions"],
+    queryFn: async () => {
+      const firstPage = await getPlayers(1, 100, "", "All", "All", "All", "All", "All");
+      const totalPages = firstPage.totalPages || 1;
+      if (totalPages <= 1) return firstPage.users || [];
+
+      const remainingPages = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, index) =>
+          getPlayers(index + 2, 100, "", "All", "All", "All", "All", "All")
+        )
+      );
+
+      return [firstPage, ...remainingPages].flatMap((page) => page.users || []);
+    },
+    staleTime: 30 * 1000,
   });
 };
 
@@ -53,6 +74,7 @@ export const useUpdatePlayer = () => {
       updatePlayer(playerId, data),
     onSuccess: (data: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["playerFilterOptions"] });
       queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails", variables.playerId] });
       queryClient.invalidateQueries({ queryKey: ["playerProfile", variables.playerId] });
       toast.success(data?.message || "Player updated successfully");
@@ -69,6 +91,7 @@ export const useDeletePlayer = () => {
     mutationFn: (id: string) => deletePlayer(id),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["playerFilterOptions"] });
       toast.success(data?.message || "Player deleted successfully");
     },
     onError: (error: any) => {
@@ -114,11 +137,17 @@ export const useAssignClass = () => {
   });
 };
 
-export const useClassFiltersWithTimeSlots = (categoryId: string, programId: string, day: string, termId?: string) => {
+export const useClassFiltersWithTimeSlots = (
+  categoryId: string,
+  programId: string,
+  day: string,
+  termId?: string,
+  options?: { allowUnfiltered?: boolean }
+) => {
   return useQuery({
     queryKey: ["classFiltersWithTimeSlots", categoryId, programId, day, termId],
     queryFn: () => getClassFiltersWithTimeSlots(categoryId, programId, day, termId),
-    enabled: !!categoryId && !!programId && !!day,
+    enabled: !!day && (options?.allowUnfiltered === true || (!!categoryId && !!programId)),
   });
 };
 
@@ -359,10 +388,10 @@ export const useAddCoachNote = () => {
   });
 };
 
-export const useCoachNotes = (playerId: string, page = 1, limit = 20) => {
+export const useCoachNotes = (playerId: string, page = 1, limit = 20, scope?: { termId?: string; year?: string; noTerm?: boolean }) => {
   return useQuery({
-    queryKey: ["coachNotes", playerId, page, limit],
-    queryFn: () => getCoachNotes(playerId, page, limit),
+    queryKey: ["coachNotes", playerId, page, limit, scope],
+    queryFn: () => getCoachNotes(playerId, page, limit, scope),
     enabled: !!playerId,
   });
 };

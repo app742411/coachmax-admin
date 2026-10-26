@@ -8,6 +8,7 @@ import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
 import { successToast, errorToast } from "../../utils/toast";
+import { getMediaUrl } from "../../utils/media";
 import {
   Calendar,
   User,
@@ -152,11 +153,7 @@ export default function CloneTermPage() {
   }, []);
 
   const getImageUrl = (path: string | undefined | null) => {
-    if (!path) return null;
-    if (path.startsWith("http")) return path;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${baseUrl}${cleanPath}`;
+    return getMediaUrl(path) || null;
   };
 
   // Calculate term stats from allClasses and allLeagues lists

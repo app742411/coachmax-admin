@@ -21,6 +21,7 @@ import AddTemporaryPlayersModal from "../../components/management/AddTemporaryPl
 import EditTemporaryPlayerModal from "../../components/management/EditTemporaryPlayerModal";
 import { TeamLeaguesView } from "./components/TeamLeaguesView";
 import TeamFullTable from "../../components/teams/TeamFullTable";
+import TeamBroadcastButton from "../../components/teams/TeamBroadcastButton";
 import {
   Shield,
   User,
@@ -38,6 +39,9 @@ import {
   Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { addDateOnlyDays, formatDateTime, todayDateOnly, toDateOnly } from "../../utils/dateTime";
 
 export default function TeamDetailsPage() {
   const { teamId } = useParams<{ teamId: string }>();
@@ -76,7 +80,7 @@ export default function TeamDetailsPage() {
   const [scheduleMode, setScheduleMode] = useState<"ROUNDS" | "TERM">("ROUNDS");
   const [roundCount, setRoundCount] = useState<number | string>(1);
   const [sessionDates, setSessionDates] = useState<string[]>([
-    new Date().toISOString().split("T")[0],
+    todayDateOnly(),
   ]);
   const [, setCustomSchedules] = useState<{ dayOfWeek: string; startTime: string; endTime: string }[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -84,12 +88,10 @@ export default function TeamDetailsPage() {
 
   const handleAddSessionDate = () => {
     const lastDate = sessionDates[sessionDates.length - 1];
-    let nextDateStr = new Date().toISOString().split("T")[0];
+    let nextDateStr = todayDateOnly();
     if (lastDate) {
       try {
-        const nextD = new Date(lastDate);
-        nextD.setDate(nextD.getDate() + 7);
-        nextDateStr = nextD.toISOString().split("T")[0];
+        nextDateStr = addDateOnlyDays(lastDate, 7);
       } catch { }
     }
     const updated = [...sessionDates, nextDateStr];
@@ -123,10 +125,8 @@ export default function TeamDetailsPage() {
         const newDates = [...sessionDates];
         for (let i = 0; i < toAdd; i++) {
           try {
-            const lastD = newDates[newDates.length - 1] || new Date().toISOString().split("T")[0];
-            const nextD = new Date(lastD);
-            nextD.setDate(nextD.getDate() + 7);
-            newDates.push(nextD.toISOString().split("T")[0]);
+            const lastD = newDates[newDates.length - 1] || todayDateOnly();
+            newDates.push(addDateOnlyDays(lastD, 7));
           } catch {
             newDates.push("");
           }
@@ -138,13 +138,8 @@ export default function TeamDetailsPage() {
     }
   };
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
-
   const getImageUrl = (path: string | undefined | null) => {
-    if (!path) return null;
-    if (path.startsWith("http://") || path.startsWith("https://")) return path;
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${baseUrl}${cleanPath}`;
+    return getMediaUrl(path) || null;
   };
 
   // Fetch Team Details
@@ -250,18 +245,18 @@ export default function TeamDetailsPage() {
       setScheduleMode("ROUNDS");
       const formattedDates = (team.sessionDates || []).map((d: string) => {
         try {
-          return d.includes("T") ? d.split("T")[0] : d;
+          return toDateOnly(d);
         } catch {
           return d;
         }
       });
-      const validDates = formattedDates.length > 0 ? formattedDates : [new Date().toISOString().split("T")[0]];
+      const validDates = formattedDates.length > 0 ? formattedDates : [todayDateOnly()];
       setSessionDates(validDates);
       setRoundCount(team.round || validDates.length || 1);
     } else {
       setScheduleMode("TERM");
       setRoundCount(1);
-      setSessionDates([new Date().toISOString().split("T")[0]]);
+      setSessionDates([todayDateOnly()]);
     }
 
     setSelectedFile(null);
@@ -269,15 +264,19 @@ export default function TeamDetailsPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedFile(file);
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "logo");
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setSelectedFile(normalized);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(normalized);
     }
   };
 
@@ -548,11 +547,7 @@ export default function TeamDetailsPage() {
                     <Calendar className="w-3.5 h-3.5 text-gray-400" />
                     <span>
                       Created{" "}
-                      {new Date(team.createdAt || Date.now()).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {formatDateTime(team.createdAt || Date.now(), { month: "short", day: "numeric", year: "numeric" })}
                     </span>
                   </span>
 
@@ -651,12 +646,12 @@ export default function TeamDetailsPage() {
             <div className="flex items-center gap-3.5 min-w-0">
               {headCoach?.profileImage ? (
                 <img
-                  src={getImageUrl(headCoach.profileImage)!}
+                  src={getMediaUrl(headCoach.profileImage, getMediaFallback(headCoach.name || headCoach.fullName || "Coach"))}
                   alt={headCoach.name}
                   className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-slate-200 dark:border-slate-700"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(headCoach.name || "Coach")}&background=0A1930&color=fff`;
+                    e.currentTarget.src = getMediaFallback(headCoach.name || headCoach.fullName || "Coach");
                   }}
                 />
               ) : (
@@ -698,12 +693,12 @@ export default function TeamDetailsPage() {
             <div className="flex items-center gap-3.5 min-w-0">
               {asstCoach?.profileImage ? (
                 <img
-                  src={getImageUrl(asstCoach.profileImage)!}
+                  src={getMediaUrl(asstCoach.profileImage, getMediaFallback(asstCoach.name || asstCoach.fullName || "Assistant"))}
                   alt={asstCoach.name}
                   className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-slate-200 dark:border-slate-700"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(asstCoach.name || "Assistant")}&background=0A1930&color=fff`;
+                    e.currentTarget.src = getMediaFallback(asstCoach.name || asstCoach.fullName || "Assistant");
                   }}
                 />
               ) : (
@@ -744,6 +739,9 @@ export default function TeamDetailsPage() {
         </div>
 
         {/* TEAM ATTENDANCE MATRIX & FULL TABLE */}
+        <div className="mb-3 flex justify-end">
+          <TeamBroadcastButton teamId={teamId!} teamName={team.teamName} />
+        </div>
         <TeamFullTable teamId={teamId!} teamName={team.teamName} />
 
         {/* TEAM ASSIGNED LEAGUES VIEW */}
@@ -973,10 +971,10 @@ export default function TeamDetailsPage() {
                 id="team-details-logo-input"
                 type="file"
                 className="hidden"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                 onChange={handleFileChange}
               />
-              <span className="text-[10px] text-gray-400 mt-3 text-center">Supports PNG, JPG, WEBP</span>
+              <span className="text-[10px] text-gray-400 mt-3 text-center">JPEG, PNG, WebP, HEIC/HEIF · max 2MB</span>
             </div>
           </div>
 

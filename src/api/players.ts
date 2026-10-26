@@ -9,7 +9,8 @@ export const getPlayers = async (
   status?: string,
   term?: string,
   medical?: string,
-  ageGroup?: string
+  ageGroup?: string,
+  subProgram?: string
 ): Promise<PlayersResponse> => {
   const params: any = { page, limit };
   if (search && search.trim()) params.search = search.trim();
@@ -21,6 +22,7 @@ export const getPlayers = async (
   if (term && term !== "All") params.term = term;
   if (medical && medical !== "All") params.medical = medical;
   if (ageGroup && ageGroup !== "All") params.ageGroup = ageGroup;
+  if (subProgram && subProgram !== "All") params.subProgram = subProgram;
 
   const response = await apiClient.get<PlayersResponse>("/api/admin/getUsers", { params });
   return response.data;

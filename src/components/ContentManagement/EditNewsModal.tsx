@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { smartErrorToast } from "../../utils/toast";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { getMediaUrl } from "../../utils/media";
 import { updateNews } from "../../api/adminApi";
 import HtmlEditor from "../form/HtmlEditor";
 
@@ -47,7 +49,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
         featured: newsItem.isFeatured ? "true" : "false"
       });
       setImageFile(null);
-      setImagePreview(newsItem.image || null);
+      setImagePreview(getMediaUrl(newsItem.image) || null);
     }
   }, [newsItem, isOpen]);
 
@@ -60,11 +62,15 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
     setFormData(prev => ({ ...prev, featured: val }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "news");
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setImageFile(normalized);
+      setImagePreview(URL.createObjectURL(normalized));
     }
   };
 
@@ -228,7 +234,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
                   >
                     <input
                       type="file"
-                      accept="image/*"
+                      accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                       onChange={handleImageChange}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
@@ -239,7 +245,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
                       Drag & drop banner here
                     </h3>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      JPG, PNG, WEBP (Max 5MB)
+                      JPG, PNG, WebP, HEIC/HEIF (max 5MB)
                     </p>
                     <span className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline">
                       Browse Local Files

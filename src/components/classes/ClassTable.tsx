@@ -3,10 +3,8 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import Badge from "../../components/ui/badge/Badge";
 import { MoreVertical, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
-import { useAppDispatch } from "../../store";
-import { setActiveRoomId } from "../../store/slices/chatSlice";
+import ChatActionButton from "../chat/ChatActionButton";
 import { chatApi } from "../../services/chatApi";
-import toast from "react-hot-toast";
 import ClassFullTable from "../academy/ClassFullTable";
 
 interface ClassItem {
@@ -42,52 +40,12 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [expandedClassIds, setExpandedClassIds] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   const toggleExpandClass = (classId: string) => {
     setExpandedClassIds((prev) => ({
       ...prev,
       [classId]: !prev[classId],
     }));
-  };
-
-  const handleClassChat = async (cls: ClassItem) => {
-    try {
-      let roomId = cls.broadcastChatRoomId || "";
-
-      // If room already exists, use it directly (Text Class)
-      if (!roomId) {
-        // No existing room — create it via broadcast API (Chat Active)
-        const broadcastRes = await chatApi.broadcastToClass(cls._id, "Broadcast channel active");
-        if (broadcastRes && broadcastRes.success) {
-          toast.success(broadcastRes.message || "Broadcast message sent successfully");
-          if (broadcastRes.data?.room?._id) {
-            roomId = broadcastRes.data.room._id;
-          }
-        } else if (broadcastRes && !broadcastRes.success) {
-          toast.error(broadcastRes.message || "Failed to send broadcast");
-        }
-      }
-
-      if (roomId) {
-        dispatch(setActiveRoomId(roomId));
-      }
-
-      const userStr = localStorage.getItem("user");
-      let isCoach = false;
-      if (userStr) {
-        try {
-          const parsed = JSON.parse(userStr);
-          isCoach = parsed?.role === "COACH";
-        } catch (e) {
-          console.error(e);
-        }
-      }
-      navigate(isCoach ? "/messages" : "/communication");
-    } catch (error) {
-      console.error("Error setting up class broadcast:", error);
-      navigate("/messages");
-    }
   };
 
   const handleNavigateToProgram = (cls: ClassItem) => {
@@ -233,23 +191,17 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                         </Badge>
                       </td>
                       <td className="py-4 px-3">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClassChat(cls);
-                          }}
+                        <ChatActionButton
+                          contextLabel={cls.name}
+                          ensureRoom={() => chatApi.openClassChat(cls._id)}
+                          buttonText="Chat"
                           className={`flex items-center gap-1.5 border px-2.5 py-1 rounded-[4px] text-[10px] font-semibold transition-all active:scale-95 cursor-pointer shadow-sm ${
                             isRowExpanded
                               ? "border-white/20 bg-white/10 hover:bg-white/20 text-white"
                               : "border-slate-300 hover:bg-slate-50 text-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700/50"
                           }`}
-                          title={cls.broadcastChatRoomId ? "Open Class Chat" : "Start Class Broadcast"}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          {cls.broadcastChatRoomId ? "Text Class" : "Chat Active"}
-                        </button>
+                          title="Open class chat"
+                        />
                       </td>
                       <td className="py-4 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
@@ -354,7 +306,7 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                                 setOpenDropdownId(null);
                               }}
                             >
-                              Send Broadcast
+                              Send Announcement
                             </button>
                             <button
                               className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors border-t border-slate-100 dark:border-slate-700"
@@ -385,6 +337,7 @@ export default function ClassTable({ classes, isLoading, onEditClass, onViewPlay
                               timeSlotStr={`${cls.startTime} - ${cls.endTime}`}
                               isExpanded={true}
                               hideHeader={true}
+                              onCreateClassChat={() => onBroadcastClass?.(cls)}
                             />
                           </div>
                         </td>

@@ -13,6 +13,13 @@ const apiClient = axios.create({
 // Interceptor for adding Auth token to headers
 apiClient.interceptors.request.use(
   (config) => {
+    // Let the browser set the multipart boundary for FormData requests. A
+    // global JSON content type (or a manually supplied multipart header without
+    // its boundary) makes Multer receive an empty body, which looks like
+    // required event fields such as `title` were never sent.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      config.headers?.delete("Content-Type");
+    }
     const token = localStorage.getItem("token");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;

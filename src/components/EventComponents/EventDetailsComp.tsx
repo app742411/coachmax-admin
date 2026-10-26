@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router";
-import { getEventDetails, getEventParticipants, exportEventParticipants } from "../../api/eventApi";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate, useParams } from "react-router";
+import { deleteEvent, getEventDetails, getEventParticipants, exportEventParticipants, removeEventRegistration } from "../../api/eventApi";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 import {
   Calendar,
   MapPin,
@@ -17,7 +18,9 @@ import {
   PhoneCall,
   Download,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
@@ -29,6 +32,9 @@ import HolidayCampRegistrationModal from "./HolidayCampRegistrationModal";
 import Button from "../ui/button/Button";
 import { UserPlus, UserCheck2, List } from "lucide-react";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
+import { formatDateOnly, formatDateTime } from "../../utils/dateTime";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
+import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 
 interface EventStats {
   totalSlots: number;
@@ -72,12 +78,14 @@ interface Participant {
   _id: string;
   user: User;
   status: string;
+  paymentStatus?: string;
   createdAt: string;
 }
 
 const EventDetailsComp: React.FC = () => {
   const { markItemAsRead } = useSidebarBadges();
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [event, setEvent] = useState<Event | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +99,15 @@ const EventDetailsComp: React.FC = () => {
   const [campSessions, setCampSessions] = useState<any[]>([]);
   const [attendanceRefreshKey, setAttendanceRefreshKey] = useState(0);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
+  const [registrationToRemove, setRegistrationToRemove] = useState<Participant | null>(null);
+  const [isRemovingPlayer, setIsRemovingPlayer] = useState(false);
+  const [isDeleteEventOpen, setIsDeleteEventOpen] = useState(false);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
+
+  const orderedParticipants = useMemo(
+    () => sortPlayersByPaymentStatus(participants, (participant) => participant.paymentStatus, (participant) => participant.user?.fullName),
+    [participants]
+  );
 
   const handleExport = async (format: "csv" | "excel") => {
     if (!id) return;
@@ -149,6 +166,39 @@ const EventDetailsComp: React.FC = () => {
     }
   }, [id, page]);
 
+  const confirmRemovePlayer = async () => {
+    if (!registrationToRemove) return;
+    setIsRemovingPlayer(true);
+    try {
+      await removeEventRegistration(registrationToRemove._id);
+      toast.success(`${registrationToRemove.user?.fullName || "Player"} removed from the event`);
+      setRegistrationToRemove(null);
+      if (participants.length <= 1 && page > 1) setPage((current) => current - 1);
+      else await fetchParticipants();
+      await fetchDetails();
+      setAttendanceRefreshKey((current) => current + 1);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not remove player from the event");
+    } finally {
+      setIsRemovingPlayer(false);
+    }
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!event) return;
+    setIsDeletingEvent(true);
+    try {
+      await deleteEvent(event._id);
+      toast.success("Event removed from active events. Its history has been preserved.");
+      navigate("/events");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not delete event");
+    } finally {
+      setIsDeletingEvent(false);
+      setIsDeleteEventOpen(false);
+    }
+  };
+
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
@@ -158,7 +208,7 @@ const EventDetailsComp: React.FC = () => {
   }, [fetchParticipants]);
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
+    return formatDateOnly(date, {
       month: "long",
       day: "numeric",
       year: "numeric",
@@ -256,6 +306,20 @@ const EventDetailsComp: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => navigate(`/edit-event/${event._id}`)}
+              className="px-3 py-1.5 border border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 font-bold text-xs shadow-sm flex items-center gap-1.5"
+            >
+              <Edit2 size={13} /> Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDeleteEventOpen(true)}
+              className="px-3 py-1.5 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300 font-bold text-xs shadow-sm flex items-center gap-1.5"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+            <button
+              type="button"
               onClick={() => setIsRegModalOpen(true)}
               className="px-3 py-1.5 bg-[#1d4ed8] hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all active:scale-95"
             >
@@ -278,15 +342,20 @@ const EventDetailsComp: React.FC = () => {
         {isOverviewExpanded && (
           <div className="border-t border-gray-200 dark:border-gray-800 transition-all duration-300">
             {/* Banner Section if has image */}
-            {event.bannerImage && (
-              <div className="w-full relative overflow-hidden bg-gray-950 max-h-56 flex items-center justify-center">
+            <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
+              {event.bannerImage ? (
                 <img
-                  src={`${import.meta.env.VITE_API_BASE_URL}/${event.bannerImage}`}
-                  alt={event.title}
-                  className="w-full h-auto max-h-56 object-cover"
+                  src={getMediaUrl(event.bannerImage)}
+                  alt={`${event.title} banner`}
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaUrl(); }}
+                  className="absolute inset-0 h-full w-full object-contain"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-950/35 pointer-events-none">
+                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600">Event image unavailable</span>
+                </div>
+              )}
+            </div>
             
             {/* Info Grid */}
             <div className="p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 bg-gray-50/50 dark:bg-gray-800/20">
@@ -381,7 +450,15 @@ const EventDetailsComp: React.FC = () => {
         </div>
 
         {activeTab === "attendance" && (
-          <HolidayCampAttendanceDashboard key={`${event._id}_${attendanceRefreshKey}`} eventId={event._id} />
+          <HolidayCampAttendanceDashboard
+            key={`${event._id}_${attendanceRefreshKey}`}
+            eventId={event._id}
+            onRosterChange={() => {
+              void fetchDetails();
+              void fetchParticipants();
+              setAttendanceRefreshKey((current) => current + 1);
+            }}
+          />
         )}
 
         {activeTab === "roster" && (
@@ -442,17 +519,18 @@ const EventDetailsComp: React.FC = () => {
                 <TableCell isHeader className="px-8">Affiliation</TableCell>
                 <TableCell isHeader className="px-8">Skill metrics</TableCell>
                 <TableCell isHeader className="px-8 text-center">Registration Status</TableCell>
+                <TableCell isHeader className="px-4 text-right">Actions</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody>
               {participantsLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-20 text-center">
+                  <TableCell colSpan={5} className="py-20 text-center">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent" />
                   </TableCell>
                 </TableRow>
-              ) : participants.length > 0 ? (
-                participants.map((p) => (
+              ) : orderedParticipants.length > 0 ? (
+                orderedParticipants.map((p) => (
                   <TableRow
                     key={p._id}
                     onClick={() => markItemAsRead("eventRegistrations", p._id)}
@@ -462,7 +540,8 @@ const EventDetailsComp: React.FC = () => {
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <img
-                            src={p.user.profile ? `${import.meta.env.VITE_API_BASE_URL}/${p.user.profile}` : "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
+                            src={getMediaUrl(p.user.profile, getMediaFallback(p.user.fullName || "Player"))}
+                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(p.user.fullName || "Player"); }}
                             className="h-12 w-12 rounded-none object-cover ring-2 ring-gray-100 dark:ring-gray-800 group-hover:ring-brand-500/30 transition-all shadow-sm"
                             alt={p.user.fullName}
                           />
@@ -508,14 +587,24 @@ const EventDetailsComp: React.FC = () => {
                         <Badge variant="light" color={p.status === "REGISTERED" ? "success" : "warning"} className=" font-bold text-[9px] tracking-[0.2em] px-5 py-2 rounded-full ring-1 ring-inset ring-current/20">
                           {p.status}
                         </Badge>
-                        <span className="text-[8px] font-bold text-gray-400  mt-2">Registered: {new Date(p.createdAt).toLocaleDateString()}</span>
+                        <span className="text-[8px] font-bold text-gray-400  mt-2">Registered: {formatDateTime(p.createdAt, { dateStyle: "medium" })}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={(click) => { click.stopPropagation(); setRegistrationToRemove(p); }}
+                        className="inline-flex items-center gap-1.5 rounded border border-red-200 px-2.5 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                        aria-label={`Remove ${p.user?.fullName || "player"} from this event`}
+                      >
+                        <Trash2 size={12} /> Remove
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-20 text-center">
+                  <TableCell colSpan={5} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center opacity-40">
                       <Users size={40} className="text-gray-200 mb-3" />
                       <p className="text-[10px] font-bold tracking-[0.3em] text-gray-400 ">No registrations for this event yet.</p>
@@ -566,6 +655,23 @@ const EventDetailsComp: React.FC = () => {
           }}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={Boolean(registrationToRemove)}
+        onClose={() => setRegistrationToRemove(null)}
+        onConfirm={confirmRemovePlayer}
+        loading={isRemovingPlayer}
+        title="Remove player from event?"
+        message={`This will cancel ${registrationToRemove?.user?.fullName || "this player's"} active registration and free their booked places. Attendance and invoice history will be retained; paid amounts are not refunded automatically.`}
+      />
+      <ConfirmDeleteModal
+        isOpen={isDeleteEventOpen}
+        onClose={() => setIsDeleteEventOpen(false)}
+        onConfirm={confirmDeleteEvent}
+        loading={isDeletingEvent}
+        title="Delete event?"
+        message="The event will be removed from active event lists. Active registrations will be cancelled. Attendance, paid invoices, and chat history will be kept for records."
+      />
     </div>
   );
 };

@@ -1,11 +1,17 @@
 import { ClassSchedule } from "../../types/academy";
 import { getPlayerStatusTextClass, StatusIcon } from "../common/StatusColorCode";
+import { formatDateOnly } from "../../utils/dateTime";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface AttendanceTableProps {
   schedule: ClassSchedule;
 }
 
 export default function AttendanceTable({ schedule }: AttendanceTableProps) {
+  const orderedPlayers = sortPlayersByPaymentStatus(
+    schedule.players,
+    (player: any) => player.paymentStatus || player.status
+  );
   // Date labels
   const dates = [
     { num: 1, day: "Mon", date: "20/04" },
@@ -146,7 +152,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
             </tr>
           </thead>
           <tbody>
-            {schedule.players.map((row, idx) => (
+            {orderedPlayers.map((row, idx) => (
               <tr key={row.id} className="border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/40 dark:hover:bg-slate-800/10">
                 <td className="py-2 px-1.5 text-center font-bold text-slate-400 text-xs">
                   {idx + 1}
@@ -180,14 +186,7 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
                   </div>
                 </td>
                 <td className="py-2 px-3 font-semibold text-slate-500">
-                  {row.dob ? (() => {
-                    const d = new Date(row.dob);
-                    if (isNaN(d.getTime())) return row.dob;
-                    const day = String(d.getDate()).padStart(2, "0");
-                    const month = String(d.getMonth() + 1).padStart(2, "0");
-                    const year = d.getFullYear();
-                    return `${day}/${month}/${year}`;
-                  })() : "-"}
+                  {row.dob ? formatDateOnly(row.dob, { day: "2-digit", month: "2-digit", year: "numeric" }) || row.dob : "-"}
                 </td>
                 <td className="py-2 px-3 text-center">
                   <span className={row.medicalConditions && row.medicalConditions !== "None" && row.medicalConditions !== "No" ? "text-rose-600 font-bold text-xs" : "text-slate-500 font-semibold"}>

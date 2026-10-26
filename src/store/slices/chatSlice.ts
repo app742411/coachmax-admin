@@ -23,16 +23,56 @@ export interface RoomMember {
     email?: string;
     profileImage?: string;
   };
-  refModel: "Parent" | "Admin";
+  refModel?: "Parent" | "Admin";
+  model?: "Parent" | "Admin";
+  role?: string;
 }
 
 export interface ChatRoom {
   _id: string;
   type: "DIRECT" | "GROUP" | "BROADCAST";
   name?: string;
+  /** Optional scope metadata returned by enriched chat-room endpoints. */
+  scopeType?: "DIRECT" | "CLASS" | "TEAM" | "EVENT_DAY" | string;
+  scopeLabel?: string;
+  scope?: string;
+  audience?: string;
+  audienceType?: "DIRECT" | "PARENTS" | "STAFF" | "TEAM";
+  recipientCount?: number;
+  entityStatus?: string;
+  classId?: string | { _id?: string; name?: string };
+  termId?: string | { _id?: string; name?: string; year?: number | string; status?: string };
+  programId?: string | { _id?: string; name?: string; ageGroup?: string };
+  leagueId?: string | { _id?: string; name?: string; season?: string };
+  teamId?: string | { _id?: string; name?: string; teamName?: string };
+  eventId?: string | { _id?: string; title?: string; name?: string };
+  eventSessionDate?: string;
+  campSessionId?: string;
+  eventSessionType?: string;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+  coach?: { _id?: string; name?: string; fullName?: string; profileImage?: string };
+  context?: {
+    className?: string;
+    teamName?: string;
+    leagueName?: string;
+    eventTitle?: string;
+    programName?: string;
+    categoryName?: string;
+    termName?: string;
+    dayOfWeek?: string;
+    startTime?: string;
+    endTime?: string;
+    parentCount?: number;
+    playerCount?: number;
+  };
+  subtitle?: string;
+  participantCount?: number;
+  onlineCount?: number;
+  isActive?: boolean;
   lastMessage?: {
     text?: string;
     createdAt?: string;
+    timestamp?: string;
     attachments?: any[];
   };
   members?: RoomMember[];

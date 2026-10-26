@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useTerms, Term } from "./useTerms";
+import { todayDateOnly, toDateOnly } from "../utils/dateTime";
 
 export interface FindTermOptions {
   isEvent?: boolean;
@@ -13,7 +14,12 @@ export interface FindTermOptions {
  */
 export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term | null {
   if (!terms || terms.length === 0) return null;
-  const now = new Date();
+  const today = todayDateOnly();
+  const dateKey = (value?: string) => {
+    if (!value) return "";
+    const dmy = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return dmy ? `${dmy[3]}-${dmy[2]}-${dmy[1]}` : toDateOnly(value);
+  };
 
   const filteredTerms = options?.isEvent !== undefined
     ? terms.filter((t) => !!t.isEvent === options.isEvent)
@@ -24,9 +30,9 @@ export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term 
   // 1. Date Range Match (Today is between startDate and endDate)
   const dateMatch = filteredTerms.find((t) => {
     if (!t.startDate || !t.endDate) return false;
-    const start = new Date(t.startDate);
-    const end = new Date(t.endDate);
-    return now >= start && now <= end;
+    const start = dateKey(t.startDate);
+    const end = dateKey(t.endDate);
+    return Boolean(start && end) && today >= start && today <= end;
   });
   if (dateMatch) return dateMatch;
 
@@ -34,13 +40,11 @@ export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term 
   const upcomingTerms = filteredTerms
     .filter((t) => {
       if (!t.startDate) return false;
-      const start = new Date(t.startDate);
-      return start > now;
+      const start = dateKey(t.startDate);
+      return Boolean(start) && start > today;
     })
     .sort((a, b) => {
-      const startA = new Date(a.startDate!).getTime();
-      const startB = new Date(b.startDate!).getTime();
-      return startA - startB; // Closest upcoming first
+      return dateKey(a.startDate).localeCompare(dateKey(b.startDate)); // Closest upcoming first
     });
 
   if (upcomingTerms.length > 0) {
@@ -51,9 +55,7 @@ export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term 
   const sortedByDate = filteredTerms
     .filter((t) => !!(t.endDate || t.startDate))
     .sort((a, b) => {
-      const dateA = new Date(a.endDate || a.startDate!).getTime();
-      const dateB = new Date(b.endDate || b.startDate!).getTime();
-      return dateA - dateB;
+      return dateKey(a.endDate || a.startDate).localeCompare(dateKey(b.endDate || b.startDate));
     });
 
   if (sortedByDate.length > 0) {
@@ -64,7 +66,7 @@ export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term 
 }
 
 export function getCurrentDateFormatted(): string {
-  return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  return todayDateOnly();
 }
 
 export function getCurrentYearNumber(): number {

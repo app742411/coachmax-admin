@@ -11,6 +11,7 @@ import {
   LucideIcon
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 import { createNews } from "../../api/adminApi";
 import SuccessPopup from "../SuccessPopup";
 import HtmlEditor from "../form/HtmlEditor";
@@ -57,11 +58,15 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
     setFormData((prev) => ({ ...prev, featured: val }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "news");
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setImageFile(normalized);
+      setImagePreview(URL.createObjectURL(normalized));
     }
   };
 
@@ -240,7 +245,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
                     >
                       <input
                         type="file"
-                        accept="image/*"
+                        accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                         onChange={handleImageChange}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
@@ -251,7 +256,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
                         Drag & drop banner here
                       </h3>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                        JPG, PNG, WEBP (Max 5MB)
+                        JPG, PNG, WebP, HEIC/HEIF (max 5MB)
                       </p>
                       <span className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline">
                         Browse Local Files

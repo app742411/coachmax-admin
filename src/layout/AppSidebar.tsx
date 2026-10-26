@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { ChevronDownIcon, HorizontaLDots } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import { Trophy, Shield, ClipboardList, Copy } from "lucide-react";
+import {
+  Activity, CalendarDays, ClipboardList, Copy, CreditCard, LayoutDashboard,
+  MessageCircle, Newspaper, Settings2, Shield, ShoppingBag, Tag, Trophy, UserRound,
+  Users, UsersRound,
+} from "lucide-react";
 import { useCategories } from "../hooks/useCategories";
 import { useSidebarBadges } from "../hooks/useSidebarBadges";
 
@@ -35,8 +39,9 @@ const DEFAULT_PROGRAM_SUBITEMS: NavSubItem[] = [
 ];
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     sectionKey: string;
@@ -84,37 +89,7 @@ const AppSidebar: React.FC = () => {
     [location.pathname]
   );
 
-  // SVG Icons built inline to match the screenshot branding and ensure compatibility
-  const GridIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-    </svg>
-  );
-
-  const UserIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
-
-  const CalendarIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  );
-
-  const ChatIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-    </svg>
-  );
-
-  const SettingsIcon = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  );
+  const navIcon = (Icon: typeof LayoutDashboard) => <Icon size={19} strokeWidth={1.8} />;
 
   const coachMenuSections: MenuSection[] = useMemo(() => [
     {
@@ -123,12 +98,12 @@ const AppSidebar: React.FC = () => {
       items: [
         {
           name: "Dashboard",
-          icon: <GridIcon />,
+          icon: navIcon(LayoutDashboard),
           path: "/",
         },
         {
           name: "My Players",
-          icon: <UserIcon />,
+          icon: navIcon(Users),
           badgeCount: badges.temporaryPlayers || 0,
           subItems: [
             { name: "Player List", path: "/my-players" },
@@ -143,17 +118,17 @@ const AppSidebar: React.FC = () => {
         },
         {
           name: "Classes",
-          icon: <CalendarIcon />,
+          icon: navIcon(Activity),
           path: "/schedule",
         },
         {
           name: "Programs",
-          icon: <CalendarIcon />,
+          icon: navIcon(CalendarDays),
           subItems: programsSubItems,
         },
         {
           name: "Communication",
-          icon: <ChatIcon />,
+          icon: navIcon(MessageCircle),
           subItems: [
             { name: "Direct & Group Chat", path: "/messages" },
             { name: "Class Broadcast Announcements", path: "/announcements" },
@@ -161,7 +136,7 @@ const AppSidebar: React.FC = () => {
         },
         {
           name: "News",
-          icon: <GridIcon />,
+          icon: navIcon(Newspaper),
           path: "/news",
         },
       ],
@@ -172,7 +147,7 @@ const AppSidebar: React.FC = () => {
       items: [
         {
           name: "My Profile",
-          icon: <UserIcon />,
+          icon: navIcon(UserRound),
           path: "/profile",
         },
       ],
@@ -184,10 +159,10 @@ const AppSidebar: React.FC = () => {
       title: "Main",
       key: "main",
       items: [
-        { name: "Dashboard", icon: <GridIcon />, path: "/" },
+        { name: "Dashboard", icon: navIcon(LayoutDashboard), path: "/" },
         {
           name: "Players Management",
-          icon: <UserIcon />,
+          icon: navIcon(Users),
           badgeCount: badges.playersManagementTotal || 0,
           subItems: [
             { name: "Players", path: "/players" },
@@ -206,19 +181,17 @@ const AppSidebar: React.FC = () => {
         },
         {
           name: "Programs",
-          icon: <CalendarIcon />,
-          badgeCount: badges.unallocatedPlayers || 0,
+          icon: navIcon(CalendarDays),
           subItems: programsSubItems
         },
         {
           name: "Classes",
-          icon: <CalendarIcon />,
+          icon: navIcon(CalendarDays),
           path: "/programs-2",
-          badgeCount: badges.unallocatedPlayers || 0,
         },
         // {
         //   name: "Classes",
-        //   icon: <CalendarIcon />,
+        //   icon: navIcon(CalendarDays),
         //   path: "/classes"
         // },
       ],
@@ -229,8 +202,7 @@ const AppSidebar: React.FC = () => {
       items: [
         {
           name: "Events",
-          icon: <CalendarIcon />,
-          badgeCount: badges.eventRegistrations || 0,
+          icon: navIcon(CalendarDays),
           subItems: [
             {
               name: "All Events",
@@ -241,26 +213,26 @@ const AppSidebar: React.FC = () => {
           ],
         },
         {
+          name: "Leagues",
+          icon: navIcon(Trophy),
+          path: "/leagues"
+        },
+        {
+          name: "Teams Management",
+          icon: navIcon(Shield),
+          path: "/teams"
+        },
+        {
           name: "Communication",
-          icon: <ChatIcon />,
+          icon: navIcon(MessageCircle),
           subItems: [
             { name: "Direct & Group Chat", path: "/communication" },
             { name: "Class Broadcast Announcements", path: "/announcements" },
           ],
         },
         {
-          name: "Leagues",
-          icon: <Trophy size={18} />,
-          path: "/leagues"
-        },
-        {
-          name: "Teams Management",
-          icon: <Shield size={18} />,
-          path: "/teams"
-        },
-        {
           name: "Finance",
-          icon: <GridIcon />,
+          icon: navIcon(CreditCard),
           badgeCount: badges.financeTotal || 0,
           subItems: [
             { name: "Bank Details", path: "/bank-details" },
@@ -285,8 +257,7 @@ const AppSidebar: React.FC = () => {
       items: [
         {
           name: "Store",
-          icon: <GridIcon />,
-          badgeCount: badges.orders || 0,
+          icon: navIcon(ShoppingBag),
           subItems: [
             { name: "Product List", path: "/products" },
             { name: "Add Product", path: "/add-product" },
@@ -305,7 +276,7 @@ const AppSidebar: React.FC = () => {
       items: [
         {
           name: "News",
-          icon: <GridIcon />,
+          icon: navIcon(Newspaper),
           subItems: [
             { name: "All News", path: "/news" },
             { name: "Add News", path: "/add-content" },
@@ -317,18 +288,18 @@ const AppSidebar: React.FC = () => {
       title: "Management",
       key: "management",
       items: [
-        { name: "Coaching Management", icon: <UserIcon />, path: "/coaching-management" },
-        { name: "Coach Manage", icon: <UserIcon />, path: "/coaches" },
-        { name: "Sponsors", icon: <GridIcon />, path: "/sponsors" },
-        { name: "Audit Logs", icon: <ClipboardList size={18} />, path: "/audit-logs" },
-        { name: "Clone Term", icon: <Copy size={18} />, path: "/clone-term" },
+        { name: "Coaching Management", icon: navIcon(UsersRound), path: "/coaching-management" },
+        { name: "Coach Manage", icon: navIcon(UserRound), path: "/coaches" },
+        { name: "Sponsors", icon: navIcon(Tag), path: "/sponsors" },
+        { name: "Audit Logs", icon: navIcon(ClipboardList), path: "/audit-logs" },
+        { name: "Clone Term", icon: navIcon(Copy), path: "/clone-term" },
       ],
     },
     {
       title: "Settings",
       key: "settings",
       items: [
-        { name: "Settings", icon: <SettingsIcon />, path: "/profile" }
+        { name: "Settings", icon: navIcon(Settings2), path: "/profile" }
       ],
     },
   ], [badges, programsSubItems]);
@@ -394,13 +365,28 @@ const AppSidebar: React.FC = () => {
     <ul className="flex flex-col gap-1">
       {items.map((nav, index) => {
         const hasBadge = (nav.badgeCount || 0) > 0;
-        const isCollapsedMode = !isExpanded && !isHovered && !isMobileOpen;
+        const isCollapsedMode = !isExpanded && !isMobileOpen;
 
         return (
-          <li key={nav.name}>
+          <li key={nav.name} className="group/nav relative">
             {nav.subItems ? (
               <button
-                onClick={() => handleSubmenuToggle(sectionKey, index)}
+                onClick={() => {
+                  if (!isCollapsedMode) {
+                    handleSubmenuToggle(sectionKey, index);
+                    return;
+                  }
+
+                  const isAlreadyOpen = openSubmenu?.sectionKey === sectionKey && openSubmenu.index === index;
+                  if (isAlreadyOpen) {
+                    setOpenSubmenu(null);
+                    return;
+                  }
+
+                  setOpenSubmenu({ sectionKey, index });
+                  const firstDestination = nav.subItems?.find((item) => item.path)?.path;
+                  if (firstDestination) navigate(firstDestination);
+                }}
                 className={`menu-item group ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
                   ? "menu-item-active"
                   : "menu-item-inactive"
@@ -408,6 +394,7 @@ const AppSidebar: React.FC = () => {
                     ? "lg:justify-center"
                     : "lg:justify-start"
                   } relative`}
+                aria-label={isCollapsedMode ? nav.name : undefined}
               >
                 <span
                   className={`menu-item-icon-size relative ${openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
@@ -427,8 +414,8 @@ const AppSidebar: React.FC = () => {
                 </span>
 
                 {!isCollapsedMode && hasBadge && (
-                  <span className="ml-auto mr-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold bg-rose-600 text-white shadow-sm ring-1 ring-rose-400/30 animate-pulse">
-                    ({nav.badgeCount! > 99 ? "99+" : nav.badgeCount})
+                    <span className="ml-auto mr-1.5 inline-flex items-center justify-center min-w-[22px] h-[21px] px-1.5 rounded-full text-[10px] font-bold tabular-nums bg-rose-500/15 text-rose-200 ring-1 ring-inset ring-rose-300/20">
+                      {nav.badgeCount! > 99 ? "99+" : nav.badgeCount}
                   </span>
                 )}
 
@@ -444,6 +431,7 @@ const AppSidebar: React.FC = () => {
               nav.path && (
                 <Link
                   to={nav.path}
+                  aria-label={isCollapsedMode ? nav.name : undefined}
                   className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                     } ${isCollapsedMode ? "lg:justify-center" : "lg:justify-start"} relative`}
                 >
@@ -463,9 +451,14 @@ const AppSidebar: React.FC = () => {
                   <span className={`menu-item-text ${!isCollapsedMode ? "block" : "hidden"}`}>
                     {nav.name}
                   </span>
+                  {isCollapsedMode && (
+                    <span className="pointer-events-none absolute left-full top-1/2 z-[60] hidden -translate-y-1/2 whitespace-nowrap rounded-r-md border border-white/10 bg-[#061b51] px-3 py-2 text-xs font-semibold text-white shadow-xl group-hover/nav:block">
+                      {nav.name}
+                    </span>
+                  )}
                   {!isCollapsedMode && hasBadge && (
-                    <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold bg-rose-600 text-white shadow-sm ring-1 ring-rose-400/30">
-                      ({nav.badgeCount! > 99 ? "99+" : nav.badgeCount})
+                    <span className="ml-auto inline-flex items-center justify-center min-w-[22px] h-[21px] px-1.5 rounded-full text-[10px] font-bold tabular-nums bg-rose-500/15 text-rose-200 ring-1 ring-inset ring-rose-300/20">
+                      {nav.badgeCount! > 99 ? "99+" : nav.badgeCount}
                     </span>
                   )}
                 </Link>
@@ -473,19 +466,30 @@ const AppSidebar: React.FC = () => {
             )}
             {nav.subItems && (
               <div
-                className={`overflow-hidden transition-all duration-300 ${!isCollapsedMode ? "block" : "hidden"}`}
+                className={`${isCollapsedMode
+                  ? openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
+                    ? "absolute left-full top-0 z-[60] block w-56 rounded-r-lg border border-white/10 bg-[#061b51] p-2 shadow-xl group-hover/nav:block"
+                    : "absolute left-full top-0 z-[60] hidden w-56 rounded-r-lg border border-white/10 bg-[#061b51] p-2 shadow-xl group-hover/nav:block"
+                  : "block overflow-hidden transition-all duration-300"
+                  }`}
                 style={{
-                  height:
-                    openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
+                  height: isCollapsedMode
+                    ? undefined
+                    : openSubmenu?.sectionKey === sectionKey && openSubmenu?.index === index
                       ? `${subMenuHeight[`${sectionKey}-${index}`]}px`
                       : "0px",
                 }}
               >
+                {isCollapsedMode && (
+                  <div className="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                    {nav.name}
+                  </div>
+                )}
                 <ul
                   ref={(el) => {
                     subMenuRefs.current[`${sectionKey}-${index}`] = el;
                   }}
-                  className="pt-1 space-y-1 ml-9 pb-1"
+                  className={isCollapsedMode ? "space-y-1" : "pt-1 space-y-1 ml-9 pb-1"}
                 >
                   {nav.subItems.map((subItem) => {
                     const subBadge = (subItem.badgeCount || 0) > 0;
@@ -501,13 +505,13 @@ const AppSidebar: React.FC = () => {
                           <span className="truncate">{subItem.name}</span>
                           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                             {subItem.isEvent && (
-                              <span className="px-1 py-px text-[7px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-none select-none">
+                              <span className="px-1 py-px text-[7px] font-black uppercase bg-amber-500/10 text-amber-300 border border-amber-500/20 rounded select-none">
                                 Holiday
                               </span>
                             )}
                             {subBadge && (
-                              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-extrabold bg-rose-600 text-white shadow-sm ring-1 ring-rose-500/30">
-                                ({subItem.badgeCount! > 99 ? "99+" : subItem.badgeCount})
+                              <span className="inline-flex items-center justify-center min-w-[22px] h-[21px] px-1.5 rounded-full text-[10px] font-bold tabular-nums bg-rose-500/15 text-rose-200 ring-1 ring-inset ring-rose-300/20">
+                                {subItem.badgeCount! > 99 ? "99+" : subItem.badgeCount}
                               </span>
                             )}
                           </div>
@@ -529,40 +533,36 @@ const AppSidebar: React.FC = () => {
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-4 2xl:px-5 left-0 bg-[#031549] text-gray-300 h-screen transition-all duration-300 ease-in-out z-50 border-r border-[#082269] 
         ${isExpanded || isMobileOpen
           ? "w-[240px] 2xl:w-[290px]"
-          : isHovered
-            ? "w-[240px] 2xl:w-[290px]"
-            : "w-[80px] xl:w-[90px]"
+          : "w-[80px] xl:w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="py-6 flex justify-center w-full">
+      <div className="py-5 flex justify-center w-full">
         <Link to="/">
-          <span className={isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}>
+          <span className={isExpanded || isMobileOpen ? "block" : "hidden"}>
             <img src="/images/logo/newlogo.png" alt="CoachMax" className="h-12 object-contain" />
           </span>
-          <span className={!isExpanded && !isHovered && !isMobileOpen ? "block" : "hidden"}>
+          <span className={!isExpanded && !isMobileOpen ? "block" : "hidden"}>
             <span className="text-white font-bold text-xl">C</span>
           </span>
         </Link>
       </div>
       <div className="flex flex-col flex-1 overflow-y-auto duration-300 ease-linear no-scrollbar pb-6">
         <nav className="mb-6">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {menuSections.map((section) => (
               <div key={section.key}>
                 <h2
-                  className={`mb-1.5 text-[10px] tracking-wider uppercase font-semibold text-slate-400/70 flex leading-[20px] ${!isExpanded && !isHovered
+                  className={`mb-1.5 px-3 text-[9px] tracking-[0.16em] uppercase font-bold text-slate-500 flex leading-[20px] ${!isExpanded
                     ? "lg:justify-center"
                     : "justify-start"
                     }`}
                 >
-                  <span className={isExpanded || isHovered || isMobileOpen ? "block" : "hidden"}>
+                  <span className={isExpanded || isMobileOpen ? "block" : "hidden"}>
                     {section.title}
                   </span>
-                  <span className={!isExpanded && !isHovered && !isMobileOpen ? "block" : "hidden"}>
+                  <span className={!isExpanded && !isMobileOpen ? "block" : "hidden"}>
                     <HorizontaLDots className="size-6" />
                   </span>
                 </h2>

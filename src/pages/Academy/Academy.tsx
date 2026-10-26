@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import PageMeta from "../../components/common/PageMeta";
 import AcademyHeader from "../../components/academy/AcademyHeader";
@@ -15,7 +16,9 @@ import AddClassModal from "../../components/classes/AddClassModal";
 import PlayersListModal from "../../components/academy/PlayersListModal";
 import TermManagement from "../../components/management/TermManagement";
 import { Modal } from "../../components/ui/modal";
+import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
+import apiClient from "../../api/apiClient";
 
 interface AcademyProps {
   programType?: string;
@@ -40,6 +43,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   const [expandedClassIds, setExpandedClassIds] = useState<Record<string, boolean>>({});
   const [targetHighlightClassId, setTargetHighlightClassId] = useState<string | null>(null);
   const assignClassesMutation = useAssignClassesToPlayer();
+  const queryClient = useQueryClient();
 
   // Smart 3-tier redirection handler when admin clicks "Go to Request" on an unallocated player card
   const handleNavigateToRequestedTarget = (player: any) => {
@@ -130,10 +134,73 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   };
 
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [classToEdit, setClassToEdit] = useState<any | null>(null);
+  const [classToDuplicate, setClassToDuplicate] = useState<any | null>(null);
+  const [deleteClassId, setDeleteClassId] = useState<string | null>(null);
+  const [isDeletingClass, setIsDeletingClass] = useState(false);
   const [isTermModalOpen, setIsTermModalOpen] = useState(false);
 
   const { data: filtersData } = useClassFiltersWithTimeSlots(categoryId, programId, activeDay.toUpperCase(), termId);
   const timeSlots = filtersData?.timeSlots || [];
+
+  // The header selects category, program, and term asynchronously on a fresh page load.
+  // Refetch once those values are ready so the initial day is populated without
+  // requiring the user to switch tabs first.
+  useEffect(() => {
+    if (!categoryId || !programId || !termId) return;
+    void queryClient.refetchQueries({
+      queryKey: ["classFiltersWithTimeSlots", categoryId, programId, activeDay.toUpperCase(), termId],
+      type: "active",
+    });
+  }, [categoryId, programId, termId, activeDay, queryClient]);
+
+  const handleEditClass = async (classId: string) => {
+    try {
+      const response = await apiClient.get(`/api/admin/getClassById/${classId}`);
+      const classData = response.data?.data;
+      if (!classData) throw new Error("Class not found");
+      setClassToDuplicate(null);
+      setClassToEdit(classData);
+      setIsClassModalOpen(true);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to load class details");
+    }
+  };
+
+  const handleDuplicateClass = async (classId: string) => {
+    try {
+      const response = await apiClient.get(`/api/admin/getClassById/${classId}`);
+      const classData = response.data?.data;
+      if (!classData) throw new Error("Class not found");
+      setClassToEdit(null);
+      setClassToDuplicate(classData);
+      setIsClassModalOpen(true);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to load class for duplication");
+    }
+  };
+
+  const confirmDeleteClass = async () => {
+    if (!deleteClassId) return;
+    try {
+      setIsDeletingClass(true);
+      await apiClient.delete(`/api/admin/deleteClass/${deleteClassId}`);
+      toast.success("Class deleted successfully");
+      setDeleteClassId(null);
+      setExpandedClassIds((current) => {
+        const next = { ...current };
+        delete next[deleteClassId];
+        return next;
+      });
+      await queryClient.invalidateQueries({ queryKey: ["classFiltersWithTimeSlots"] });
+      await queryClient.invalidateQueries({ queryKey: ["classFullTable", deleteClassId] });
+      await queryClient.invalidateQueries({ queryKey: ["classesForAssign"] });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete class");
+    } finally {
+      setIsDeletingClass(false);
+    }
+  };
 
   const hasInitializedFromState = useRef(false);
 
@@ -299,7 +366,11 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         }}
         onYearChange={(year) => { setYear(year); }}
         onTermChange={setTermId}
-        onOpenCreateClass={() => setIsClassModalOpen(true)}
+        onOpenCreateClass={() => {
+          setClassToEdit(null);
+          setClassToDuplicate(null);
+          setIsClassModalOpen(true);
+        }}
         onOpenTermSettings={() => setIsTermModalOpen(true)}
         showSidebar={showSidebar}
         onShowSidebarChange={setShowSidebar}
@@ -335,6 +406,9 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                         [slot.classId]: !prev[slot.classId],
                       }))
                     }
+                    onEditClass={handleEditClass}
+                    onDuplicateClass={handleDuplicateClass}
+                    onDeleteClass={(classId) => setDeleteClassId(classId)}
                   />
                 );
               })}
@@ -407,12 +481,30 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
       <AddClassModal
         isOpen={isClassModalOpen}
-        onClose={() => setIsClassModalOpen(false)}
-        onSuccess={() => { /* re-fetch could be handled via query invalidation if needed */ }}
+        classToEdit={classToEdit}
+        duplicateFromClass={classToDuplicate}
+        onClose={() => {
+          setIsClassModalOpen(false);
+          setClassToEdit(null);
+          setClassToDuplicate(null);
+        }}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["classFiltersWithTimeSlots"] });
+          queryClient.invalidateQueries({ queryKey: ["classesForAssign"] });
+        }}
         prefilledCategoryId={categoryId}
         prefilledProgramId={programId}
         prefilledDayOfWeek={activeDay.toUpperCase()}
         prefilledTermId={termId}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteClassId}
+        onClose={() => setDeleteClassId(null)}
+        onConfirm={confirmDeleteClass}
+        loading={isDeletingClass}
+        title="Delete Class"
+        message="Are you sure you want to delete this class? All attendance and class chat data will be removed."
       />
 
       <Modal

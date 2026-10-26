@@ -1,5 +1,6 @@
 import React from "react";
 import { Message } from "../../store/slices/chatSlice";
+import { getMediaFallback, getMediaUrl } from "../../utils/media";
 
 interface MessageBubbleProps {
   message: Message;
@@ -10,18 +11,7 @@ interface MessageBubbleProps {
 
 const getAttachmentUrl = (url: string) => {
   if (!url) return "";
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("blob:") ||
-    url.startsWith("data:")
-  ) {
-    return url;
-  }
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  const cleanBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-  const cleanPath = url.startsWith("/") ? url : `/${url}`;
-  return `${cleanBase}${cleanPath}`;
+  return getMediaUrl(url);
 };
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -34,6 +24,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     hour: "2-digit",
     minute: "2-digit",
   });
+  const sender = typeof message.sender?.user === "string" ? undefined : message.sender?.user;
+  const senderAvatar = sender?.profileImage
+    ? getMediaUrl(sender.profileImage, getMediaFallback(senderName))
+    : getMediaFallback(senderName);
 
   const renderTicks = () => {
     if (!isSelf) return null;
@@ -58,9 +52,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       }`}
     >
       {!isSelf && (
-        <span className="text-[11px] font-semibold text-amber-500 mb-1 px-1">
-          {senderName}
-        </span>
+        <div className="flex items-center gap-1.5 mb-1 px-1">
+          <img
+            src={senderAvatar}
+            alt={`${senderName} avatar`}
+            className="w-5 h-5 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+            onError={(event) => { event.currentTarget.src = getMediaFallback(senderName); }}
+          />
+          <span className="text-[11px] font-semibold text-amber-500">{senderName}</span>
+        </div>
       )}
 
       <div

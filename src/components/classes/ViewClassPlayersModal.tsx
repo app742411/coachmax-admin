@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Modal } from "../../components/ui/modal";
 import { useClassPlayers } from "../../hooks/usePlayers";
 import PlayerDetailCard from "../players/PlayerDetailCard";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface ViewClassPlayersModalProps {
   isOpen: boolean;
@@ -18,7 +20,10 @@ export default function ViewClassPlayersModal({
   const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
   const classData = data?.class || data?.data;
-  const players = data?.players || data?.data?.players || [];
+  const players = sortPlayersByPaymentStatus(
+    data?.players || data?.data?.players || [],
+    (player: any) => player.paymentStatus || player.status
+  );
   const totalPlayers = data?.totalPlayers !== undefined ? data.totalPlayers : (data?.data?.totalPlayers !== undefined ? data.data.totalPlayers : players.length);
 
   return (
@@ -167,7 +172,12 @@ export default function ViewClassPlayersModal({
                           <div className="flex items-center gap-3.5 text-left">
                             <div className="w-10 h-10 shrink-0 bg-[#0A1930] dark:bg-slate-700 text-white rounded-none flex items-center justify-center text-xs font-bold shadow-sm overflow-hidden">
                               {playerPhoto ? (
-                                <img src={playerPhoto} alt={playerName} className="w-full h-full object-cover" />
+                                <img
+                                  src={getMediaUrl(playerPhoto, getMediaFallback(playerName))}
+                                  alt={playerName}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(playerName); }}
+                                />
                               ) : player.jerseyNumber ? (
                                 <span>#{player.jerseyNumber}</span>
                               ) : (

@@ -5,6 +5,7 @@ import { addTemporaryPlayersToTeam } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserPlus, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 
 interface AddTemporaryPlayersModalProps {
   isOpen: boolean;
@@ -88,19 +89,23 @@ const AddTemporaryPlayersModal: React.FC<AddTemporaryPlayersModalProps> = ({
     );
   };
 
-  const handleImageChange = (id: string, file: File | null) => {
+  const handleImageChange = async (id: string, file: File | null) => {
     if (!file) return;
+    let normalized: File;
+    try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); return; }
+    const validationError = await validateUploadFile(normalized, "profile");
+    if (validationError) { toast.error(validationError); return; }
     const reader = new FileReader();
     reader.onloadend = () => {
       setPlayers((prev) =>
         prev.map((p) =>
           p.id === id
-            ? { ...p, profileImageFile: file, profileImagePreview: reader.result as string }
+            ? { ...p, profileImageFile: normalized, profileImagePreview: reader.result as string }
             : p
         )
       );
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(normalized);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -215,7 +220,7 @@ const AddTemporaryPlayersModal: React.FC<AddTemporaryPlayersModalProps> = ({
                     )}
                     <input
                       type="file"
-                      accept="image/*"
+                      accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                       className="hidden"
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {

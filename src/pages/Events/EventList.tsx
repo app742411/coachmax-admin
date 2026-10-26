@@ -1,8 +1,9 @@
 // src/pages/Events/EventList.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { getAllEvents, updateEvent, deleteEvent } from "../../api/eventApi";
+import { getMediaUrl } from "../../utils/media";
 import { Link, useNavigate } from "react-router";
 import {
     MapPin,
@@ -14,12 +15,17 @@ import {
     Clock3,
     Edit,
     Image as ImageIcon,
-    Trash2
+    Trash2,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Dropdown } from "../../components/ui/dropdown/Dropdown";
 import { DropdownItem } from "../../components/ui/dropdown/DropdownItem";
 import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
+import { formatDateOnly, todayDateOnly, toDateOnly } from "../../utils/dateTime";
+
+const PAGE_SIZE = 8;
 
 interface Event {
     _id: string;
@@ -72,12 +78,47 @@ export default function EventList() {
     const [openStatusMenuId, setOpenStatusMenuId] = useState<string | null>(null);
     const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [page, setPage] = useState(1);
+
+    const today = todayDateOnly();
+    const orderedEvents = useMemo(() => events
+        .map((event) => {
+            const startDate = toDateOnly(event.startDate);
+            const endDate = toDateOnly(event.endDate);
+            const status = endDate && endDate < today
+                ? "COMPLETED"
+                : event.status === "UPCOMING" && startDate && startDate <= today
+                    ? "ONGOING"
+                    : event.status;
+            return { ...event, status };
+        })
+        .sort((a, b) => {
+            const aCompleted = a.status === "COMPLETED";
+            const bCompleted = b.status === "COMPLETED";
+            if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+
+            if (!aCompleted) {
+                const dateCompare = toDateOnly(a.startDate).localeCompare(toDateOnly(b.startDate));
+                if (dateCompare) return dateCompare;
+            } else {
+                const dateCompare = toDateOnly(b.endDate).localeCompare(toDateOnly(a.endDate));
+                if (dateCompare) return dateCompare;
+            }
+            return a.title.localeCompare(b.title);
+        }), [events, today]);
+    const totalPages = Math.max(1, Math.ceil(orderedEvents.length / PAGE_SIZE));
+    const visibleEvents = orderedEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+    useEffect(() => {
+        if (page > totalPages) setPage(totalPages);
+    }, [page, totalPages]);
 
     const fetchEvents = async () => {
         try {
             const data = await getAllEvents();
             if (data.success) {
                 setEvents(data.data);
+                setPage(1);
             }
         } catch (err) {
             console.error("Error fetching events:", err);
@@ -113,7 +154,7 @@ export default function EventList() {
         setIsDeleting(true);
         try {
             await deleteEvent(deleteModalId);
-            toast.success("Event deleted successfully");
+            toast.success("Event removed from active events. Its history has been preserved.");
             setEvents(prev => prev.filter(ev => ev._id !== deleteModalId));
         } catch (err) {
             console.error("Error deleting event:", err);
@@ -125,7 +166,7 @@ export default function EventList() {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
+        return formatDateOnly(dateString, {
             month: "short",
             day: "numeric",
             year: "numeric"
@@ -144,9 +185,10 @@ export default function EventList() {
                 <div className="flex justify-center items-center py-40">
                     <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent align-[-0.125em]" />
                 </div>
-            ) : events.length > 0 ? (
+            ) : orderedEvents.length > 0 ? (
+                <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {events.map((event) => {
+                    {visibleEvents.map((event) => {
                         const StatusIcon = statusIcons[event.status];
                         return (
                             <div
@@ -159,8 +201,9 @@ export default function EventList() {
 
                                     {event.bannerImage ? (
                                         <img
-                                            src={`${import.meta.env.VITE_API_BASE_URL}/${event.bannerImage}`}
+                                            src={getMediaUrl(event.bannerImage)}
                                             alt={event.title}
+                                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaUrl(); }}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                         />
                                     ) : (
@@ -328,6 +371,33 @@ export default function EventList() {
                         );
                     })}
                 </div>
+                {totalPages > 1 && (
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, orderedEvents.length)} of {orderedEvents.length} events
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                disabled={page === 1}
+                                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                                className="inline-flex items-center gap-1 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-brand-500 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
+                            >
+                                <ChevronLeft size={14} /> Previous
+                            </button>
+                            <span className="px-2 text-xs font-bold text-gray-700 dark:text-gray-200">Page {page} of {totalPages}</span>
+                            <button
+                                type="button"
+                                disabled={page === totalPages}
+                                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                                className="inline-flex items-center gap-1 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-brand-500 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
+                            >
+                                Next <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+                </>
             ) : (
                 <div className="flex flex-col items-center justify-center py-40 bg-white dark:bg-gray-900 rounded-[3rem] border border-dashed border-gray-200 dark:border-gray-800">
                     <AlertCircle size={48} className="text-gray-100 mb-4" />
@@ -341,7 +411,7 @@ export default function EventList() {
                 onConfirm={confirmDelete}
                 loading={isDeleting}
                 title="Delete Event"
-                message="Are you sure you want to delete this event? This action cannot be undone."
+                message="The event will be removed from active event lists. Active registrations will be cancelled. Attendance, paid invoices, and chat history will be kept for records."
             />
         </>
     );

@@ -16,7 +16,17 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { registerForEvent } from "../../api/eventApi";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 import apiClient from "../../api/apiClient";
+import { addDateOnlyDays, formatDateOnly, toDateOnly } from "../../utils/dateTime";
+
+const WEEKDAY_ORDER = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+const getWeekStartDate = (dateStr: string): string => {
+  const dayIndex = WEEKDAY_ORDER.indexOf(formatDateOnly(dateStr, { weekday: "short" }).slice(0, 3).toLowerCase());
+  const daysFromMonday = dayIndex === 0 ? 6 : Math.max(0, dayIndex - 1);
+  return addDateOnlyDays(dateStr, -daysFromMonday);
+};
 
 export interface CampSessionItem {
   _id: string;
@@ -123,19 +133,17 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
   const [loading, setLoading] = useState(false);
   const [completedRegistration, setCompletedRegistration] = useState<any>(null);
 
-  // Group available sessions by week (matching screenshots)
+  // Group sessions by actual Monday-to-Sunday calendar weeks.
   const groupedByWeek = useMemo(() => {
-    const weeks: { weekLabel: string; dateRangeLabel: string; dates: { dateStr: string; dayLabel: string; dayOfWeek: string; sessions: CampSessionItem[] }[] }[] = [];
     const dateMap = new Map<string, { dateStr: string; dayLabel: string; dayOfWeek: string; sessions: CampSessionItem[] }>();
 
     sessions.forEach((s) => {
-      const d = new Date(s.sessionDate);
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = toDateOnly(s.sessionDate);
       if (!dateMap.has(dateStr)) {
         dateMap.set(dateStr, {
           dateStr,
-          dayLabel: d.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short", year: "numeric" }),
-          dayOfWeek: d.toLocaleDateString("en-US", { weekday: "short" }),
+          dayLabel: formatDateOnly(dateStr, { weekday: "long", day: "numeric", month: "short", year: "numeric" }),
+          dayOfWeek: formatDateOnly(dateStr, { weekday: "short" }),
           sessions: [],
         });
       }
@@ -143,24 +151,24 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
     });
 
     const distinctDates = Array.from(dateMap.values()).sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+    const byWeek = new Map<string, typeof distinctDates>();
+    distinctDates.forEach((date) => {
+      const weekStart = getWeekStartDate(date.dateStr);
+      if (!byWeek.has(weekStart)) byWeek.set(weekStart, []);
+      byWeek.get(weekStart)!.push(date);
+    });
 
-    const chunkSize = 5;
-    for (let i = 0; i < distinctDates.length; i += chunkSize) {
-      const chunk = distinctDates.slice(i, i + chunkSize);
-      const weekNum = Math.floor(i / chunkSize) + 1;
-      const firstDate = new Date(chunk[0].dateStr);
-      const lastDate = new Date(chunk[chunk.length - 1].dateStr);
-
-      const dateRangeLabel = `${firstDate.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })} – ${lastDate.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
-
-      weeks.push({
-        weekLabel: `Week ${weekNum}`,
-        dateRangeLabel,
-        dates: chunk,
+    return Array.from(byWeek.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([, dates], index) => {
+        const firstDate = dates[0].dateStr;
+        const lastDate = dates[dates.length - 1].dateStr;
+        return {
+          weekLabel: `Week ${index + 1}`,
+          dateRangeLabel: `${formatDateOnly(firstDate, { weekday: "short", day: "numeric", month: "short" })} – ${formatDateOnly(lastDate, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`,
+          dates,
+        };
       });
-    }
-
-    return weeks;
   }, [sessions]);
 
   // Selected sessions list & total price
@@ -170,7 +178,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
       const found = sessions.find((s) => s._id === sessId);
       if (found) list.push(found);
     });
-    return list.sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime());
+    return list.sort((a, b) => toDateOnly(a.sessionDate).localeCompare(toDateOnly(b.sessionDate)));
   }, [selectedSessionMap, sessions]);
 
   const totalAmount = useMemo(() => {
@@ -192,17 +200,18 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
   const handleSelectAllInWeek = (dates: { dateStr: string; sessions: CampSessionItem[] }[]) => {
     setSelectedSessionMap((prev) => {
       const next = { ...prev };
-      // If all dates in week already selected, deselect; otherwise select full day (or first session)
-      const allSelected = dates.every((d) => next[d.dateStr]);
+      const selectableDates = dates.filter((d) => d.sessions.some((session) => session.isAvailable));
+      if (selectableDates.length === 0) return next;
+      // If all available dates in week already selected, deselect; otherwise select full day (or first session)
+      const allSelected = selectableDates.every((d) => next[d.dateStr]);
       if (allSelected) {
-        dates.forEach((d) => delete next[d.dateStr]);
+        selectableDates.forEach((d) => delete next[d.dateStr]);
       } else {
-        dates.forEach((d) => {
-          if (d.sessions.length > 0) {
-            const preferred = d.sessions.find((s) => s.sessionType === "FULL_DAY" && s.isAvailable) || d.sessions[0];
-            if (preferred && preferred.isAvailable) {
-              next[d.dateStr] = preferred._id;
-            }
+        selectableDates.forEach((d) => {
+          const preferred = d.sessions.find((s) => s.sessionType === "FULL_DAY" && s.isAvailable)
+            || d.sessions.find((s) => s.isAvailable);
+          if (preferred) {
+            next[d.dateStr] = preferred._id;
           }
         });
       }
@@ -371,7 +380,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
                       onClick={() => handleSelectAllInWeek(week.dates)}
                       className="px-3 py-1 text-xs font-bold text-brand-600 hover:text-brand-700 bg-brand-50 dark:bg-brand-950/40 rounded transition-all"
                     >
-                      Select All
+                      Select All Available
                     </button>
                   </div>
 
@@ -380,22 +389,27 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
                     {week.dates.map((d) => {
                       const fullDaySession = d.sessions.find((s) => s.sessionType === "FULL_DAY");
                       const halfDaySession = d.sessions.find((s) => s.sessionType === "HALF_DAY");
+                      const availableSessions = d.sessions.filter((s) => s.isAvailable);
+                      const isAvailable = availableSessions.length > 0;
                       const isDateSelected = Boolean(selectedSessionMap[d.dateStr]);
 
                       return (
                         <div
                           key={d.dateStr}
-                          className="p-3 bg-gray-50/70 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-brand-500/30 transition-all"
+                          className={`p-3 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isAvailable ? "bg-gray-50/70 dark:bg-gray-800/40 border-gray-200/80 dark:border-gray-700/80 hover:border-brand-500/30" : "bg-slate-200/80 dark:bg-slate-950/70 border-slate-300 dark:border-slate-700 opacity-75"}`}
                         >
                           <div className="flex items-start gap-3">
                             <input
                               type="checkbox"
                               checked={isDateSelected}
+                              disabled={!isAvailable}
                               onChange={() => {
                                 if (isDateSelected) {
                                   handleSelectSession(d.dateStr, selectedSessionMap[d.dateStr]);
                                 } else {
-                                  const pref = fullDaySession || halfDaySession || d.sessions[0];
+                                  const pref = (fullDaySession?.isAvailable ? fullDaySession : undefined)
+                                    || (halfDaySession?.isAvailable ? halfDaySession : undefined)
+                                    || availableSessions[0];
                                   if (pref) handleSelectSession(d.dateStr, pref._id);
                                 }
                               }}
@@ -406,7 +420,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
                                 {d.dayLabel}
                               </span>
                               <span className="text-[10px] text-gray-400">
-                                {d.sessions.filter((s) => s.isAvailable).length} options offered
+                                {isAvailable ? `${availableSessions.length} options offered` : "Unavailable"}
                               </span>
                             </div>
                           </div>
@@ -442,6 +456,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
                                 <span className="text-sm font-extrabold">${fullDaySession.fee}</span>
                               </button>
                             )}
+                            {!isAvailable && <span className="text-[10px] text-slate-500">This day is unavailable.</span>}
                           </div>
                         </div>
                       );
@@ -488,7 +503,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
                     <div key={s._id} className="p-3.5 flex items-center justify-between text-xs">
                       <div>
                         <span className="font-bold text-gray-900 dark:text-white block">
-                          {new Date(s.sessionDate).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })}
+                          {formatDateOnly(s.sessionDate, { weekday: "short", day: "numeric", month: "short" })}
                         </span>
                         <span className="text-gray-500 text-[11px]">
                           {s.startTime} – {s.endTime} ({s.sessionType === "FULL_DAY" ? "Full Day" : "Half Day"})
@@ -568,11 +583,11 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
                 <div className="pt-2 border-t border-blue-100 dark:border-blue-900/40 flex items-center gap-3">
                   {selectedPlayer?.profileImage ? (
                     <img
-                      src={`${import.meta.env.VITE_API_BASE_URL || ""}/${selectedPlayer.profileImage}`}
+                      src={getMediaUrl(selectedPlayer.profileImage, getMediaFallback(selectedPlayer.fullName || "Player"))}
                       alt={selectedPlayer.fullName || "Player"}
                       className="w-10 h-10 rounded-full object-cover border border-blue-200"
                       onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
+                        (e.target as HTMLImageElement).src = getMediaFallback(selectedPlayer.fullName || "Player");
                       }}
                     />
                   ) : (

@@ -19,7 +19,7 @@ export default function SidebarPlayersFilter({
   onSearchChange,
 }: SidebarPlayersFilterProps) {
   const { categories } = useCategories({ isEvent: "all" });
-  const { programs } = useProgramsByCategory("69e0716f5c46873ed2327d0b");
+  const { programs } = useProgramsByCategory(category);
 
   return (
     <div className="bg-white border border-slate-200 dark:border-slate-700 dark:bg-slate-900 p-4 rounded-none shadow-sm mb-5 flex flex-col gap-3">
@@ -30,7 +30,10 @@ export default function SidebarPlayersFilter({
       <div className="grid grid-cols-2 gap-2">
         <select
           value={category}
-          onChange={(e) => onCategoryChange(e.target.value)}
+          onChange={(e) => {
+            onCategoryChange(e.target.value);
+            onProgramChange("");
+          }}
           className="w-full p-2 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none focus:outline-none focus:border-brand-500 dark:text-white"
         >
           <option value="">Select Category</option>
@@ -42,6 +45,7 @@ export default function SidebarPlayersFilter({
         <select
           value={program}
           onChange={(e) => onProgramChange(e.target.value)}
+          disabled={!category}
           className="w-full p-2 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none focus:outline-none focus:border-brand-500 dark:text-white"
         >
           <option value="">Select Program</option>

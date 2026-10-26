@@ -5,6 +5,8 @@ import { updateTemporaryPlayer } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Edit, Image as ImageIcon } from "lucide-react";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { getMediaUrl } from "../../utils/media";
 
 interface EditTemporaryPlayerModalProps {
   isOpen: boolean;
@@ -51,11 +53,7 @@ const EditTemporaryPlayerModal: React.FC<EditTemporaryPlayerModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getImageUrl = (path: string | undefined | null) => {
-    if (!path) return null;
-    if (path.startsWith("http")) return path;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${baseUrl}${cleanPath}`;
+    return getMediaUrl(path) || null;
   };
 
   useEffect(() => {
@@ -77,15 +75,19 @@ const EditTemporaryPlayerModal: React.FC<EditTemporaryPlayerModalProps> = ({
     }
   }, [player]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedFile(file);
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "profile");
+      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
+      setSelectedFile(normalized);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(normalized);
     }
   };
 
@@ -172,7 +174,7 @@ const EditTemporaryPlayerModal: React.FC<EditTemporaryPlayerModalProps> = ({
               )}
               <input
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                 className="hidden"
                 onChange={handleFileChange}
               />

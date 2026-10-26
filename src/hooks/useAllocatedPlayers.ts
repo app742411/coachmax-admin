@@ -1,11 +1,23 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getAllocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
+import { getMediaUrl, getMediaFallback } from "../utils/media";
+import { sortPlayersByPaymentStatus } from "../utils/paymentStatus";
 
 const mapAllocatedToCard = (data: any): UnallocatedPlayer => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-  const avatar = data.profileImage ? `${baseUrl}/${data.profileImage.replace(/^\/+/, "")}` : `https://ui-avatars.com/api/?name=${data.fullName}`;
+  const avatar = getMediaUrl(data.profileImage, getMediaFallback(data.fullName || "Player"));
   const details = `${data.gender || "Unknown"}`;
+  const assignedClasses = Array.isArray(data.assignedClasses)
+    ? data.assignedClasses.map((item: any) => ({
+      _id: item?._id,
+      name: item?.name,
+      dayOfWeek: item?.dayOfWeek,
+      startTime: item?.startTime,
+      endTime: item?.endTime,
+      venue: item?.venue,
+      location: item?.location,
+    }))
+    : [];
 
   const requestedDate = new Date(data.joinedDate || data.createdAt);
   const formattedRequested = `${requestedDate.toLocaleDateString("en-US", { weekday: 'short' })} ${requestedDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' })}`;
@@ -24,6 +36,8 @@ const mapAllocatedToCard = (data: any): UnallocatedPlayer => {
     programId: data.programs && data.programs.length > 0 ? data.programs[0]._id : undefined,
     registrationRequestId: data.registrationRequest?._id || undefined,
     paymentStatus: data.paymentStatus || "TRIAL",
+    assignedClasses,
+    assignedTeams: Array.isArray(data.assignedTeams) ? data.assignedTeams : [],
   };
 };
 
@@ -47,7 +61,10 @@ export const useAllocatedPlayers = (
     queryFn: async () => {
       const response = await getAllocatedPlayers(category, program, search, page, limit);
       if (response) {
-        const players = (response.data || []).map(mapAllocatedToCard);
+        const players = sortPlayersByPaymentStatus<UnallocatedPlayer>(
+          (response.data || []).map(mapAllocatedToCard),
+          (player) => player.paymentStatus
+        );
         const total = response.pagination?.total ?? response.total ?? players.length;
         const totalPages = response.pagination?.totalPages ?? Math.ceil(total / limit);
         const hasMore = response.pagination?.hasMore ?? (page < totalPages);

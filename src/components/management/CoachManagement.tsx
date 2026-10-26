@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import Button from "../ui/button/Button";
@@ -8,9 +9,13 @@ import { toast } from "react-hot-toast";
 import { User, Mail, Phone, Lock, ShieldCheck } from "../../icons/lucide-icons";
 import { Eye, EyeOff, Pencil, X } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 
 const CoachManagement: React.FC = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const profileImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -24,6 +29,8 @@ const CoachManagement: React.FC = () => {
     password: "",
     confirmPassword: "",
   });
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -94,6 +101,8 @@ const CoachManagement: React.FC = () => {
     setFormData({ fullName: "", email: "", phone: "", password: "", confirmPassword: "" });
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
     setIsEditing(false);
     setSelectedCoachId(null);
     setIsModalOpen(true);
@@ -109,9 +118,26 @@ const CoachManagement: React.FC = () => {
     });
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setProfileImageFile(null);
+    setProfileImagePreview(getMediaUrl(coach.profileImage, getMediaFallback(coach.fullName || coach.name || "Coach")));
     setIsEditing(true);
     setSelectedCoachId(coach._id);
     setIsModalOpen(true);
+  };
+
+  const handleProfileImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    let normalized: File;
+    try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+    const validationError = await validateUploadFile(normalized, "profile");
+    if (validationError) {
+      toast.error(validationError);
+      e.target.value = "";
+      return;
+    }
+    setProfileImageFile(normalized);
+    setProfileImagePreview(URL.createObjectURL(normalized));
   };
 
 
@@ -150,29 +176,55 @@ const CoachManagement: React.FC = () => {
       return;
     }
 
-    const payload = {
+    if (profileImageFile) {
+      const payload = new FormData();
+      payload.append("name", formData.fullName);
+      payload.append("fullName", formData.fullName);
+      payload.append("email", formData.email);
+      payload.append("phone", formData.phone);
+      payload.append("mobile", formData.phone);
+      payload.append("password", formData.password);
+      payload.append("profileImage", profileImageFile);
+      createMutation.mutate(payload);
+      return;
+    }
+
+    createMutation.mutate({
       name: formData.fullName,
       fullName: formData.fullName,
       email: formData.email,
       phone: formData.phone,
       mobile: formData.phone,
       password: formData.password,
-    };
-    createMutation.mutate(payload);
+    });
   };
 
   const handleUpdateInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCoachId) return;
 
-    const payload = {
-      name: formData.fullName,
-      fullName: formData.fullName,
-      email: formData.email,
-      phone: formData.phone,
-      mobile: formData.phone,
-    };
-    updateMutation.mutate({ id: selectedCoachId, data: payload });
+    if (profileImageFile) {
+      const payload = new FormData();
+      payload.append("name", formData.fullName);
+      payload.append("fullName", formData.fullName);
+      payload.append("email", formData.email);
+      payload.append("phone", formData.phone);
+      payload.append("mobile", formData.phone);
+      payload.append("profileImage", profileImageFile);
+      updateMutation.mutate({ id: selectedCoachId, data: payload });
+      return;
+    }
+
+    updateMutation.mutate({
+      id: selectedCoachId,
+      data: {
+        name: formData.fullName,
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        mobile: formData.phone,
+      },
+    });
   };
 
   const handleUpdatePasswordSubmit = (e: React.FormEvent) => {
@@ -227,19 +279,15 @@ const CoachManagement: React.FC = () => {
                 <TableRow key={coach._id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      {coach.profileImage ? (
-                        <img
-                          src={coach.profileImage.startsWith('http') ? coach.profileImage : `${import.meta.env.VITE_API_BASE_URL || ""}/${coach.profileImage.replace(/^\/+/, "")}`}
-                          alt={coach.fullName || coach.name || "Coach"}
-                          className="w-10 h-10 rounded-none object-cover border border-brand-100 shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-none bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-100 shadow-sm">
-                          <User size={18} />
-                        </div>
-                      )}
+                      <img
+                        src={getMediaUrl(coach.profileImage, getMediaFallback(coach.fullName || coach.name || "Coach"))}
+                        alt={coach.fullName || coach.name || "Coach"}
+                        className="w-10 h-10 rounded-full object-cover border border-brand-100 shadow-sm"
+                      />
                       <div className="flex flex-col">
-                        <span className="font-bold text-sm text-gray-900 dark:text-white/90 tracking-tight">{coach.fullName || coach.name || "N/A"}</span>
+                        <button type="button" onClick={() => navigate(`/coaches/${coach._id}`)} className="w-fit text-left font-bold text-sm text-gray-900 hover:text-brand-600 dark:text-white/90 tracking-tight">
+                          {coach.fullName || coach.name || "N/A"}
+                        </button>
                         <span className="text-[10px] font-bold text-brand-500 uppercase flex items-center gap-1"><ShieldCheck size={10} /> Certified Coach</span>
                       </div>
                     </div>
@@ -285,6 +333,7 @@ const CoachManagement: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-3">
+                      <button onClick={() => navigate(`/coaches/${coach._id}`)} title="View coach details" aria-label={`View ${coach.fullName || coach.name || "coach"} details`} className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"><Eye size={14} /></button>
                       <button onClick={() => handleOpenEdit(coach)} title="Modify" className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"><Pencil size={14} /></button>
                       {/* <button onClick={() => handleDeleteClick(coach._id)} title="Remove" className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button> */}
                     </div>
@@ -345,6 +394,17 @@ const CoachManagement: React.FC = () => {
                         placeholder="+61 000 000 000"
                         required
                       />
+                    </div>
+                    <div className="flex items-center gap-3 rounded-none border border-gray-200 bg-gray-50 p-3">
+                      <button type="button" onClick={() => profileImageInputRef.current?.click()} className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-brand-200 bg-white">
+                        <img src={profileImagePreview || getMediaFallback(formData.fullName || "Coach")} alt="Coach preview" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(formData.fullName || "Coach"); }} />
+                      </button>
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500">Coach Image</label>
+                        <button type="button" onClick={() => profileImageInputRef.current?.click()} className="mt-1 text-xs font-bold text-brand-500 hover:underline">Choose image</button>
+                        <p className="mt-1 text-[10px] text-gray-500">JPEG, PNG, WebP, HEIC/HEIF · max 5MB</p>
+                        <input ref={profileImageInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={handleProfileImageChange} className="hidden" />
+                      </div>
                     </div>
                   </div>
                   <div className="mt-auto pt-6 border-t border-gray-100 flex justify-end">
@@ -470,6 +530,17 @@ const CoachManagement: React.FC = () => {
                     placeholder="+61 000 000 000"
                     required
                   />
+                </div>
+                <div className="flex items-center gap-3 rounded-none border border-gray-200 bg-gray-50 p-3">
+                  <button type="button" onClick={() => profileImageInputRef.current?.click()} className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-brand-200 bg-white">
+                    <img src={profileImagePreview || getMediaFallback(formData.fullName || "Coach")} alt="Coach preview" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(formData.fullName || "Coach"); }} />
+                  </button>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500">Coach Image</label>
+                    <button type="button" onClick={() => profileImageInputRef.current?.click()} className="mt-1 text-xs font-bold text-brand-500 hover:underline">Choose image</button>
+                    <p className="mt-1 text-[10px] text-gray-500">JPEG, PNG, WebP, HEIC/HEIF · max 5MB</p>
+                    <input ref={profileImageInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={handleProfileImageChange} className="hidden" />
+                  </div>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">

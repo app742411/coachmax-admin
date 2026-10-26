@@ -39,7 +39,6 @@ export const teamAttendanceService = {
       const res = await axios.post(`${API_BASE}/api/admin/teams`, teamData, {
         headers: {
           ...getHeaders(token).headers,
-          "Content-Type": "multipart/form-data",
         },
       });
       return res.data;
@@ -63,7 +62,6 @@ export const teamAttendanceService = {
       const res = await axios.post(`${API_BASE}/api/admin/teams`, formData, {
         headers: {
           ...getHeaders(token).headers,
-          "Content-Type": "multipart/form-data",
         },
       });
       return res.data;
@@ -81,7 +79,6 @@ export const teamAttendanceService = {
       const res = await axios.put(`${API_BASE}/api/admin/teams/${teamId}`, updateData, {
         headers: {
           ...getHeaders(token).headers,
-          "Content-Type": "multipart/form-data",
         },
       });
       return res.data;

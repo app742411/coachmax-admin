@@ -12,6 +12,7 @@ export const ENDPOINTS = {
   DELETE_COACH: "/api/admin/deleteCoach",
   TOGGLE_COACH_ACTIVE: "/api/admin/toggleCoachActive",
   GET_COACH_BY_ID: "/api/admin/getCoachById",
+  GET_COACH_DETAIL: "/api/admin/coaches",
   CHANGE_COACH_PASSWORD: "/api/admin/changeCoachPassword",
   UPDATE_ADMIN_NOTE: "/api/admin/updateAdminNote",
   EXPORT_CLASS_CSV: "/api/admin/exportClassCSV",
@@ -76,12 +77,14 @@ export const getAllCoaches = async (): Promise<any> => {
 };
 
 export const createCoach = async (data: any): Promise<any> => {
-  const res = await apiClient.post(ENDPOINTS.CREATE_COACH, data);
+  const headers = data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+  const res = await apiClient.post(ENDPOINTS.CREATE_COACH, data, { headers });
   return res.data;
 };
 
 export const updateCoach = async (id: string, data: any): Promise<any> => {
-  const res = await apiClient.put(`${ENDPOINTS.UPDATE_COACH}/${id}`, data);
+  const headers = data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+  const res = await apiClient.put(`${ENDPOINTS.UPDATE_COACH}/${id}`, data, { headers });
   return res.data;
 };
 
@@ -97,6 +100,11 @@ export const toggleCoachActive = async (id: string, isActive: boolean): Promise<
 
 export const getCoachById = async (id: string): Promise<any> => {
   const res = await apiClient.get(`${ENDPOINTS.GET_COACH_BY_ID}/${id}`);
+  return res.data;
+};
+
+export const getCoachDetail = async (id: string): Promise<any> => {
+  const res = await apiClient.get(`${ENDPOINTS.GET_COACH_DETAIL}/${id}/detail`);
   return res.data;
 };
 
@@ -135,7 +143,9 @@ export const getTermsUrl = (): string => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
       const user = JSON.parse(userStr);
-      if (user?.role === "COACH") return "/api/user/getAllTerms";
+      if (["COACH", "PARENT", "USER"].includes(String(user?.role || "").toUpperCase())) {
+        return "/api/user/getAllTerms";
+      }
     }
   } catch { }
   return "/api/admin/getAllTerms";

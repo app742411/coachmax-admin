@@ -23,7 +23,8 @@ import DropzoneComponent from "../form/form-elements/DropZone";
 import SuccessPopup from "../SuccessPopup";
 import { LucideIcon } from "lucide-react";
 import { createEvent, getAllEvents, updateEvent } from "../../api/eventApi";
-import apiClient from "../../api/apiClient";
+import apiClient, { getErrorMessage } from "../../api/apiClient";
+import { getMediaUrl } from "../../utils/media";
 
 interface SectionHeaderProps {
   icon: LucideIcon;
@@ -56,11 +57,19 @@ interface AddEventFormProps {
 
 import { useNavigate } from "react-router";
 import HolidayCampSessionConfig, { CampSessionRow } from "./HolidayCampSessionConfig";
+import {
+  addDateOnlyDays,
+  dateOnlyFormValue,
+  dateOnlyToLocalDate,
+  formatDateOnly,
+  toDateOnly,
+} from "../../utils/dateTime";
 
 const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [eventBannerPreview, setEventBannerPreview] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -93,24 +102,17 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   // Helper to generate dates between startDate and endDate
   const generateCampDates = (start: Date, end: Date, existingSessions: CampSessionRow[] = []) => {
     const list: CampSessionRow[] = [];
-    const curr = new Date(start);
-    curr.setUTCHours(0, 0, 0, 0);
-
-    const targetEnd = new Date(end);
-    targetEnd.setUTCHours(0, 0, 0, 0);
-
-    if (curr > targetEnd) return [];
+    let currentDate = dateOnlyFormValue(start);
+    const targetEnd = dateOnlyFormValue(end);
+    if (!currentDate || !targetEnd || currentDate > targetEnd) return [];
 
     const existingMap = new Map<string, CampSessionRow>();
     existingSessions.forEach(s => existingMap.set(s.dateStr, s));
 
-    const dayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "long", day: "numeric", month: "short" });
-    const dayNameFormatter = new Intl.DateTimeFormat("en-US", { weekday: "short" });
-
     // Safety cap at 60 days
     let count = 0;
-    while (curr <= targetEnd && count < 60) {
-      const dateStr = curr.toISOString().split("T")[0];
+    while (currentDate <= targetEnd && count < 60) {
+      const dateStr = currentDate;
       const existing = existingMap.get(dateStr);
 
       if (existing) {
@@ -118,8 +120,8 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
       } else {
         list.push({
           dateStr,
-          dayLabel: dayFormatter.format(curr),
-          dayOfWeek: dayNameFormatter.format(curr),
+          dayLabel: formatDateOnly(dateStr, { weekday: "long", day: "numeric", month: "short" }),
+          dayOfWeek: formatDateOnly(dateStr, { weekday: "short" }),
           isEnabled: true,
           hasFullDay: true,
           hasHalfDay: true,
@@ -131,7 +133,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
           halfDayPrice: defaultHalfPrice,
         });
       }
-      curr.setUTCDate(curr.getUTCDate() + 1);
+      currentDate = addDateOnlyDays(currentDate, 1);
       count++;
     }
     return list;
@@ -144,13 +146,15 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
           const res = await getAllEvents();
           const event = res.data.find((e: any) => e._id === eventId);
           if (event) {
+            const existingBanner = event.bannerImage || event.eventImg || event.image;
+            setEventBannerPreview(existingBanner ? getMediaUrl(existingBanner) : null);
             setFormData({
               title: event.title,
               description: event.description,
               category: event.category,
               maxParticipants: event.maxParticipants ? event.maxParticipants.toString() : "",
-              startDate: event.startDate ? new Date(event.startDate) : null,
-              endDate: event.endDate ? new Date(event.endDate) : null,
+              startDate: dateOnlyToLocalDate(event.startDate),
+              endDate: dateOnlyToLocalDate(event.endDate),
               startTime: event.startTime || "08:00 AM",
               endTime: event.endTime || "04:00 PM",
               venue: event.venueName || event.venue || "",
@@ -158,7 +162,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
               googleMapLink: event.googleMapLink || "",
               contactPhone: event.contactPhone || "",
               website: event.website || "",
-              registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
+              registrationDeadline: dateOnlyToLocalDate(event.registrationDeadline),
               eventType: event.eventType || "TOURNAMENT",
               registrationFee: event.registrationFee ? event.registrationFee.toString() : "",
               documentsRequired: event.documentsRequired || "",
@@ -180,12 +184,12 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                 const groupedByDate: Record<string, any> = {};
 
                 dbSess.forEach((s: any) => {
-                  const dStr = new Date(s.sessionDate).toISOString().split("T")[0];
+                  const dStr = toDateOnly(s.sessionDate);
                   if (!groupedByDate[dStr]) {
                     groupedByDate[dStr] = {
                       dateStr: dStr,
-                      dayLabel: new Date(s.sessionDate).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" }),
-                      dayOfWeek: new Date(s.sessionDate).toLocaleDateString("en-US", { weekday: "short" }),
+                      dayLabel: formatDateOnly(dStr, { weekday: "long", day: "numeric", month: "short" }),
+                      dayOfWeek: formatDateOnly(dStr, { weekday: "short" }),
                       isEnabled: s.isAvailable,
                       hasFullDay: false,
                       hasHalfDay: false,
@@ -258,6 +262,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const handleFileChange = (files: File[]) => {
     if (files.length > 0) {
       setFormData(prev => ({ ...prev, eventImg: files[0] }));
+      setEventBannerPreview(URL.createObjectURL(files[0]));
     }
   };
 
@@ -270,15 +275,30 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
       return;
     }
 
+    // The final action is a button click, and fields from the earlier steps
+    // are unmounted in this wizard. Validate them explicitly before sending.
+    if (!formData.title.trim()) {
+      setCurrentStep(1);
+      toast.error("Enter an event title before creating the event.");
+      return;
+    }
+    if (!formData.description.trim()) {
+      setCurrentStep(1);
+      toast.error("Enter an event description before creating the event.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const data = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         if (value instanceof Date) {
-          data.append(key, value.toISOString());
-        } else if (value && key !== "eventImg") {
-          data.append(key, value as string | Blob);
+          // Event and camp dates are calendar dates. Preserve the selected day
+          // instead of serialising local midnight through UTC.
+          data.append(key, dateOnlyFormValue(value));
+        } else if (value !== null && key !== "eventImg") {
+          data.append(key, key === "title" ? String(value).trim() : value as string | Blob);
         }
       });
 
@@ -369,7 +389,9 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
       setShowSuccessPopup(true);
     } catch (err) {
       console.error("Error saving event:", err);
-      toast.error("Failed to save event. Please check your network.");
+      if (!(err as any)?._handled) {
+        toast.error(getErrorMessage(err, "Failed to save the event. Please try again."));
+      }
     } finally {
       setLoading(false);
     }
@@ -660,7 +682,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
 
               <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
                 <Label>Official Event Banner</Label>
-                <DropzoneComponent onUpload={handleFileChange} />
+                <DropzoneComponent policy="eventBanner" onUpload={handleFileChange} previewUrl={eventBannerPreview} />
                 {formData.eventImg && (
                   <p className="mt-2 text-xs font-bold text-success-600">Selected: {formData.eventImg.name}</p>
                 )}

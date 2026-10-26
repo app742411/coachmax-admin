@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useLeagueStats } from "../../hooks/useLeagueStats";
 import { PlayerLeaderboardEntry } from "../../types/league";
+import { getMediaUrl, getMediaFallback } from "../../../../utils/media";
 
 interface StatsDashboardProps {
   leagueId: string;
@@ -31,8 +32,7 @@ const getImageUrl = (path?: string | null) => {
   ) {
     return path;
   }
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-  return `${baseUrl}/${path.replace(/^\//, "")}`;
+  return getMediaUrl(path);
 };
 
 const TeamLogoCrest: React.FC<{ logo?: string; name: string; size?: string }> = ({
@@ -326,9 +326,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ leagueId }) => {
                   <div className="w-14 h-14 rounded-full bg-white/10 border-2 border-amber-400/80 p-0.5 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
                     {mvpPlayer.profileImage ? (
                       <img
-                        src={getImageUrl(mvpPlayer.profileImage)}
+                        src={getMediaUrl(mvpPlayer.profileImage, getMediaFallback(mvpPlayer.playerName))}
                         alt={mvpPlayer.playerName}
                         className="w-full h-full object-cover rounded-full"
+                        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(mvpPlayer.playerName); }}
                       />
                     ) : (
                       <span className="font-black text-lg text-amber-300">
@@ -437,9 +438,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ leagueId }) => {
                           <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0 text-[10px] font-black text-slate-600 dark:text-slate-300">
                             {item.profileImage ? (
                               <img
-                                src={getImageUrl(item.profileImage)}
+                                src={getMediaUrl(item.profileImage, getMediaFallback(item.playerName))}
                                 alt={item.playerName}
                                 className="w-full h-full object-cover rounded-full"
+                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(item.playerName); }}
                               />
                             ) : (
                               item.playerName.slice(0, 2).toUpperCase()

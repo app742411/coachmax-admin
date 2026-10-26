@@ -5,6 +5,7 @@ import { Shield, Search, Users, UserPlus, Trash2, X, User, ExternalLink } from "
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unassignPlayersFromTeam } from "../../api/adminApi";
 import toast from "react-hot-toast";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 interface ViewTeamPlayersModalProps {
   isOpen: boolean;
@@ -23,13 +24,8 @@ export default function ViewTeamPlayersModal({
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
-
   const getImageUrl = (path: string | undefined | null): string | undefined => {
-    if (!path) return undefined;
-    if (path.startsWith("http")) return path;
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${baseUrl}${cleanPath}`;
+    return getMediaUrl(path) || undefined;
   };
 
   const players: any[] = useMemo(() => {
@@ -197,9 +193,7 @@ export default function ViewTeamPlayersModal({
                   player.name ||
                   (player.email ? player.email.split("@")[0] : `Player #${idx + 1}`);
 
-                const avatarSrc = player.profileImage
-                  ? getImageUrl(player.profileImage)
-                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName)}&background=0A1930&color=fff`;
+                const avatarSrc = getMediaUrl(player.profileImage, getMediaFallback(playerName));
 
                 return (
                   <div
@@ -216,7 +210,7 @@ export default function ViewTeamPlayersModal({
                         className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
-                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName)}&background=0A1930&color=fff`;
+                          e.currentTarget.src = getMediaFallback(playerName);
                         }}
                       />
                       <div className="min-w-0">

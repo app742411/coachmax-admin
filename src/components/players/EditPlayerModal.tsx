@@ -19,6 +19,9 @@ import {
   Check, 
   AlertCircle 
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
 interface EditPlayerModalProps {
   isOpen: boolean;
@@ -134,31 +137,38 @@ export default function EditPlayerModal({
       }
 
       setImageFile(null);
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
       if (player.profileImage) {
-        setImagePreview(player.profileImage.startsWith("http") ? player.profileImage : `${baseUrl}/${player.profileImage}`);
+        setImagePreview(getMediaUrl(player.profileImage));
       } else {
-        setImagePreview(`https://ui-avatars.com/api/?name=${encodeURIComponent(player.fullName || "Player")}`);
+        setImagePreview(getMediaFallback(player.fullName || "Player"));
       }
       setActiveTab("general");
     }
   }, [player, isOpen]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
+      let normalized: File;
+      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
+      const validationError = await validateUploadFile(normalized, "profile");
+      if (validationError) {
+        toast.error(validationError);
+        e.target.value = "";
+        return;
+      }
+      setImageFile(normalized);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(normalized);
     }
   };
 
   const handleRemoveImage = () => {
     setImageFile(null);
-    setImagePreview(`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || "Player")}`);
+    setImagePreview(getMediaFallback(fullName || "Player"));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -225,7 +235,7 @@ export default function EditPlayerModal({
         <div className="flex items-center gap-3">
           <div className="relative group">
             <img
-              src={imagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || "Player")}`}
+              src={imagePreview || getMediaFallback(fullName || "Player")}
               alt={fullName}
               className="w-12 h-12 rounded-full object-cover border-2 border-[#0047FF] bg-white shadow-sm"
             />
@@ -269,7 +279,7 @@ export default function EditPlayerModal({
         type="file"
         ref={fileInputRef}
         onChange={handleImageChange}
-        accept="image/*"
+        accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
         className="hidden"
       />
 

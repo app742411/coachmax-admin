@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getTeamPlayers } from "../../../../api/adminApi";
+import { getMediaUrl } from "../../../../utils/media";
 import {
   CalendarDays,
   Plus,
@@ -35,6 +36,7 @@ import { useLeaguePermissions } from "../../hooks/useLeaguePermissions";
 import { Modal } from "../../../../components/ui/modal";
 import Button from "../../../../components/ui/button/Button";
 import { toast } from "react-hot-toast";
+import { formatDateOnly, formatTime, todayDateOnly, toDateOnly, zonedDateTimeToUtcISOString } from "../../../../utils/dateTime";
 
 interface ScheduleViewProps {
   leagueId: string;
@@ -50,8 +52,7 @@ const getImageUrl = (path?: string | null) => {
   ) {
     return path;
   }
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-  return `${baseUrl}/${path.replace(/^\//, "")}`;
+  return getMediaUrl(path);
 };
 
 const TeamLogoCrest: React.FC<{ logo?: string; name: string }> = ({ logo, name }) => {
@@ -179,7 +180,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   // Add Match Form
   const [addForm, setAddForm] = useState({
     round: 1,
-    matchDate: new Date().toISOString().split("T")[0],
+    matchDate: todayDateOnly(),
     matchDateFormatted: "",
     time: "2:00 pm",
     field: "Field 1",
@@ -340,7 +341,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     setSelectedMatch(match);
     setEditForm({
       round: match.round,
-      matchDate: match.matchDate || match.kickoffTime?.split("T")[0] || "",
+      matchDate: toDateOnly(match.matchDate || match.kickoffTime || ""),
       time: match.time || "",
       field: match.field || match.venue || "",
       venue: match.venue || "",
@@ -439,19 +440,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     const homeTeamObj = teams.find((t) => t._id === addForm.homeTeamId);
     const awayTeamObj = teams.find((t) => t._id === addForm.awayTeamId);
 
-    const dateObj = new Date(addForm.matchDate);
-    const dateFormatted = !isNaN(dateObj.getTime())
-      ? dateObj.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    const dateFormatted = addForm.matchDate
+      ? formatDateOnly(addForm.matchDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
       : addForm.matchDate;
 
-    let kickoffIso = new Date().toISOString();
+    let kickoffIso = zonedDateTimeToUtcISOString(addForm.matchDate, addForm.time);
     try {
-      const combined = new Date(`${addForm.matchDate} ${addForm.time}`);
-      if (!isNaN(combined.getTime())) {
-        kickoffIso = combined.toISOString();
-      } else if (!isNaN(dateObj.getTime())) {
-        kickoffIso = dateObj.toISOString();
-      }
+      kickoffIso = zonedDateTimeToUtcISOString(addForm.matchDate, addForm.time);
     } catch {
       kickoffIso = new Date().toISOString();
     }
@@ -492,7 +487,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
           toast.success("Match created manually (Protected from random regeneration)");
           setAddForm({
             round: 1,
-            matchDate: new Date().toISOString().split("T")[0],
+            matchDate: todayDateOnly(),
             matchDateFormatted: "",
             time: "2:00 pm",
             field: "Field 1",
@@ -524,13 +519,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     let kickoffIso: string | undefined = undefined;
     if (editForm.matchDate) {
       try {
-        const combined = new Date(`${editForm.matchDate} ${editForm.time}`);
-        if (!isNaN(combined.getTime())) {
-          kickoffIso = combined.toISOString();
-        } else {
-          const d = new Date(editForm.matchDate);
-          if (!isNaN(d.getTime())) kickoffIso = d.toISOString();
-        }
+        kickoffIso = zonedDateTimeToUtcISOString(editForm.matchDate, editForm.time);
       } catch {
         // fallback
       }
@@ -1164,11 +1153,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                           const matchTime =
                             match.time ||
                             (match.kickoffTime
-                              ? new Date(match.kickoffTime).toLocaleTimeString([], {
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })
+                              ? formatTime(match.kickoffTime)
                               : "2:00 pm");
                           const homeScore = match.score?.homeScore ?? match.homeScore;
                           const awayScore = match.score?.awayScore ?? match.awayScore;

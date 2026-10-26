@@ -54,6 +54,7 @@ interface AddClassModalProps {
   onClose: () => void;
   onSuccess: () => void;
   classToEdit?: any;
+  duplicateFromClass?: any;
   prefilledCategoryId?: string;
   prefilledProgramId?: string;
   prefilledDayOfWeek?: string;
@@ -66,6 +67,7 @@ export default function AddClassModal({
   onClose,
   onSuccess,
   classToEdit,
+  duplicateFromClass,
   prefilledCategoryId,
   prefilledProgramId,
   prefilledDayOfWeek,
@@ -73,6 +75,8 @@ export default function AddClassModal({
   prefilledYear,
 }: AddClassModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [copyPlayers, setCopyPlayers] = useState(true);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("SINGLE_DAY");
   const [selectedYear, setSelectedYear] = useState<string>(prefilledYear || "");
 
@@ -154,6 +158,10 @@ export default function AddClassModal({
   const [coaches, setCoaches] = useState<any[]>([]);
 
   useEffect(() => {
+    if (isOpen) setValidationErrors([]);
+  }, [isOpen, classToEdit?._id, duplicateFromClass?._id]);
+
+  useEffect(() => {
     if (isOpen) {
       const fetchCoaches = async () => {
         try {
@@ -169,7 +177,41 @@ export default function AddClassModal({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && classToEdit) {
+    if (isOpen && duplicateFromClass) {
+      const sourceClass = duplicateFromClass;
+      const detectedScheduleType: ScheduleType =
+        sourceClass.scheduleType ||
+        (Array.isArray(sourceClass.schedule) && sourceClass.schedule.length > 1 ? "CUSTOM" : "SINGLE_DAY");
+      setScheduleType(detectedScheduleType);
+
+      const termId = sourceClass.term?._id || sourceClass.term || "";
+      const termYear = sourceClass.term?.year || allTerms.find(t => t._id === termId)?.year;
+      if (termYear) setSelectedYear(termYear.toString());
+
+      setFormData({
+        name: `${sourceClass.name || "Class"} Copy`,
+        term: termId,
+        category: sourceClass.category?._id || sourceClass.category || "",
+        program: sourceClass.program?._id || sourceClass.program || "",
+        coach: sourceClass.coach?._id || sourceClass.coach || "",
+        dayOfWeek: sourceClass.dayOfWeek || "MONDAY",
+        startTime: sourceClass.startTime || "",
+        endTime: sourceClass.endTime || "",
+        location: sourceClass.location || "",
+        capacity: sourceClass.capacity || 20,
+        price: sourceClass.price || sourceClass.ClassFee || 0,
+      });
+      setCopyPlayers(true);
+      if (Array.isArray(sourceClass.schedule) && sourceClass.schedule.length > 0) {
+        setCustomSchedules(sourceClass.schedule.map((s: any) => ({
+          dayOfWeek: s.dayOfWeek || "MONDAY",
+          startTime: s.startTime || "",
+          endTime: s.endTime || "",
+        })));
+      } else {
+        setCustomSchedules([{ dayOfWeek: sourceClass.dayOfWeek || "MONDAY", startTime: sourceClass.startTime || "", endTime: sourceClass.endTime || "" }]);
+      }
+    } else if (isOpen && classToEdit) {
       const detectedScheduleType: ScheduleType =
         classToEdit.scheduleType ||
         (Array.isArray(classToEdit.schedule) && classToEdit.schedule.length > 1 ? "CUSTOM" : "SINGLE_DAY");
@@ -211,6 +253,7 @@ export default function AddClassModal({
       }
     } else if (isOpen) {
       setScheduleType("SINGLE_DAY");
+      setCopyPlayers(true);
       if (prefilledYear) {
         setSelectedYear(prefilledYear);
       } else if (prefilledTermId) {
@@ -238,7 +281,7 @@ export default function AddClassModal({
         { dayOfWeek: "WEDNESDAY", startTime: "", endTime: "" },
       ]);
     }
-  }, [isOpen, classToEdit, prefilledCategoryId, prefilledProgramId, prefilledDayOfWeek, prefilledTermId, prefilledYear, allTerms]);
+  }, [isOpen, classToEdit, duplicateFromClass, prefilledCategoryId, prefilledProgramId, prefilledDayOfWeek, prefilledTermId, prefilledYear, allTerms]);
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newYear = e.target.value;
@@ -307,35 +350,38 @@ export default function AddClassModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: string[] = [];
+    if (!formData.name.trim()) errors.push("Class name is required.");
+    if (!formData.term) errors.push("Select an academic term.");
+    if (!formData.category) errors.push("Select a category.");
+    if (!formData.program) errors.push("Select a program.");
+    if (!formData.coach) errors.push("Select a coach.");
+    if (!formData.location.trim()) errors.push("Class location is required.");
+    if (!Number.isInteger(Number(formData.capacity)) || Number(formData.capacity) < 1) {
+      errors.push("Capacity must be a whole number of at least 1.");
+    }
+    if (!Number.isFinite(Number(formData.price)) || Number(formData.price) < 0) {
+      errors.push("Price must be 0 or more.");
+    }
 
-    // Validation based on scheduleType
     if (scheduleType === "SINGLE_DAY") {
-      if (!formData.dayOfWeek) {
-        toast.error("Please select a day of week");
-        return;
-      }
-      if (!formData.startTime || !formData.endTime) {
-        toast.error("Please enter both start and end times");
-        return;
-      }
+      if (!formData.dayOfWeek) errors.push("Select a day of the week.");
+      if (!formData.startTime) errors.push("Select a start time.");
+      if (!formData.endTime) errors.push("Select an end time.");
     } else if (scheduleType === "WEEKDAYS") {
-      if (!formData.startTime || !formData.endTime) {
-        toast.error("Please enter both start and end times for weekdays");
-        return;
-      }
+      if (!formData.startTime) errors.push("Select a start time for weekdays.");
+      if (!formData.endTime) errors.push("Select an end time for weekdays.");
     } else if (scheduleType === "CUSTOM") {
-      if (customSchedules.length === 0) {
-        toast.error("Please add at least one schedule slot");
-        return;
-      }
+      if (customSchedules.length === 0) errors.push("Add at least one schedule slot.");
       for (let i = 0; i < customSchedules.length; i++) {
         const slot = customSchedules[i];
         if (!slot.dayOfWeek || !slot.startTime || !slot.endTime) {
-          toast.error(`Please complete Day, Start Time, and End Time for slot #${i + 1}`);
-          return;
+          errors.push(`Complete the day, start time, and end time for schedule slot ${i + 1}.`);
         }
       }
     }
+    setValidationErrors(errors);
+    if (errors.length > 0) return;
 
     setIsSubmitting(true);
     try {
@@ -379,7 +425,13 @@ export default function AddClassModal({
         };
       }
 
-      if (classToEdit) {
+      if (duplicateFromClass) {
+        await apiClient.post(`/api/admin/duplicateClass/${duplicateFromClass._id}`, {
+          ...payload,
+          copyPlayers,
+        });
+        toast.success(copyPlayers ? "Class duplicated with players and payment statuses" : "Class duplicated successfully");
+      } else if (classToEdit) {
         await apiClient.put(`/api/admin/updateClass/${classToEdit._id}`, payload);
         toast.success("Class updated successfully");
       } else {
@@ -440,7 +492,7 @@ export default function AddClassModal({
               </div>
               <div>
                 <h3 className="text-lg xl:text-xl font-bold tracking-wide text-white">
-                  {classToEdit ? "Edit Training Class" : "Create Training Class"}
+                  {duplicateFromClass ? "Duplicate Training Class" : classToEdit ? "Edit Training Class" : "Create Training Class"}
                 </h3>
                 <p className="text-xs text-gray-300 mt-0.5 font-medium">
                   Schedule and manage academy training sessions
@@ -458,7 +510,24 @@ export default function AddClassModal({
         </div>
 
         {/* Scrollable Form Body */}
-        <form id="create-class-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 sm:p-6 xl:p-8 space-y-6 custom-scrollbar">
+        <form id="create-class-form" noValidate onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 sm:p-6 xl:p-8 space-y-6 custom-scrollbar">
+
+          {validationErrors.length > 0 && (
+            <div role="alert" aria-live="polite" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+              <p className="font-bold">Please fix these required fields:</p>
+              <ul className="mt-1 list-disc pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
+            </div>
+          )}
+
+          {duplicateFromClass && (
+            <label className="flex items-start gap-3 border border-blue-200 bg-blue-50/70 dark:border-blue-900/50 dark:bg-blue-950/20 p-3 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+              <input type="checkbox" checked={copyPlayers} onChange={(event) => setCopyPlayers(event.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0047FF]" />
+              <span>
+                <span className="block font-bold text-[#0047FF]">Copy assigned players and payment statuses</span>
+                <span className="block mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Attendance, invoices, chat, and history will start fresh for the duplicate.</span>
+              </span>
+            </label>
+          )}
 
           {/* BASIC INFORMATION SECTION */}
           <div className="space-y-3.5">
@@ -1049,7 +1118,7 @@ export default function AddClassModal({
               <path d="M12 9l2.5 1.8.8 2.7-2.3 2-2 0-1.5-1.5.8-2.7z" fill="currentColor" fillOpacity="0.25" />
               <path d="M12 9V2M14.5 10.8l5.5-1.8M15.3 13.5l5.2 2.5M13 15.5l2 6.5M11 15.5l-2 6.5M8.7 13.5L3.5 16M9.5 10.8l-5.5-1.8" />
             </svg>
-            {isSubmitting ? "Saving..." : classToEdit ? "Update Class" : "Create Class"}
+            {isSubmitting ? "Saving..." : duplicateFromClass ? "Duplicate Class" : classToEdit ? "Update Class" : "Create Class"}
           </button>
         </div>
 

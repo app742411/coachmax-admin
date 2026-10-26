@@ -32,6 +32,7 @@ import OrdersList from "./pages/Store/OrdersList";
 import OrderDetails from "./pages/Store/OrderDetails";
 import CoachingManagementPage from "./pages/CoachingManagement/CoachingManagementPage";
 import CoachesPage from "./pages/Coaches/CoachesPage";
+import CoachDetailPage from "./pages/Coaches/CoachDetailPage";
 import AddTempPlayers from "./pages/CoachManagement/AddTempPlayers";
 import MyClassesList from "./pages/CoachManagement/MyClassesList";
 import TemporaryPlayersList from "./pages/CoachManagement/TemporaryPlayersList";
@@ -131,6 +132,7 @@ export default function App() {
             {/* Management */}
             <Route path="/coaching-management" element={<CoachingManagementPage />} />
             <Route path="/coaches" element={<CoachesPage />} />
+            <Route path="/coaches/:coachId" element={<CoachDetailPage />} />
             <Route path="/add-temporary-players" element={<AddTempPlayers />} />
             <Route path="/leagues" element={<LeaguesManagementPage />} />
             <Route path="/leagues/:leagueId" element={<LeagueDetails />} />
