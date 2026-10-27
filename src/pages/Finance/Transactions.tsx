@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
@@ -8,16 +9,9 @@ import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
 import toast from "react-hot-toast";
 import { getMediaUrl } from "../../utils/media";
+import { openMediaInNewTab } from "../../utils/privateMedia";
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "N/A";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+const formatDate = (value: string) => formatTimestampDate(value) || "N/A";
 
 export default function Transactions() {
   const navigate = useNavigate();
@@ -241,8 +235,10 @@ export default function Transactions() {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               markItemAsRead("pendingPayments", txn._id);
+                              void openMediaInNewTab(txn.paymentScreenshot).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Could not open payment proof."));
                             }}
                             className="text-xs font-bold text-[#0047FF] hover:underline"
                           >

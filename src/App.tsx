@@ -1,68 +1,72 @@
+import { lazy } from "react";
+import PageLoadBoundary from "./components/common/PageLoadBoundary";
 import { BrowserRouter as Router, Routes, Route, useParams } from "react-router";
-import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
-import ForgotPassword from "./pages/AuthPages/ForgotPassword";
-import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
-import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
-import Alerts from "./pages/UiElements/Alerts";
-import Badges from "./pages/UiElements/Badges";
-import Avatars from "./pages/UiElements/Avatars";
-import Buttons from "./pages/UiElements/Buttons";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
-import BasicTables from "./pages/Tables/BasicTables";
-import FormElements from "./pages/Forms/FormElements";
-import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
-import PlayersManagement from "./pages/PlayersManagement/PlayersManagement";
-import RegistrationRequests from "./pages/PlayersManagement/RegistrationRequests";
-import PlayerProfilePage from "./pages/PlayersManagement/PlayerProfilePage";
-import Academy from "./pages/Academy/Academy";
-import ProgramsManagement from "./pages/Programs/ProgramsManagement";
-import Programs2 from "./pages/Programs/Programs2";
-import ClassesList from "./pages/Classes/ClassesList";
-import CloneTermPage from "./pages/Classes/CloneTermPage";
-import ProductList from "./pages/Store/ProductList";
-import AddProductPage, { EditProductPage } from "./pages/Store/AddProductPage";
-import OrdersList from "./pages/Store/OrdersList";
-import OrderDetails from "./pages/Store/OrderDetails";
-import CoachingManagementPage from "./pages/CoachingManagement/CoachingManagementPage";
-import CoachesPage from "./pages/Coaches/CoachesPage";
-import CoachDetailPage from "./pages/Coaches/CoachDetailPage";
-import AddTempPlayers from "./pages/CoachManagement/AddTempPlayers";
-import MyClassesList from "./pages/CoachManagement/MyClassesList";
-import TemporaryPlayersList from "./pages/CoachManagement/TemporaryPlayersList";
-import CoachNotesPage from "./pages/CoachManagement/CoachNotesPage";
-import RoleBasedDashboard from "./components/auth/RoleBasedDashboard";
-import AddEvent from "./pages/Events/AddEvent";
-import EventList from "./pages/Events/EventList";
-import ContentListPage from "./pages/Content/ContentListPage";
-import AddContentPage from "./pages/Content/AddContentPage";
-import NewsDetails from "./pages/Content/NewsDetails";
-import GalleryGrid from "./pages/Gallery/GalleryGrid";
-import AddGalleryPage from "./pages/Gallery/AddGalleryPage";
-import SponsorManagementPage from "./pages/Sponsors/SponsorManagementPage";
-import EditEvent from "./pages/Events/EditEvent";
-import EventDetails from "./pages/Events/EventDetails";
-import BankDetails from "./pages/Finance/BankDetails";
-import InvoiceList from "./pages/Finance/InvoiceList";
-import InvoiceDetails from "./pages/Finance/InvoiceDetails";
-import Transactions from "./pages/Finance/Transactions";
-import TermEarningsPage from "./pages/Finance/TermEarningsPage";
-import NotificationsPage from "./pages/Notifications/NotificationsPage";
-import CommunicationPage from "./pages/Communication";
-import TeamsManagementPage from "./pages/Teams/TeamsManagementPage";
-import TeamDetailsPage from "./pages/Teams/TeamDetailsPage";
-import LeaguesManagementPage from "./pages/Teams/LeaguesManagementPage";
-import LeagueDetails from "./modules/leagues/pages/LeagueDetails";
-import FixturesManagementPage from "./pages/Teams/FixturesManagementPage";
-import AuditLogsPage from "./pages/AuditLogs/AuditLogsPage";
-import UserManual from "./pages/Docs/UserManual";
 import { Toaster } from "react-hot-toast";
+
+const SignIn = lazy(() => import("./pages/AuthPages/SignIn"));
+const SignUp = lazy(() => import("./pages/AuthPages/SignUp"));
+const ForgotPassword = lazy(() => import("./pages/AuthPages/ForgotPassword"));
+const NotFound = lazy(() => import("./pages/OtherPage/NotFound"));
+const UserProfiles = lazy(() => import("./pages/UserProfiles"));
+const Videos = lazy(() => import("./pages/UiElements/Videos"));
+const Images = lazy(() => import("./pages/UiElements/Images"));
+const Alerts = lazy(() => import("./pages/UiElements/Alerts"));
+const Badges = lazy(() => import("./pages/UiElements/Badges"));
+const Avatars = lazy(() => import("./pages/UiElements/Avatars"));
+const Buttons = lazy(() => import("./pages/UiElements/Buttons"));
+const LineChart = lazy(() => import("./pages/Charts/LineChart"));
+const BarChart = lazy(() => import("./pages/Charts/BarChart"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const BasicTables = lazy(() => import("./pages/Tables/BasicTables"));
+const FormElements = lazy(() => import("./pages/Forms/FormElements"));
+const Blank = lazy(() => import("./pages/Blank"));
+const PlayersManagement = lazy(() => import("./pages/PlayersManagement/PlayersManagement"));
+const RegistrationRequests = lazy(() => import("./pages/PlayersManagement/RegistrationRequests"));
+const PlayerProfilePage = lazy(() => import("./pages/PlayersManagement/PlayerProfilePage"));
+const Academy = lazy(() => import("./pages/Academy/Academy"));
+const ProgramsManagement = lazy(() => import("./pages/Programs/ProgramsManagement"));
+const Programs2 = lazy(() => import("./pages/Programs/Programs2"));
+const ClassesList = lazy(() => import("./pages/Classes/ClassesList"));
+const CloneTermPage = lazy(() => import("./pages/Classes/CloneTermPage"));
+const ProductList = lazy(() => import("./pages/Store/ProductList"));
+const OrdersList = lazy(() => import("./pages/Store/OrdersList"));
+const OrderDetails = lazy(() => import("./pages/Store/OrderDetails"));
+const CoachingManagementPage = lazy(() => import("./pages/CoachingManagement/CoachingManagementPage"));
+const CoachesPage = lazy(() => import("./pages/Coaches/CoachesPage"));
+const CoachDetailPage = lazy(() => import("./pages/Coaches/CoachDetailPage"));
+const AddTempPlayers = lazy(() => import("./pages/CoachManagement/AddTempPlayers"));
+const MyClassesList = lazy(() => import("./pages/CoachManagement/MyClassesList"));
+const TemporaryPlayersList = lazy(() => import("./pages/CoachManagement/TemporaryPlayersList"));
+const CoachNotesPage = lazy(() => import("./pages/CoachManagement/CoachNotesPage"));
+const RoleBasedDashboard = lazy(() => import("./components/auth/RoleBasedDashboard"));
+const AddEvent = lazy(() => import("./pages/Events/AddEvent"));
+const EventList = lazy(() => import("./pages/Events/EventList"));
+const ContentListPage = lazy(() => import("./pages/Content/ContentListPage"));
+const AddContentPage = lazy(() => import("./pages/Content/AddContentPage"));
+const NewsDetails = lazy(() => import("./pages/Content/NewsDetails"));
+const GalleryGrid = lazy(() => import("./pages/Gallery/GalleryGrid"));
+const AddGalleryPage = lazy(() => import("./pages/Gallery/AddGalleryPage"));
+const SponsorManagementPage = lazy(() => import("./pages/Sponsors/SponsorManagementPage"));
+const EditEvent = lazy(() => import("./pages/Events/EditEvent"));
+const EventDetails = lazy(() => import("./pages/Events/EventDetails"));
+const BankDetails = lazy(() => import("./pages/Finance/BankDetails"));
+const InvoiceList = lazy(() => import("./pages/Finance/InvoiceList"));
+const InvoiceDetails = lazy(() => import("./pages/Finance/InvoiceDetails"));
+const Transactions = lazy(() => import("./pages/Finance/Transactions"));
+const TermEarningsPage = lazy(() => import("./pages/Finance/TermEarningsPage"));
+const NotificationsPage = lazy(() => import("./pages/Notifications/NotificationsPage"));
+const CommunicationPage = lazy(() => import("./pages/Communication"));
+const TeamsManagementPage = lazy(() => import("./pages/Teams/TeamsManagementPage"));
+const TeamDetailsPage = lazy(() => import("./pages/Teams/TeamDetailsPage"));
+const LeaguesManagementPage = lazy(() => import("./pages/Teams/LeaguesManagementPage"));
+const LeagueDetails = lazy(() => import("./modules/leagues/pages/LeagueDetails"));
+const FixturesManagementPage = lazy(() => import("./pages/Teams/FixturesManagementPage"));
+const AuditLogsPage = lazy(() => import("./pages/AuditLogs/AuditLogsPage"));
+const UserManual = lazy(() => import("./pages/Docs/UserManual"));
+const AddProductPage = lazy(() => import("./pages/Store/AddProductPage"));
+const EditProductPage = lazy(() => import("./pages/Store/AddProductPage").then((module) => ({ default: module.EditProductPage })));
 
 function DynamicProgramRoute() {
   const { programType } = useParams<{ programType: string }>();
@@ -112,6 +116,7 @@ export default function App() {
         <Routes>
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
+            <Route element={<PageLoadBoundary />}>
             <Route index path="/" element={<RoleBasedDashboard />} />
             <Route path="/new-registration-request" element={<RegistrationRequests />} />
             <Route path="/players" element={<PlayersManagement />} />
@@ -150,8 +155,6 @@ export default function App() {
             <Route path="/gallery" element={<GalleryGrid />} />
             <Route path="/add-gallery" element={<AddGalleryPage />} />
             <Route path="/sponsors" element={<SponsorManagementPage />} />
-            <Route path="/edit-event/:id" element={<EditEvent />} />
-            <Route path="/event-details/:id" element={<EventDetails />} />
 
             {/* Finance */}
             <Route path="/bank-details" element={<BankDetails />} />
@@ -199,8 +202,10 @@ export default function App() {
             {/* Charts */}
             <Route path="/line-chart" element={<LineChart />} />
             <Route path="/bar-chart" element={<BarChart />} />
+            </Route>
           </Route>
 
+          <Route element={<PageLoadBoundary />}>
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
@@ -208,6 +213,7 @@ export default function App() {
 
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />
+          </Route>
         </Routes>
       </Router>
     </>

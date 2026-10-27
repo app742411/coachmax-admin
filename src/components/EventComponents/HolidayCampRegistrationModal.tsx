@@ -80,7 +80,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
     if (!isOpen) return;
 
     if (!playersList || playersList.length === 0) {
-      let isMounted = true;
+      const isMounted = true;
       const loadPlayers = async () => {
         setFetchingPlayers(true);
         try {

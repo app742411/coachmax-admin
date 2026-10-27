@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { dateOnlyToLocalDate, todayDateOnly, toDateOnly } from "../../utils/dateTime";
+import { addDateOnlyDays, todayDateOnly, toDateOnly } from "../../utils/dateTime";
 
 interface Term {
   _id: string;
@@ -48,46 +48,10 @@ const MONTH_NAMES = [
   "May", "June", "July", "August",
   "September", "October", "November", "December",
 ];
-const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 function toKey(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-function parseLocalDate(dateStr: string, isEnd = false): Date {
-  if (!dateStr) return new Date();
-  
-  const isoDate = dateStr.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
-  if (isoDate) {
-    const date = dateOnlyToLocalDate(isoDate);
-    if (date) {
-      if (isEnd) date.setHours(23, 59, 59, 999);
-      else date.setHours(0, 0, 0, 0);
-      return date;
-    }
-  }
-  
-  // Fallback parsing (e.g. if we get "YYYY-MM-DD" or similar)
-  const dmy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  const dateOnly = dmy ? `${dmy[3]}-${dmy[2]}-${dmy[1]}` : toDateOnly(dateStr);
-  const parts = dateOnly.split('-');
-  if (parts.length === 3) {
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // 0-indexed
-    const day = parseInt(parts[2], 10);
-    if (isEnd) {
-      return new Date(year, month, day, 23, 59, 59, 999);
-    }
-    return new Date(year, month, day, 0, 0, 0, 0);
-  }
-  
-  const date = new Date(dateStr);
-  if (isEnd) {
-    date.setHours(23, 59, 59, 999);
-  } else {
-    date.setHours(0, 0, 0, 0);
-  }
-  return date;
 }
 
 const TermCalendar: React.FC<TermCalendarProps> = ({ terms, selectedYear }) => {
@@ -97,18 +61,22 @@ const TermCalendar: React.FC<TermCalendarProps> = ({ terms, selectedYear }) => {
   const dateMap = useMemo(() => {
     const map: Record<string, number[]> = {};
     terms.forEach((term, idx) => {
-      const start = parseLocalDate(term.startDate, false);
-      const end = parseLocalDate(term.endDate, true);
-      const cur = new Date(start);
+      const termStart = toDateOnly(term.startDate);
+      const termEnd = toDateOnly(term.endDate);
+      if (!termStart || !termEnd || termStart > termEnd) return;
+      // Only expand the visible year, including terms crossing New Year.
+      const start = termStart < `${selectedYear}-01-01` ? `${selectedYear}-01-01` : termStart;
+      const end = termEnd > `${selectedYear}-12-31` ? `${selectedYear}-12-31` : termEnd;
+      let cur = start;
       while (cur <= end) {
-        const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`;
+        const key = cur;
         if (!map[key]) map[key] = [];
         map[key].push(idx);
-        cur.setDate(cur.getDate() + 1);
+        cur = addDateOnlyDays(cur, 1);
       }
     });
     return map;
-  }, [terms]);
+  }, [terms, selectedYear]);
 
   const todayKey = todayDateOnly();
 
@@ -150,7 +118,7 @@ const TermCalendar: React.FC<TermCalendarProps> = ({ terms, selectedYear }) => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {MONTH_NAMES.map((monthName, monthIdx) => {
           const daysInMonth = new Date(selectedYear, monthIdx + 1, 0).getDate();
-          const firstDay = new Date(selectedYear, monthIdx, 1).getDay();
+          const firstDay = (new Date(selectedYear, monthIdx, 1).getDay() + 6) % 7;
 
           const cells: React.ReactNode[] = [];
 

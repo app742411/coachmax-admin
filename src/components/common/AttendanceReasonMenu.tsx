@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Check, Clock, X, RotateCcw, Flag, User, AlertCircle, Save } from "lucide-react";
+import { formatDateOnly } from "../../utils/dateTime";
 
 export interface AttendanceCellFlagProps {
   reason?: string;
@@ -81,7 +82,7 @@ export const AttendanceStatusDropdown: React.FC<AttendanceStatusDropdownProps> =
   onClose,
 }) => {
   const [reasonInput, setReasonInput] = useState(currentReason);
-  const quickReasons = ["Sick", "Traffic", "Doctor / Injury", "Family", "Holiday"];
+  const quickReasons = ["Great session", "Good effort", "Needs follow-up", "Sick", "Traffic", "Doctor / Injury"];
 
   useEffect(() => {
     setReasonInput(currentReason || "");
@@ -121,6 +122,8 @@ export const AttendanceStatusDropdown: React.FC<AttendanceStatusDropdownProps> =
         width: "220px",
       }}
       className="z-[99999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-lg py-2 overflow-hidden text-xs flex flex-col animate-in fade-in zoom-in-95 duration-100"
+      role="dialog"
+      aria-label="Attendance and note"
     >
       {/* Optional Player / Date Header */}
       {(playerName || sessionDateStr) && (
@@ -131,7 +134,7 @@ export const AttendanceStatusDropdown: React.FC<AttendanceStatusDropdownProps> =
             </div>
           )}
           <div className="flex items-center justify-between text-[10px] text-gray-400 mt-0.5">
-            <span>{sessionDateStr || "Mark Attendance"}</span>
+            <span>{formatDateOnly(sessionDateStr) || sessionDateStr || "Mark Attendance"}</span>
             {markedByParent && (
               <span className="text-[9px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 px-1 py-0.5 rounded font-bold">
                 Parent Reported
@@ -197,7 +200,7 @@ export const AttendanceStatusDropdown: React.FC<AttendanceStatusDropdownProps> =
         <button
           type="button"
           onClick={() => {
-            onSelectStatus("NOT_MARKED", "");
+            onSelectStatus("NOT_MARKED", reasonInput);
             onClose();
           }}
           className={`w-full text-left px-3 py-1.5 rounded flex items-center justify-between transition-colors font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 ${
@@ -206,7 +209,7 @@ export const AttendanceStatusDropdown: React.FC<AttendanceStatusDropdownProps> =
         >
           <span className="flex items-center gap-2">
             <RotateCcw size={13} strokeWidth={2} />
-            Clear
+            Clear Status
           </span>
         </button>
       </div>
@@ -216,19 +219,21 @@ export const AttendanceStatusDropdown: React.FC<AttendanceStatusDropdownProps> =
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
             <Flag size={10} className="text-rose-500" />
-            Reason (Late / Absent):
+            Note:
           </label>
         </div>
 
         <input
           type="text"
-          placeholder="e.g. Sick, Traffic, Doctor..."
+          placeholder="Add a session note..."
+          aria-label="Session note"
+          maxLength={2000}
           value={reasonInput}
           onChange={(e) => setReasonInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              const targetStatus = currentStatus === "NOT_MARKED" ? "ABSENT" : currentStatus;
+              const targetStatus = currentStatus || "NOT_MARKED";
               onSelectStatus(targetStatus, reasonInput);
               onClose();
             }
@@ -254,14 +259,14 @@ export const AttendanceStatusDropdown: React.FC<AttendanceStatusDropdownProps> =
         <button
           type="button"
           onClick={() => {
-            const targetStatus = currentStatus === "NOT_MARKED" ? "ABSENT" : currentStatus;
+            const targetStatus = currentStatus || "NOT_MARKED";
             onSelectStatus(targetStatus, reasonInput);
             onClose();
           }}
           className="mt-1 w-full py-1 px-2 bg-[#0047FF] hover:bg-blue-700 text-white rounded font-bold text-[11px] flex items-center justify-center gap-1 shadow-sm transition-all active:scale-95"
         >
           <Save size={11} />
-          Save Reason
+          Save Note
         </button>
       </div>
     </div>,

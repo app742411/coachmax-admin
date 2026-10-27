@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useTerms, Term } from "./useTerms";
-import { todayDateOnly, toDateOnly } from "../utils/dateTime";
+import { APP_TIME_ZONE, ageGroupContextYear, todayDateOnly, toDateOnly } from "../utils/dateTime";
 
 export interface FindTermOptions {
   isEvent?: boolean;
@@ -14,11 +14,10 @@ export interface FindTermOptions {
  */
 export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term | null {
   if (!terms || terms.length === 0) return null;
-  const today = todayDateOnly();
+  const today = todayDateOnly(APP_TIME_ZONE);
   const dateKey = (value?: string) => {
     if (!value) return "";
-    const dmy = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    return dmy ? `${dmy[3]}-${dmy[2]}-${dmy[1]}` : toDateOnly(value);
+    return toDateOnly(value);
   };
 
   const filteredTerms = options?.isEvent !== undefined
@@ -66,15 +65,15 @@ export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term 
 }
 
 export function getCurrentDateFormatted(): string {
-  return todayDateOnly();
+  return todayDateOnly(APP_TIME_ZONE);
 }
 
 export function getCurrentYearNumber(): number {
-  return new Date().getFullYear();
+  return ageGroupContextYear();
 }
 
 export function getCurrentYearString(): string {
-  return new Date().getFullYear().toString();
+  return ageGroupContextYear().toString();
 }
 
 /**

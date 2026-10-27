@@ -1,3 +1,4 @@
+import { formatDateOnly } from "../../utils/dateTime";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
@@ -5,15 +6,7 @@ import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useInvoices, useUpdateInvoice } from "../../hooks/useInvoices";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "N/A";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+const formatDate = (value: string) => formatDateOnly(value) || "N/A";
 
 const STATUS_STYLES: Record<string, { dot: string; text: string }> = {
   PAID: { dot: "bg-emerald-500", text: "text-emerald-600" },

@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { getRegistrationRequests, deleteTemporaryPlayer } from "../api/adminApi";
+import { deleteTemporaryPlayer } from "../api/adminApi";
 import { getCoachTemporaryPlayers } from "../api/coaches";
+import { fetchVerificationRequests, VerificationFilters } from "../api/verificationApi";
 import { Player, PlayersResponse } from "../types/player";
 
 // We map the raw response to match the Player interface so we can reuse PlayerTable
@@ -36,36 +37,29 @@ const mapRegistrationToPlayer = (reg: any): Player => {
     redCards: reg.player?.redCards || 0,
     // Add raw registration request id for status updates if needed
     requestId: reg._id,
+    assignedClasses: reg.player?.assignedClasses || [],
+    classPaymentStatuses: reg.player?.classPaymentStatuses || [],
+    playerStatus: reg.player?.playerStatus,
+    createdAt: reg.createdAt,
     preferredTerm: reg.preferredTerm,
     preferredClasses: reg.preferredClasses,
     requestType: reg.requestType,
     createdBy: reg.createdBy,
     assignedBy: reg.assignedBy,
     rating: reg.player?.rating || 0,
-    isMedicalCondition: reg.player?.isMedicalCondition || false,
+    isMedicalCondition: reg.player?.isMedicalCondition === true,
     medicalConditionDetails: reg.player?.medicalConditionDetails || "",
     medicalConditions: reg.player?.medicalConditions || "",
     prefferedFoot: reg.player?.prefferedFoot || reg.player?.preferredFoot || "",
   } as Player & { requestId: string };
 };
 
-export const useRegistrationRequests = (page = 1, limit = 10, isMedicalCondition?: string) => {
+export const useRegistrationRequests = (page = 1, limit = 20, filters: VerificationFilters = {}) => {
   return useQuery<PlayersResponse, Error>({
-    queryKey: ["registrationRequests", page, limit, isMedicalCondition],
+    queryKey: ["registrationRequests", page, limit, filters],
     queryFn: async () => {
-      const response = await getRegistrationRequests(page, limit, isMedicalCondition);
-      // Map data array to Players
-      if (!response || !response.data) {
-        return { success: true, limit: 10, totalPages: 1, users: [], total: 0, page: 1 };
-      }
-      return {
-        success: true,
-        limit: response.limit || 10,
-        totalPages: response.totalPages || 1,
-        users: response.data.map(mapRegistrationToPlayer),
-        total: response.total || 0,
-        page: response.page || 1,
-      } as PlayersResponse;
+      const response = await fetchVerificationRequests(page, limit, filters);
+      return { success: true, limit: response.limit, totalPages: response.totalPages, users: response.data.map(mapRegistrationToPlayer), total: response.total, page: response.page };
     },
   });
 };
@@ -96,6 +90,8 @@ export const useDeleteTemporaryPlayer = () => {
     mutationFn: (id: string) => deleteTemporaryPlayer(id),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["coachTemporaryPlayers"] });
+      queryClient.invalidateQueries({ queryKey: ["registrationRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebarBadges"] });
       toast.success(data?.message || "Temporary player deleted successfully");
     },
     onError: (error: any) => {

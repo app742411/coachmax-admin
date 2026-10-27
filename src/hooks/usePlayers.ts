@@ -142,20 +142,20 @@ export const useClassFiltersWithTimeSlots = (
   programId: string,
   day: string,
   termId?: string,
-  options?: { allowUnfiltered?: boolean }
+  options?: { allowUnfiltered?: boolean; enabled?: boolean }
 ) => {
   return useQuery({
     queryKey: ["classFiltersWithTimeSlots", categoryId, programId, day, termId],
     queryFn: () => getClassFiltersWithTimeSlots(categoryId, programId, day, termId),
-    enabled: !!day && (options?.allowUnfiltered === true || (!!categoryId && !!programId)),
+    enabled: options?.enabled !== false && !!day && (options?.allowUnfiltered === true || (!!categoryId && !!programId)),
   });
 };
 
-export const useClassFullTable = (classId: string) => {
+export const useClassFullTable = (classId: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["classFullTable", classId],
     queryFn: () => getClassFullTable(classId),
-    enabled: !!classId,
+    enabled: !!classId && options?.enabled !== false,
   });
 };
 
@@ -173,6 +173,8 @@ export const useMarkSingleTeamAttendance = (teamId: string, leagueId?: string) =
     mutationFn: (data: { sessionDate: string; playerId: string; status: string; reason?: string }) => markSingleTeamAttendance(teamId, { ...data, leagueId }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile"] });
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
       const statusSuffix = data?.data?.status ? `: ${data.data.status}` : "";
       toast.success((data?.message || "Team attendance marked") + statusSuffix);
@@ -189,6 +191,8 @@ export const useMarkTeamAttendance = (teamId: string, leagueId?: string) => {
     mutationFn: (data: { sessionDate: string; records: { player: string; status: string }[] }) => markTeamAttendance(teamId, { ...data, leagueId }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile"] });
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
       toast.success(data?.message || "Bulk team attendance marked!");
     },
@@ -222,6 +226,9 @@ export const useMarkSingleAttendance = (classId: string) => {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["myClassesList"] });
       const statusSuffix = data?.data?.status ? `: ${data.data.status}` : "";
       toast.success((data?.message || "Attendance marked") + statusSuffix);
     },
@@ -255,6 +262,9 @@ export const useMarkBulkAttendance = (classId: string) => {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["classFullTable", classId] });
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["myClassesList"] });
       toast.success(data?.message || "Bulk attendance marked");
     },
     onError: (error: any) => {
@@ -450,6 +460,8 @@ export const useUpdateTeamPlayerStatistics = (teamId: string) => {
       updateTeamPlayerStatistics(teamId, playerId, data),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["teamFullTable", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["adminPlayerDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["playerProfile"] });
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
       queryClient.invalidateQueries({ queryKey: ["teams"] });
       toast.success(data?.message || "Team player statistics updated successfully");

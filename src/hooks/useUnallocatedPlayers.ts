@@ -1,3 +1,4 @@
+import { formatDateOnly, formatDateTime } from "../utils/dateTime";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getUnallocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
@@ -8,11 +9,11 @@ const mapUnallocatedToCard = (data: any): UnallocatedPlayer => {
   const avatar = getMediaUrl(data.profileImage, getMediaFallback(data.fullName || "Player"));
   
   // Extract details (e.g. Gender, Age) cleanly without showing raw "Unknown"
-  const details = data.gender && data.gender !== "Unknown" ? data.gender : (data.dateOfBirth ? `DOB: ${new Date(data.dateOfBirth).toLocaleDateString("en-GB")}` : "Player");
+  const details = data.gender && data.gender !== "Unknown" ? data.gender : (data.dateOfBirth ? `DOB: ${formatDateOnly(data.dateOfBirth)}` : "Player");
 
   // Format requested date/time
   const requestedDate = new Date(data.joinedDate || data.createdAt || Date.now());
-  const formattedRequested = `${requestedDate.toLocaleDateString("en-US", { weekday: 'short' })} ${requestedDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' })}`;
+  const formattedRequested = formatDateTime(requestedDate);
 
   // Extract Category from request or user
   const reqCategory = data.registrationRequest?.category || data.category || (data.categories && data.categories[0]);

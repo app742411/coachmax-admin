@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import DOMPurify from "dompurify";
@@ -97,11 +98,7 @@ const NewsDetails: React.FC = () => {
     imageUrl = getMediaUrl(newsItem.images[0].replace(/\\/g, "/"), imageUrl);
   }
 
-  const formattedDate = new Date(newsItem.publishedAt || newsItem.createdAt).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  });
+  const formattedDate = formatTimestampDate(newsItem.publishedAt || newsItem.createdAt);
 
   // Prepare standard mappedNews object for EditNewsModal compatibility
   const mappedNewsForEdit = {

@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import { useState } from "react";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
@@ -608,7 +609,7 @@ export default function Home() {
                       </td>
                       {/* Registered Date */}
                       <td className="py-4 text-slate-550 dark:text-slate-400 font-semibold">
-                        {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "N/A"}
+                        {row.createdAt ? formatTimestampDate(row.createdAt) : "N/A"}
                       </td>
                       {/* Status */}
                       <td className="py-4">

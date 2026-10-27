@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import DateInput from "../form/DateInput";
+import { APP_TIME_ZONE, formatTimestampDate, formatTime, toDateOnly, zonedDateTimeToUtcISOString } from "../../utils/dateTime";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
@@ -110,10 +112,10 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
                           <div className="flex flex-col gap-1">
                               <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-semibold">
                                   <CalendarIcon size={12} className="text-brand-500" />
-                                  {fixture.kickoffTime ? new Date(fixture.kickoffTime).toLocaleDateString() : "TBD"}
+                                  {fixture.kickoffTime ? formatTimestampDate(fixture.kickoffTime) : "TBD"}
                               </span>
                               <span className="text-[10px] font-bold text-slate-500 ml-4.5">
-                                  {fixture.kickoffTime ? new Date(fixture.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                                  {fixture.kickoffTime ? formatTime(fixture.kickoffTime) : ""}
                               </span>
                           </div>
                         </td>
@@ -121,7 +123,7 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
                             <div className="flex flex-col gap-1">
                                 <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-[11px] font-semibold">
                                     <MapPin size={12} className="text-slate-400" />
-                                    {fixture.venue || "TBD"}
+                                    {[fixture.field, fixture.venue].filter(Boolean).join(" · ") || "TBD"}
                                 </span>
                                 <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-[11px] font-semibold">
                                     <User size={12} className="text-slate-400" />
@@ -182,7 +184,7 @@ const LeagueFixturesAccordion = ({ league, searchQuery, getTeamName, handleOpenE
 
 const FixtureManagement: React.FC = () => {
   const queryClient = useQueryClient();
-  const kickoffTimeRef = useRef<HTMLInputElement>(null);
+
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -192,7 +194,10 @@ const FixtureManagement: React.FC = () => {
 
   const [formData, setFormData] = useState({
     league: "",
-    kickoffTime: "",
+    kickoffDate: "",
+    kickoffClock: "",
+    round: 1,
+    field: "Field 1",
     venue: "",
     referee: "",
     homeTeam: "",
@@ -225,10 +230,16 @@ const FixtureManagement: React.FC = () => {
   });
   const leagues = getDataArray(leaguesData);
 
+  const selectedLeague = leagues.find((league: any) => league._id === formData.league);
+  const { data: selectedFixtures } = useQuery({ queryKey: ["fixtures", formData.league], queryFn: () => getFixturesByLeague(formData.league), enabled: !!formData.league && isModalOpen });
+  const usedTeamIds = new Set(getDataArray(selectedFixtures).filter((fixture: any) => Number(fixture.round) === Number(formData.round) && fixture._id !== selectedFixtureId).flatMap((fixture: any) => [fixture.homeTeam?._id || fixture.homeTeam, fixture.awayTeam?._id || fixture.awayTeam]));
+  const enrolledIds = new Set((selectedLeague?.teams || []).map((team: any) => team._id || team));
+  const eligibleTeams = teams.filter((team: any) => enrolledIds.has(team._id) && !usedTeamIds.has(team._id));
+
   const createMutation = useMutation({
     mutationFn: createFixture,
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ["fixtures"] });
+      ["fixtures", "league", "leagueSchedule", "leagueMatches", "leagueLadder", "leagueGraphs", "leagueTeams", "leagueStats"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       toast.success(res?.message || "Fixture created successfully!");
       setIsModalOpen(false);
     },
@@ -238,7 +249,7 @@ const FixtureManagement: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => updateFixture(id, data),
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ["fixtures"] });
+      ["fixtures", "league", "leagueSchedule", "leagueMatches", "leagueLadder", "leagueGraphs", "leagueTeams", "leagueStats"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       toast.success(res?.message || "Fixture updated successfully!");
       setIsModalOpen(false);
     },
@@ -248,7 +259,7 @@ const FixtureManagement: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteFixture,
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ["fixtures"] });
+      ["fixtures", "league", "leagueSchedule", "leagueMatches", "leagueLadder", "leagueGraphs", "leagueTeams", "leagueStats"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       toast.success(res?.message || "Fixture deleted successfully!");
       setDeleteModalId(null);
     },
@@ -256,7 +267,7 @@ const FixtureManagement: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
-    setFormData({ league: "", kickoffTime: "", venue: "", referee: "", homeTeam: "", awayTeam: "" });
+    setFormData({ league: "", kickoffDate: "", kickoffClock: "", round: 1, field: "Field 1", venue: "", referee: "", homeTeam: "", awayTeam: "" });
     setIsEditing(false);
     setSelectedFixtureId(null);
     setIsModalOpen(true);
@@ -265,7 +276,10 @@ const FixtureManagement: React.FC = () => {
   const handleOpenEdit = (fixture: any) => {
     setFormData({
       league: fixture.league?._id || fixture.league || "",
-      kickoffTime: fixture.kickoffTime ? new Date(fixture.kickoffTime).toISOString().slice(0, 16) : "",
+      kickoffDate: fixture.kickoffTime ? toDateOnly(formatTimestampDate(fixture.kickoffTime, APP_TIME_ZONE)) : "",
+      kickoffClock: fixture.kickoffTime ? new Date(fixture.kickoffTime).toLocaleTimeString("en-GB", { timeZone: APP_TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: false }) : "",
+      round: fixture.round || 1,
+      field: fixture.field || "Field 1",
       venue: fixture.venue || "",
       referee: fixture.referee || "",
       homeTeam: fixture.homeTeam?._id || fixture.homeTeam || "",
@@ -292,10 +306,9 @@ const FixtureManagement: React.FC = () => {
       toast.error("Home team and away team cannot be the same.");
       return;
     }
-    const payload = {
-        ...formData,
-        kickoffTime: new Date(formData.kickoffTime).toISOString()
-    };
+    let kickoffTime: string;
+    try { kickoffTime = zonedDateTimeToUtcISOString(formData.kickoffDate, formData.kickoffClock); } catch (error) { toast.error(error instanceof Error ? error.message : "Enter a valid kickoff time."); return; }
+    const payload = { ...formData, kickoffTime };
     if (isEditing && selectedFixtureId) {
       updateMutation.mutate({ id: selectedFixtureId, data: payload });
     } else {
@@ -371,7 +384,8 @@ const FixtureManagement: React.FC = () => {
               <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">League / Event</label>
               <select
                 value={formData.league}
-                onChange={(e) => setFormData({ ...formData, league: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, league: e.target.value, homeTeam: "", awayTeam: "", round: 1, field: "Field 1" })}
+                disabled={isEditing}
                 className="w-full rounded-none border border-slate-100 bg-slate-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
                 required
               >
@@ -392,7 +406,7 @@ const FixtureManagement: React.FC = () => {
                     required
                   >
                     <option value="">Select Home</option>
-                    {teams.map((t: any) => (
+                    {eligibleTeams.filter((t: any) => t._id !== formData.awayTeam).map((t: any) => (
                         <option key={t._id} value={t._id}>{t.teamName}</option>
                     ))}
                   </select>
@@ -406,7 +420,7 @@ const FixtureManagement: React.FC = () => {
                     required
                   >
                     <option value="">Select Away</option>
-                    {teams.map((t: any) => (
+                    {eligibleTeams.filter((t: any) => t._id !== formData.homeTeam).map((t: any) => (
                         <option key={t._id} value={t._id}>{t.teamName}</option>
                     ))}
                   </select>
@@ -418,28 +432,14 @@ const FixtureManagement: React.FC = () => {
           <div className="md:col-span-6 space-y-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Kick-off Time</label>
-              <div className="relative">
-                <input
-                  type="datetime-local"
-                  ref={kickoffTimeRef}
-                  value={formData.kickoffTime}
-                  onChange={(e) => setFormData({ ...formData, kickoffTime: e.target.value })}
-                  className="w-full rounded-none border border-slate-100 bg-slate-50 pl-5 pr-11 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all relative z-10 [&::-webkit-calendar-picker-indicator]:opacity-0 bg-transparent"
-                  required
-                />
-                <div 
-                  className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-pointer z-20"
-                  onClick={() => {
-                    try {
-                      kickoffTimeRef.current?.showPicker();
-                    } catch (e) {
-                      kickoffTimeRef.current?.focus();
-                    }
-                  }}
-                >
-                  <CalendarIcon className="text-gray-400 w-4 h-4" />
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                <DateInput aria-label="Kickoff date" type="date" value={formData.kickoffDate} onChange={(e) => setFormData({ ...formData, kickoffDate: e.target.value })} required className="w-full border px-3 py-2" />
+                <input aria-label="Kickoff time" type="time" value={formData.kickoffClock} onChange={(e) => setFormData({ ...formData, kickoffClock: e.target.value })} required className="w-full border px-3 py-2" />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs">Round<select value={formData.round} onChange={(e) => setFormData({ ...formData, round: Number(e.target.value), homeTeam: "", awayTeam: "" })} className="w-full border px-3 py-2">{Array.from({ length: selectedLeague?.numberOfRounds || 1 }, (_, i) => <option key={i + 1} value={i + 1}>Round {i + 1}</option>)}</select></label>
+              <label className="text-xs">Field<select value={formData.field} onChange={(e) => setFormData({ ...formData, field: e.target.value })} className="w-full border px-3 py-2">{Array.from({ length: selectedLeague?.numberOfFields || 1 }, (_, i) => <option key={i + 1} value={`Field ${i + 1}`}>Field {i + 1}</option>)}</select></label>
             </div>
 
             <div>

@@ -168,12 +168,7 @@ const AppSidebar: React.FC = () => {
             { name: "Players", path: "/players" },
             { name: "Add Temporary Players", path: "/add-temporary-players" },
             {
-              name: "Temporary Players",
-              path: "/temporary-players-list",
-              badgeCount: badges.temporaryPlayers || 0
-            },
-            {
-              name: "Verification Request",
+              name: "Verification Requests",
               path: "/new-registration-request",
               badgeCount: badges.verificationRequests || 0
             }

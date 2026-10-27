@@ -64,11 +64,13 @@ export interface ResetPasswordRequest {
   userId: string;
   role: string;
   newPassword?: string;
+  resetToken: string;
 }
 
 export interface MessageResponse {
   success: boolean;
   message: string;
+  resetToken?: string;
 }
 
 export interface UserProfileResponse {

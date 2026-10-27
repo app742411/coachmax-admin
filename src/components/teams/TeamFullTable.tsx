@@ -1,3 +1,4 @@
+import { formatDateOnly } from "../../utils/dateTime";
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
@@ -316,19 +317,7 @@ export default function TeamFullTable({
     return getMediaUrl(path) || null;
   };
 
-  const formatDob = (dobStr?: string) => {
-    if (!dobStr) return "—";
-    try {
-      const d = new Date(dobStr);
-      if (isNaN(d.getTime())) return dobStr;
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const year = d.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch {
-      return dobStr;
-    }
-  };
+  const formatDob = (value?: string) => value ? formatDateOnly(value) || "—" : "—";
 
   const handleUpdateStatus = async (userId: string, paymentStatus: string) => {
     try {
@@ -350,14 +339,7 @@ export default function TeamFullTable({
     }
   };
 
-  const formatDateLabel = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return {
-      day: d.toLocaleDateString("en-US", { weekday: "short" }),
-      date: `${d.getDate()}/${d.getMonth() + 1 < 10 ? "0" + (d.getMonth() + 1) : d.getMonth() + 1
-        }`,
-    };
-  };
+  const formatDateLabel = (value: string) => ({ day: formatDateOnly(value, { weekday: "short" }), date: formatDateOnly(value) });
 
   return (
     <div className={`relative overflow-hidden w-full ${className ? className : "border shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mb-6"}`}>
@@ -801,6 +783,7 @@ export default function TeamFullTable({
       {selectedPlayer && (
         <PlayerDetailCard
           player={selectedPlayer}
+          contextYear={schedule.term?.year}
           onClose={() => setSelectedPlayer(null)}
         />
       )}

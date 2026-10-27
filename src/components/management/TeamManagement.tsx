@@ -31,6 +31,7 @@ const TeamManagement: React.FC = () => {
   const [tempPlayersTeam, setTempPlayersTeam] = useState<{ id: string; name: string } | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const [selectedFilterYear, setSelectedFilterYear] = useState<string>(
     new Date().getFullYear().toString()
@@ -108,10 +109,14 @@ const TeamManagement: React.FC = () => {
   };
 
   const { data: teamsData, isLoading: loading } = useQuery({
-    queryKey: ["teams", selectedFilterTerm],
-    queryFn: () => getAllTeams(selectedFilterTerm || undefined),
+    queryKey: ["teams", selectedFilterTerm, page, searchQuery],
+    queryFn: () => getAllTeams(selectedFilterTerm, { page, limit: 20, search: searchQuery }),
+    enabled: !!selectedFilterTerm,
   });
   const teams = getDataArray(teamsData);
+  const totalPages = teamsData?.pagination?.totalPages || 1;
+  useEffect(() => setPage(1), [selectedFilterTerm, searchQuery]);
+  useEffect(() => { if (page > totalPages) setPage(Math.max(1, totalPages)); }, [page, totalPages]);
 
   const { data: coachesData } = useQuery({
     queryKey: ["coaches"],
@@ -128,7 +133,7 @@ const TeamManagement: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: createTeam,
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      ["teams", "team", "league", "leagueTeams", "leagueMatches", "leagueLadder"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       toast.success(res?.message || "Team created successfully!");
       setIsModalOpen(false);
     },
@@ -138,7 +143,7 @@ const TeamManagement: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => updateTeam(id, data),
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      ["teams", "team", "league", "leagueTeams", "leagueMatches", "leagueLadder"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       toast.success(res?.message || "Team updated successfully!");
       setIsModalOpen(false);
     },
@@ -148,8 +153,8 @@ const TeamManagement: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteTeam,
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast.success(res?.message || "Team deleted successfully!");
+      ["teams", "team", "league", "leagueTeams", "leagueMatches", "leagueLadder"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
+      toast.success(res?.message || "Team archived successfully!");
       setDeleteModalId(null);
     },
     onError: (error: any) => toast.error(error?.response?.data?.message || "Failed to delete team"),
@@ -164,8 +169,8 @@ const TeamManagement: React.FC = () => {
       ageGroup: "",
       fee: "",
       teamFee: "",
-      year: new Date().getFullYear().toString(),
-      term: "",
+      year: selectedFilterYear,
+      term: selectedFilterTerm,
       dayOfWeek: "Monday",
       startTime: "17:00",
       endTime: "18:30",
@@ -597,7 +602,7 @@ const TeamManagement: React.FC = () => {
                               setOpenDropdownId(null);
                             }}
                           >
-                            Delete Team
+                            Archive Team
                           </button>
                         </div>
                       )}
@@ -607,6 +612,14 @@ const TeamManagement: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-sm">
+        <span>{teamsData?.pagination?.total || 0} teams in the selected term · Page {page} of {totalPages}</span>
+        <div className="flex gap-2">
+          <Button size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Previous</Button>
+          <Button size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>Next</Button>
         </div>
       </div>
 
@@ -965,8 +978,8 @@ const TeamManagement: React.FC = () => {
             deleteMutation.mutate(deleteModalId);
           }
         }}
-        title="Delete Team"
-        message="Are you sure you want to permanently delete this team? This action cannot be undone."
+        title="Archive Team"
+        message="Archive this team? Historical matches, attendance and payments will remain available."
       />
 
       <AssignPlayerToTeamModal

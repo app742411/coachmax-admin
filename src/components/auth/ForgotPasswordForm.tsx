@@ -18,10 +18,11 @@ export default function ForgotPasswordForm() {
 
   const [step, setStep] = useState<Step>("SEND_OTP");
   const [email, setEmail] = useState("");
-  const [role] = useState("ADMIN");
+  const [role] = useState(() => new URLSearchParams(window.location.search).get("role") === "PARENT" ? "PARENT" : "ADMIN");
   const [userId, setUserId] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [resetToken, setResetToken] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const [timer, setTimer] = useState<number>(0);
@@ -87,6 +88,7 @@ export default function ForgotPasswordForm() {
       {
         onSuccess: (res) => {
           setSuccessMessage(res.message || "OTP verified successfully. You may now reset your password.");
+          setResetToken(res.resetToken || "");
           setStep("RESET_PASSWORD");
         },
         onError: (err) => setErrorMessage((err as any)?.response?.data?.message || err.message || "User not found"),
@@ -98,7 +100,7 @@ export default function ForgotPasswordForm() {
     e.preventDefault();
     clearMessages();
     resetPassword(
-      { userId, role, newPassword },
+      { userId, role, newPassword, resetToken },
       {
         onSuccess: (res) => {
           setSuccessMessage(res.message || "Password reset successful! Redirecting to login...");
@@ -222,7 +224,7 @@ export default function ForgotPasswordForm() {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         required
-                        minLength={6}
+                        minLength={8}
                       />
                       <span
                         onClick={() => setShowPassword(!showPassword)}

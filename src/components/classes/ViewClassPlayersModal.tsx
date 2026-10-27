@@ -1,3 +1,4 @@
+import { ageGroupForYear } from "../../utils/dateTime";
 import { useState } from "react";
 import { Modal } from "../../components/ui/modal";
 import { useClassPlayers } from "../../hooks/usePlayers";
@@ -190,7 +191,7 @@ export default function ViewClassPlayersModal({
                               </div>
                               {player.gender && (
                                 <span className="text-[10px] text-slate-400 uppercase font-medium tracking-wider">
-                                  {player.gender} {player.dob ? `• ${new Date().getFullYear() - new Date(player.dob).getFullYear()} yrs` : ""}
+                                  {player.gender} {player.dob ? `• U${ageGroupForYear(player.dob, classData?.term?.year) ?? "?"}` : ""}
                                 </span>
                               )}
                             </div>
@@ -240,6 +241,7 @@ export default function ViewClassPlayersModal({
       {selectedPlayer && (
         <PlayerDetailCard
           player={selectedPlayer}
+          contextYear={classData?.term?.year}
           onClose={() => setSelectedPlayer(null)}
         />
       )}

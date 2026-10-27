@@ -111,8 +111,8 @@ export const teamAttendanceService = {
   /**
    * 5. Mark Team Attendance (Admin/Coach)
    * @param teamId
-   * @param sessionDate - 'YYYY-MM-DD' or 'DD-MM-YYYY'
-   * @param records - [{ player: 'id', status: 'PRESENT' | 'ABSENT' | 'LATE' | 'TRIAL', comment: '' }]
+   * @param sessionDate - Canonical 'YYYY-MM-DD' calendar date (displayed DD/MM/YYYY)
+   * @param records - [{ player: 'id', status: 'PRESENT' | 'ABSENT' | 'LATE' | 'NOT_MARKED', comment: '' }]
    */
   async markTeamAttendance(teamId: string, sessionDate: string, records: TeamAttendanceRecord[], token?: string) {
     const res = await axios.post(

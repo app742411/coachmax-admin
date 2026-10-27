@@ -1,3 +1,4 @@
+import { formatDateTime } from "../../utils/dateTime";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
@@ -34,18 +35,7 @@ interface AuditLogResponse {
   data: AuditLog[];
 }
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "N/A";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, "0");
-  const mins = String(date.getMinutes()).padStart(2, "0");
-  const secs = String(date.getSeconds()).padStart(2, "0");
-  return `${day}/${month}/${year} ${hours}:${mins}:${secs}`;
-};
+const formatDate = (value: string) => formatDateTime(value, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }) || "N/A";
 
 const getActionColor = (action: string) => {
   const a = action?.toUpperCase() || "";

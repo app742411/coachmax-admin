@@ -38,6 +38,11 @@ export const leagueService = {
     return response.data;
   },
 
+  updateLeagueTeamStatus: async (leagueId: string, teamId: string, status: "ACTIVE" | "INACTIVE") => {
+    const response = await apiClient.patch(`/api/admin/leagues/${leagueId}/teams/${teamId}/status`, { status });
+    return response.data;
+  },
+
   // Remove team from league (Tab 3 & 7)
   removeTeamFromLeague: async (leagueId: string, teamId: string) => {
     const response = await apiClient.delete(`/api/admin/leagues/${leagueId}/teams/${teamId}`);
@@ -46,15 +51,8 @@ export const leagueService = {
 
   // Schedule a new fixture (Tab 2)
   createFixture: async (fixtureData: CreateFixturePayload) => {
-    try {
-      if (fixtureData.league) {
-        const res = await apiClient.post(`/api/admin/leagues/${fixtureData.league}/fixtures`, fixtureData);
-        return res.data;
-      }
-    } catch (e) {
-      // fallback to global fixtures endpoint
-    }
-    const response = await apiClient.post("/api/admin/fixtures", fixtureData);
+    if (!fixtureData.league) throw new Error("A league is required.");
+    const response = await apiClient.post(`/api/admin/leagues/${fixtureData.league}/fixtures`, fixtureData);
     return response.data;
   },
 
@@ -81,17 +79,8 @@ export const leagueService = {
 
   // Manual fixture edit under league (marks fixtureSource: "MANUAL")
   updateFixtureManually: async (leagueId: string, fixtureId: string, payload: any) => {
-    try {
-      const response = await apiClient.put(
-        `/api/admin/leagues/${leagueId}/fixtures/${fixtureId}`,
-        payload
-      );
-      return response.data?.data || response.data;
-    } catch (e) {
-      // fallback to global fixtures endpoint
-      const response = await apiClient.put(`/api/admin/fixtures/${fixtureId}`, payload);
-      return response.data?.data || response.data;
-    }
+    const response = await apiClient.put(`/api/admin/leagues/${leagueId}/fixtures/${fixtureId}`, payload);
+    return response.data?.data || response.data;
   },
 
   // Update fixture or enter result with statistics
@@ -125,15 +114,8 @@ export const leagueService = {
 
   // Delete fixture under league
   deleteLeagueFixture: async (leagueId: string, fixtureId: string) => {
-    try {
-      const response = await apiClient.delete(
-        `/api/admin/leagues/${leagueId}/fixtures/${fixtureId}`
-      );
-      return response.data?.data || response.data;
-    } catch (e) {
-      const response = await apiClient.delete(`/api/admin/fixtures/${fixtureId}`);
-      return response.data?.data || response.data;
-    }
+    const response = await apiClient.delete(`/api/admin/leagues/${leagueId}/fixtures/${fixtureId}`);
+    return response.data?.data || response.data;
   },
 
   // Delete all fixtures/matches for a specific round under league

@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import React, { useState, useMemo, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
@@ -348,7 +349,7 @@ export default function TermEarningsPage() {
       (r.paidAmount || 0).toFixed(2),
       (r.pendingAmount || 0).toFixed(2),
       `"${r.paymentStatus || "UNPAID"}"`,
-      `"${r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ""}"`,
+      `"${r.createdAt ? formatTimestampDate(r.createdAt) : ""}"`,
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");

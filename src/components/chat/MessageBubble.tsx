@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Message } from "../../store/slices/chatSlice";
 import { getMediaFallback, getMediaUrl } from "../../utils/media";
+import { openMediaInNewTab, renewInlineMediaElement } from "../../utils/privateMedia";
+import toast from "react-hot-toast";
 
 interface MessageBubbleProps {
   message: Message;
@@ -13,6 +15,7 @@ const getAttachmentUrl = (url: string) => {
   if (!url) return "";
   return getMediaUrl(url);
 };
+const openAttachment = (url: string) => { void openMediaInNewTab(url).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Could not open this file.")); };
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
@@ -20,6 +23,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   senderName,
   onRetry,
 }) => {
+  const [mediaErrors, setMediaErrors] = useState<Record<number, boolean>>({});
+  const clearMediaError = (index: number) => setMediaErrors((current) => current[index] ? { ...current, [index]: false } : current);
+  const handleInlineError = (index: number, url: string, target: HTMLImageElement | HTMLMediaElement) => {
+    // Capture the element synchronously; React's event object is not retained.
+    void renewInlineMediaElement(target, url).then((renewed) => {
+      if (!renewed) setMediaErrors((current) => ({ ...current, [index]: true }));
+    }).catch(() => setMediaErrors((current) => ({ ...current, [index]: true })));
+  };
+  const renderMediaError = (index: number, url: string) => mediaErrors[index] ? (
+    <div role="status" className="text-xs mt-1">
+      Preview unavailable. <button type="button" className="underline font-semibold" onClick={() => openAttachment(url)}>Open attachment</button>
+    </div>
+  ) : null;
   const timeStr = new Date(message.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -85,9 +101,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       src={fullUrl}
                       alt={attach.fileName || "Image attachment"}
                       className="max-h-[180px] w-auto border border-gray-300 dark:border-slate-700/50 object-cover cursor-pointer hover:opacity-90"
-                      onClick={() => window.open(fullUrl, "_blank")}
-                      onLoad={() => document.dispatchEvent(new Event("chat-image-loaded"))}
+                      onClick={() => openAttachment(attach.url)}
+                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openAttachment(attach.url); } }}
+                      role="button"
+                      tabIndex={0}
+                      onError={(event) => handleInlineError(idx, attach.url, event.currentTarget)}
+                      onLoad={() => { clearMediaError(idx); document.dispatchEvent(new Event("chat-image-loaded")); }}
                     />
+                    {renderMediaError(idx, attach.url)}
                   </div>
                 );
               }
@@ -97,15 +118,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     <video
                       src={fullUrl}
                       controls
+                      onError={(event) => handleInlineError(idx, attach.url, event.currentTarget)}
+                      onLoadedData={() => clearMediaError(idx)}
                       className="max-h-[180px] w-full border border-gray-300 dark:border-slate-700/50"
                     />
+                    {renderMediaError(idx, attach.url)}
                   </div>
                 );
               }
               if (fileTypeUpper === "AUDIO" || attach.fileType?.startsWith("audio/")) {
                 return (
                   <div key={idx} className="mt-1 max-w-[240px]">
-                    <audio src={fullUrl} controls className="w-full text-xs" />
+                    <audio src={fullUrl} controls className="w-full text-xs" onError={(event) => handleInlineError(idx, attach.url, event.currentTarget)} onLoadedData={() => clearMediaError(idx)} />
+                    {renderMediaError(idx, attach.url)}
                   </div>
                 );
               }
@@ -116,6 +141,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   href={fullUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(event) => { event.preventDefault(); openAttachment(attach.url); }}
                   className={`flex items-center gap-1.5 text-xs font-medium underline mt-1 ${
                     isSelf
                       ? "text-blue-200 hover:text-white"

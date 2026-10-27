@@ -1,3 +1,4 @@
+import { formatDateTime } from "../../utils/dateTime";
 import React from "react";
 import { Announcement } from "../../store/slices/broadcastSlice";
 import { getMediaFallback, getMediaUrl } from "../../utils/media";
@@ -9,12 +10,7 @@ interface BroadcastCardProps {
 export const BroadcastCard: React.FC<BroadcastCardProps> = ({ announcement }) => {
   const authorName = announcement.sender?.fullName || announcement.sender?.name || "Coach";
   const fallback = getMediaFallback(authorName);
-  const dateStr = new Date(announcement.createdAt).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateStr = formatDateTime(announcement.createdAt);
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 border-l-4 border-l-blue-600 rounded-none p-5 shadow-sm hover:shadow-md transition-all duration-200">

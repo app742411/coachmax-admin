@@ -34,6 +34,8 @@ export const useGenerateFixtures = (leagueId: string) => {
     mutationFn: (forceRegenerate?: boolean) =>
       generateRandomFixtures(leagueId, forceRegenerate),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueMatches", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueSchedule", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["league", leagueId] });
@@ -50,13 +52,15 @@ export const useCreateMatch = (leagueId: string) => {
   return useMutation({
     mutationFn: (matchData: Partial<Match>) => createLeagueMatch(leagueId, matchData),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueMatches", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
       toast.success("Match created successfully");
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Failed to create match");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to create match");
     },
   });
 };
@@ -68,13 +72,15 @@ export const useUpdateMatch = (leagueId: string) => {
     mutationFn: ({ matchId, data }: { matchId: string; data: Partial<Match> }) =>
       updateLeagueMatch(leagueId, matchId, data),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueMatches", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
       toast.success("Match updated successfully");
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Failed to update match");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update match");
     },
   });
 };
@@ -85,13 +91,15 @@ export const useDeleteMatch = (leagueId: string) => {
   return useMutation({
     mutationFn: (matchId: string) => deleteLeagueMatch(leagueId, matchId),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueMatches", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
       toast.success("Match deleted successfully");
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Failed to delete match");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to delete match");
     },
   });
 };
@@ -102,6 +110,8 @@ export const useDeleteRound = (leagueId: string) => {
   return useMutation({
     mutationFn: (round: number | string) => deleteLeagueRound(leagueId, round),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueMatches", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueSchedule", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["league", leagueId] });
@@ -111,7 +121,7 @@ export const useDeleteRound = (leagueId: string) => {
       toast.success("Round deleted successfully");
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || err?.message || "Failed to delete round");
+      toast.error(err?.response?.data?.message || err?.response?.data?.message || err?.message || "Failed to delete round");
     },
   });
 };

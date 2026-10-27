@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { getAllNews, deleteNews, getNewsCategories } from "../../api/adminApi";
@@ -47,7 +48,7 @@ const ContentListPage = ({ type = "news" }) => {
             title: item.title,
             category: item.category,
             readTime: "5 min read", // Mock
-            timeAgo: new Date(item.publishedAt || item.createdAt).toLocaleDateString(),
+            timeAgo: formatTimestampDate(item.publishedAt || item.createdAt),
             image: imageUrl,
             isFeatured: item.featured,
             description: item.description,

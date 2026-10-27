@@ -20,7 +20,8 @@ import { useLeaguePermissions } from "../../hooks/useLeaguePermissions";
 import { Modal } from "../../../../components/ui/modal";
 import Button from "../../../../components/ui/button/Button";
 import { useQuery } from "@tanstack/react-query";
-import { getAllTeams } from "../../../../api/adminApi";
+import { useLeague } from "../../hooks/useLeague";
+import { createTeam, getAllCoaches, getAllTeams } from "../../../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { getMediaUrl } from "../../../../utils/media";
 
@@ -30,6 +31,12 @@ interface TeamsGridProps {
 
 export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
   const { data: teams = [], isLoading } = useLeagueTeams(leagueId);
+  const { data: league } = useLeague(leagueId);
+  const termId = typeof league?.term === "object" ? league.term._id : league?.term;
+  const [createdTeamId, setCreatedTeamId] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const { data: coachesResponse } = useQuery({ queryKey: ["coaches"], queryFn: getAllCoaches });
+  const coaches = Array.isArray(coachesResponse) ? coachesResponse : coachesResponse?.data || [];
   const { canManageTeams } = useLeaguePermissions();
 
   const addTeamMutation = useAddTeamToLeague(leagueId);
@@ -53,9 +60,9 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
 
   // Fetch all academy teams for "Select Existing Team"
   const { data: allTeamsData } = useQuery({
-    queryKey: ["allAcademyTeams"],
-    queryFn: () => getAllTeams(),
-    enabled: isAddModalOpen,
+    queryKey: ["allAcademyTeams", termId],
+    queryFn: () => getAllTeams(termId),
+    enabled: isAddModalOpen && !!termId,
   });
 
   const allAcademyTeams: any[] = Array.isArray(allTeamsData)
@@ -66,8 +73,7 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
   const [newTeamForm, setNewTeamForm] = useState({
     name: "",
     coach: "",
-    coachEmail: "",
-    playersCount: 12,
+    ageGroup: "",
   });
 
   // Selected existing team ID
@@ -87,66 +93,31 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
     );
   });
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    if (!termId) { toast.error("This league requires a term before teams can be added."); return; }
     if (mode === "EXISTING") {
-      if (!selectedExistingTeamId) {
-        toast.error("Please select a team");
-        return;
-      }
-
-      // Validation: prevent duplicate
-      const alreadyExists = teams.some((t) => t._id === selectedExistingTeamId);
-      if (alreadyExists) {
-        toast.error("This team is already participating in the league");
-        return;
-      }
-
-      const teamObj = allAcademyTeams.find((t: any) => t._id === selectedExistingTeamId);
-      addTeamMutation.mutate(
-        {
-          _id: teamObj?._id,
-          name: teamObj?.teamName || "Selected Team",
-          coach: teamObj?.coach?.name || teamObj?.coach || "Coach Unassigned",
-          playersCount: teamObj?.players?.length || 10,
-        },
-        {
-          onSuccess: () => {
-            setIsAddModalOpen(false);
-            setSelectedExistingTeamId("");
-          },
-        }
-      );
-    } else {
-      if (!newTeamForm.name.trim()) {
-        toast.error("Team name is required");
-        return;
-      }
-
-      const alreadyExists = teams.some(
-        (t) => (t.teamName || t.name || "").toLowerCase() === newTeamForm.name.trim().toLowerCase()
-      );
-      if (alreadyExists) {
-        toast.error("A team with this name is already participating");
-        return;
-      }
-
-      addTeamMutation.mutate(
-        {
-          name: newTeamForm.name.trim(),
-          coach: newTeamForm.coach || "Unassigned",
-          coachEmail: newTeamForm.coachEmail,
-          playersCount: Number(newTeamForm.playersCount) || 0,
-        },
-        {
-          onSuccess: () => {
-            setIsAddModalOpen(false);
-            setNewTeamForm({ name: "", coach: "", coachEmail: "", playersCount: 12 });
-          },
-        }
-      );
+      if (!selectedExistingTeamId || teams.some((team) => team._id === selectedExistingTeamId)) { toast.error("Select a team that is not already enrolled."); return; }
+      addTeamMutation.mutate([selectedExistingTeamId], { onSuccess: () => { setIsAddModalOpen(false); setSelectedExistingTeamId(""); } });
+      return;
     }
+    if (!newTeamForm.name.trim() || !newTeamForm.ageGroup.trim()) { toast.error("Team name and age group are required."); return; }
+    let savedId = createdTeamId;
+    try {
+      setIsCreating(true);
+      if (!savedId) {
+        const payload = new FormData();
+        payload.append("teamName", newTeamForm.name.trim()); payload.append("term", termId); payload.append("ageGroup", newTeamForm.ageGroup.trim());
+        if (newTeamForm.coach) payload.append("coach", newTeamForm.coach);
+        const created = await createTeam(payload);
+        savedId = created?.data?._id;
+        if (!savedId) throw new Error("The server did not return the created team ID.");
+        setCreatedTeamId(savedId);
+      }
+      await addTeamMutation.mutateAsync([savedId]);
+      setIsAddModalOpen(false); setCreatedTeamId(""); setNewTeamForm({ name: "", coach: "", ageGroup: "" });
+    } catch (error: any) { toast.error(savedId ? "Team saved. Enrollment failed; retry to enroll this same team." : error?.response?.data?.message || error?.message || "Team could not be created."); }
+    finally { setIsCreating(false); }
   };
 
   const handleOpenStatsModal = (t: LeagueTeam) => {
@@ -466,6 +437,7 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
                 <input
                   type="text"
                   placeholder="e.g. Western Sydney Strikers"
+                  disabled={!!createdTeamId || isCreating}
                   value={newTeamForm.name}
                   onChange={(e) => setNewTeamForm({ ...newTeamForm, name: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
@@ -478,28 +450,14 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     Coach Name
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Coach full name"
-                    value={newTeamForm.coach}
-                    onChange={(e) => setNewTeamForm({ ...newTeamForm, coach: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
-                  />
+                  <select value={newTeamForm.coach} disabled={!!createdTeamId || isCreating} onChange={(e) => setNewTeamForm({ ...newTeamForm, coach: e.target.value })} className="w-full px-3.5 py-2 text-xs border rounded-lg"><option value="">Unassigned</option>{coaches.map((coach: any) => <option key={coach._id} value={coach._id}>{coach.fullName || coach.name}</option>)}</select>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Roster Count
+                    Age Group
                   </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={newTeamForm.playersCount}
-                    onChange={(e) =>
-                      setNewTeamForm({ ...newTeamForm, playersCount: Number(e.target.value) })
-                    }
-                    className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:border-brand-500"
-                  />
+                  <input type="text" value={newTeamForm.ageGroup} disabled={!!createdTeamId || isCreating} onChange={(e) => setNewTeamForm({ ...newTeamForm, ageGroup: e.target.value })} placeholder="e.g. U11" required className="w-full px-3.5 py-2 text-xs border rounded-lg" />
                 </div>
               </div>
             </>
@@ -513,8 +471,8 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
             >
               Cancel
             </button>
-            <Button type="submit" size="sm" disabled={addTeamMutation.isPending}>
-              {addTeamMutation.isPending ? "Assigning..." : "Assign Team"}
+            <Button type="submit" size="sm" disabled={addTeamMutation.isPending || isCreating}>
+              {addTeamMutation.isPending || isCreating ? "Saving..." : createdTeamId ? "Retry Enrollment" : "Assign Team"}
             </Button>
           </div>
         </form>

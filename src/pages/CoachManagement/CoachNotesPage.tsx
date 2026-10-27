@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { useCoachAllNotes } from "../../hooks/usePlayers";
@@ -70,7 +71,7 @@ export default function CoachNotesPage() {
                   <span className={`px-1.5 py-0.5 border uppercase font-bold text-[9px] ${getBadgeStyles(note.noteType)}`}>
                     {note.noteType?.replace("_", " ")}
                   </span>
-                  <span className="text-slate-500 dark:text-slate-400">{new Date(note.createdAt).toLocaleDateString()}</span>
+                  <span className="text-slate-500 dark:text-slate-400">{formatTimestampDate(note.createdAt)}</span>
                 </div>
 
                 <p className="text-xs text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">

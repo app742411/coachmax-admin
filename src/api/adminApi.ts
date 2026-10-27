@@ -159,13 +159,27 @@ export const getAllTerms = async (year?: number, isEvent?: "all" | "true" | "fal
   return res.data;
 };
 
+const ensureSlashDate = (value?: string | null): string | undefined => {
+  if (!value) return undefined;
+  const str = String(value).trim();
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  return str;
+};
+
 export const createTerm = async (data: any): Promise<any> => {
-  const res = await apiClient.post(ENDPOINTS.CREATE_TERM, data);
+  const payload = { ...data };
+  if (payload.startDate) payload.startDate = ensureSlashDate(payload.startDate);
+  if (payload.endDate) payload.endDate = ensureSlashDate(payload.endDate);
+  const res = await apiClient.post(ENDPOINTS.CREATE_TERM, payload);
   return res.data;
 };
 
 export const updateTerm = async (id: string, data: any): Promise<any> => {
-  const res = await apiClient.put(`${ENDPOINTS.UPDATE_TERM}/${id}`, data);
+  const payload = { ...data };
+  if (payload.startDate) payload.startDate = ensureSlashDate(payload.startDate);
+  if (payload.endDate) payload.endDate = ensureSlashDate(payload.endDate);
+  const res = await apiClient.put(`${ENDPOINTS.UPDATE_TERM}/${id}`, payload);
   return res.data;
 };
 
@@ -315,13 +329,17 @@ export const deleteNews = async (id: string): Promise<any> => {
 
 // ================= TEAMS =================
 
-export const getAllTeams = async (termId?: string): Promise<any> => {
-  let url = ENDPOINTS.TEAMS;
-  if (termId) {
-    url += `?termId=${termId}`;
+export const getAllTeams = async (termId?: string, options?: { page?: number; limit?: number; search?: string }): Promise<any> => {
+  const params = { ...(termId ? { termId } : {}), page: options?.page || 1, limit: options?.limit || 100, search: options?.search || "" };
+  const res = await apiClient.get(ENDPOINTS.TEAMS, { params });
+  if (options) return res.data;
+  const combined = [...(res.data?.data || [])];
+  const pages = res.data?.pagination?.totalPages || 1;
+  for (let page = 2; page <= pages; page++) {
+    const next = await apiClient.get(ENDPOINTS.TEAMS, { params: { ...params, page } });
+    combined.push(...(next.data?.data || []));
   }
-  const res = await apiClient.get(url);
-  return res.data;
+  return { ...res.data, data: combined };
 };
 
 export const createTeam = async (data: any): Promise<any> => {

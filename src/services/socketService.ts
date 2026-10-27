@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { store } from "../store";
+import { clearCredentials } from "../store/slices/authSlice";
 import { setConnected, setReconnecting, setSocketError } from "../store/slices/socketSlice";
 import {
   appendMessage,
@@ -11,11 +12,13 @@ import { addAnnouncement } from "../store/slices/broadcastSlice";
 import { toast } from "react-hot-toast";
 
 let socket: Socket | null = null;
+let socketToken: string | null = null;
+const REVOKED_SESSION_MESSAGE = "Session expired or revoked. Please sign in again.";
 
 export const socketService = {
   connect: (token: string) => {
     if (socket) {
-      if (socket.connected) return;
+      if (socket.connected && socketToken === token) return;
       socket.disconnect();
     }
 
@@ -26,8 +29,24 @@ export const socketService = {
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
     });
+    socketToken = token;
+    const connection = socket;
+    const handleRevokedSession = () => {
+      // A late event from an older connection must not clear a fresh sign-in.
+      if (socket !== connection) return;
+      socket = null;
+      socketToken = null;
+      connection.disconnect();
+      store.dispatch(setConnected(false));
+      store.dispatch(setReconnecting(false));
+      const storedToken = localStorage.getItem("token");
+      if (storedToken && storedToken !== token) return;
+      store.dispatch(clearCredentials());
+      window.location.href = "/signin";
+    };
 
     socket.on("connect", () => {
+      if (socket !== connection) return;
       store.dispatch(setConnected(true));
 
       const activeRoomId = store.getState().chat.activeRoomId;
@@ -38,11 +57,21 @@ export const socketService = {
     });
 
     socket.on("disconnect", () => {
+      if (socket !== connection) return;
       store.dispatch(setConnected(false));
     });
 
-    socket.on("connect_error", (error) => {
+    socket.on("connect_error", (error: Error & { data?: { code?: string } }) => {
+      if (socket !== connection) return;
+      if (error.message === REVOKED_SESSION_MESSAGE || error.data?.code === "SESSION_REVOKED") {
+        handleRevokedSession();
+        return;
+      }
       store.dispatch(setSocketError(error.message));
+    });
+
+    socket.on("session_revoked", (data: { code?: string }) => {
+      if (data?.code === "SESSION_REVOKED") handleRevokedSession();
     });
 
     socket.on("reconnect_attempt", () => {
@@ -112,6 +141,7 @@ export const socketService = {
     if (socket) {
       socket.disconnect();
       socket = null;
+      socketToken = null;
     }
   },
 

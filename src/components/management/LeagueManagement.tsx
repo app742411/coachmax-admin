@@ -1,3 +1,4 @@
+import DateInput from "../form/DateInput";
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1130,7 +1131,7 @@ const LeagueManagement: React.FC = () => {
                   Start Date
                 </label>
                 <div className="relative">
-                  <input
+                  <DateInput
                     type="date"
                     ref={startDateRef}
                     value={formData.startDate}
@@ -1167,7 +1168,7 @@ const LeagueManagement: React.FC = () => {
                   End Date
                 </label>
                 <div className="relative">
-                  <input
+                  <DateInput
                     type="date"
                     ref={endDateRef}
                     value={formData.endDate}
@@ -1432,7 +1433,7 @@ const LeagueManagement: React.FC = () => {
                         </span>
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Round {idx + 1}</span>
                       </div>
-                      <input
+                      <DateInput
                         type="date"
                         value={dateVal}
                         onChange={(e) => handleSessionDateChange(idx, e.target.value)}

@@ -1,3 +1,4 @@
+import { dateOnlyFormValue } from "../../utils/dateTime";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
@@ -44,6 +45,7 @@ export default function AddTempPlayerscomp() {
     parentEmail: string;
     parentPhone: string;
     emergencyContact: string;
+    isMedicalCondition: string;
     medicalConditions?: string;
     allergies?: string;
     classId: string;
@@ -63,6 +65,7 @@ export default function AddTempPlayerscomp() {
       parentEmail: "",
       parentPhone: "",
       emergencyContact: "",
+      isMedicalCondition: "NO",
       medicalConditions: "",
       allergies: "",
       classId: "",
@@ -76,6 +79,10 @@ export default function AddTempPlayerscomp() {
       preferredClasses: [],
     },
   });
+
+  const watchMedical = watch("isMedicalCondition");
+  const watchDob = watch("dob");
+  const watchSessionDate = watch("sessionDate");
 
   const watchCategory = watch("selectedCategory");
   const watchProgram = watch("selectedProgram");
@@ -150,10 +157,11 @@ export default function AddTempPlayerscomp() {
       parentEmail: "",
       parentPhone: "",
       emergencyContact: "",
+      isMedicalCondition: "NO",
       medicalConditions: "",
       allergies: "",
       classId: "",
-      sessionDate: new Date().toISOString().split("T")[0],
+      sessionDate: currentDate,
       selectedCategory: "",
       selectedProgram: "",
       selectedYear: "",
@@ -174,8 +182,9 @@ export default function AddTempPlayerscomp() {
         parentEmail: data.parentEmail,
         parentPhone: data.parentPhone,
         emergencyContact: data.emergencyContact,
-        medicalConditions: data.medicalConditions,
-        allergies: data.allergies,
+        isMedicalCondition: data.isMedicalCondition === "YES",
+        medicalConditions: data.isMedicalCondition === "YES" ? data.medicalConditions : "",
+        allergies: undefined,
         classId: data.classId,
         sessionDate: data.sessionDate,
         categories: data.selectedCategory ? [data.selectedCategory] : [],
@@ -186,8 +195,12 @@ export default function AddTempPlayerscomp() {
         preferredFoot: data.prefferedFoot || undefined,
         gender: data.gender || undefined,
       };
-      await addTemporaryPlayer(payload);
-      toast.success("Temporary player added successfully!");
+      const result = await addTemporaryPlayer(payload);
+      if (result?.emailSent === false) {
+        toast.error(result?.message || "Player was added, but the sign-in email could not be sent. Please contact an administrator.");
+      } else {
+        toast.success(result?.message || "Temporary player added. The parent access email is queued.");
+      }
       handleClearForm();
     } catch (error: any) {
       console.error("Failed to add temporary player:", error);
@@ -227,11 +240,12 @@ export default function AddTempPlayerscomp() {
                 <input type="hidden" {...register("dob", { required: "Date of birth is required" })} />
                 <DatePicker
                   label="Date of Birth"
+                  defaultDate={watchDob || undefined}
                   placeholder="Select Date of Birth"
                   options={{ maxDate: "today" }}
                   onChange={([selectedDate]) => {
                     if (selectedDate) {
-                      const localDateStr = selectedDate.toLocaleDateString("en-CA"); // YYYY-MM-DD
+                      const localDateStr = dateOnlyFormValue(selectedDate);
                       setValue("dob", localDateStr);
                       trigger("dob");
                     }
@@ -278,26 +292,16 @@ export default function AddTempPlayerscomp() {
             </div>
 
             <div>
-              <Label>Medical Conditions</Label>
-              <Input
-                type="text"
-                placeholder="e.g. None or specific details"
-                error={!!errors.medicalConditions}
-                hint={errors.medicalConditions?.message}
-                {...register("medicalConditions")}
-              />
+              <Label>Medical Conditions or Allergies</Label>
+              <select {...register("isMedicalCondition", { required: "Select YES or NO" })} className="h-11 w-full border border-gray-300 px-3 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-white">
+                <option value="NO">NO</option><option value="YES">YES</option>
+              </select>
             </div>
-
-            <div>
-              <Label>Allergies</Label>
-              <Input
-                type="text"
-                placeholder="e.g. Asthma, Peanuts"
-                error={!!errors.allergies}
-                hint={errors.allergies?.message}
-                {...register("allergies")}
-              />
-            </div>
+            {watchMedical === "YES" && <div>
+              <Label>Please provide details</Label>
+              <Input type="text" placeholder="Describe medical conditions and any allergies" error={!!errors.medicalConditions} hint={errors.medicalConditions?.message}
+                {...register("medicalConditions", { validate: (value) => watchMedical !== "YES" || Boolean(value?.trim()) || "Please provide details" })} />
+            </div>}
           </div>
 
           {/* Parent/Contact details */}
@@ -484,12 +488,12 @@ export default function AddTempPlayerscomp() {
               <input type="hidden" {...register("sessionDate", { required: "Session date is required" })} />
               <DatePicker
                 label="Session Date"
-                defaultDate={new Date().toISOString().split("T")[0]}
+                defaultDate={watchSessionDate || currentDate}
                 placeholder="Select Session Date"
                 options={{ minDate: "today", position: "above", static: false }}
                 onChange={([selectedDate]) => {
                   if (selectedDate) {
-                    const localDateStr = selectedDate.toLocaleDateString("en-CA"); // YYYY-MM-DD
+                    const localDateStr = dateOnlyFormValue(selectedDate);
                     setValue("sessionDate", localDateStr);
                     trigger("sessionDate");
                   }

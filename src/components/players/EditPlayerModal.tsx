@@ -1,3 +1,5 @@
+import { toDateOnly, ageGroupForYear } from "../../utils/dateTime";
+import DateInput from "../form/DateInput";
 import React, { useState, useEffect, useRef } from "react";
 import { Player } from "../../types/player";
 import { useUpdatePlayer } from "../../hooks/usePlayers";
@@ -84,21 +86,7 @@ export default function EditPlayerModal({
     if (player && isOpen) {
       setFullName(player.fullName || `${player.firstName || ""} ${player.lastName || ""}`.trim());
 
-      // Safe date format YYYY-MM-DD
-      if (player.dob) {
-        try {
-          const parsed = new Date(player.dob);
-          if (!isNaN(parsed.getTime())) {
-            setDob(parsed.toISOString().split("T")[0]);
-          } else {
-            setDob("");
-          }
-        } catch {
-          setDob("");
-        }
-      } else {
-        setDob("");
-      }
+      setDob(toDateOnly(player.dob));
 
       setGender((player.gender || "MALE").toUpperCase());
       setSchool(player.school || "");
@@ -114,7 +102,7 @@ export default function EditPlayerModal({
       const progId = player.programs?.[0]?._id || player.program?._id || (player as any).program || "";
       setProgramId(typeof progId === "string" ? progId : progId?._id || "");
 
-      const hasMed = Boolean(player.isMedicalCondition || player.medicalConditions);
+      const hasMed = player.isMedicalCondition === true;
       setIsMedicalCondition(hasMed);
       setMedicalConditionDetails(player.medicalConditionDetails || player.medicalConditions || "");
       setComments(player.adminNote || (player as any).comments || "");
@@ -183,6 +171,11 @@ export default function EditPlayerModal({
       return;
     }
 
+    if (isMedicalCondition && !medicalConditionDetails.trim()) {
+      setActiveTab("medical");
+      toast.error("Please provide details for medical conditions");
+      return;
+    }
     const formData = new FormData();
     formData.append("fullName", fullName.trim());
     if (dob) formData.append("dob", dob);
@@ -363,14 +356,14 @@ export default function EditPlayerModal({
 
                 <div>
                   <Label>Date of Birth</Label>
-                  <Input
+                  <DateInput
                     type="date"
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
                   />
                   {dob && (
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Age: ~{new Date().getFullYear() - new Date(dob).getFullYear()} years old
+                      Current-year group: U{ageGroupForYear(dob) ?? "?"}
                     </p>
                   )}
                 </div>

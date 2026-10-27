@@ -1,3 +1,4 @@
+import { formatTimestampDate, formatDateOnly } from "../../utils/dateTime";
 import { useEffect } from "react";
 import { useParams } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
@@ -85,7 +86,7 @@ export default function OrderDetails() {
                   <option value="REFUNDED">REFUNDED</option>
                 </select>
               </div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mt-3">Placed: {new Date(order.createdAt).toLocaleDateString()}</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mt-3">Placed: {formatTimestampDate(order.createdAt)}</p>
               {order.paymentMethod && <p className="text-sm font-semibold text-gray-500 mt-1">Payment Method: {order.paymentMethod}</p>}
             </div>
           </div>
@@ -133,7 +134,7 @@ export default function OrderDetails() {
                   <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-none border border-slate-100 dark:border-slate-800">
                     <p className="text-xs font-bold text-gray-400 uppercase mb-2">Linked Invoice</p>
                     <p className="text-sm font-bold text-[#0047FF]">{order.invoice.invoiceNumber}</p>
-                    <p className="text-xs font-semibold text-gray-500 mt-1">Due Date: {new Date(order.invoice.dueDate).toLocaleDateString()}</p>
+                    <p className="text-xs font-semibold text-gray-500 mt-1">Due Date: {formatDateOnly(order.invoice.dueDate)}</p>
                     <p className="text-xs font-semibold text-gray-500 mt-1">Status: {order.invoice.status} / {order.invoice.paymentStatus}</p>
                   </div>
                 )}

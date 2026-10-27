@@ -1,3 +1,4 @@
+import DateInput from "../../../../components/form/DateInput";
 import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -31,12 +32,13 @@ import {
   useDeleteRound,
   useGenerateFixtures,
 } from "../../hooks/useLeagueMatches";
+import { getLeagueById } from "../../api/leagueApi";
 import { useLeagueTeams } from "../../hooks/useLeagueTeams";
 import { useLeaguePermissions } from "../../hooks/useLeaguePermissions";
 import { Modal } from "../../../../components/ui/modal";
 import Button from "../../../../components/ui/button/Button";
 import { toast } from "react-hot-toast";
-import { formatDateOnly, formatTime, todayDateOnly, toDateOnly, zonedDateTimeToUtcISOString } from "../../../../utils/dateTime";
+import { APP_TIME_ZONE, formatTimestampDate, formatDateOnly, formatTime, todayDateOnly, toDateOnly, zonedDateTimeToUtcISOString } from "../../../../utils/dateTime";
 
 interface ScheduleViewProps {
   leagueId: string;
@@ -104,6 +106,8 @@ const getGoalAssistName = (assist: any) => {
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   const { data: matches = [], isLoading } = useLeagueMatches(leagueId);
   const { data: teams = [] } = useLeagueTeams(leagueId);
+  const { data: leagueDetails } = useQuery({ queryKey: ["league", leagueId], queryFn: () => getLeagueById(leagueId), enabled: !!leagueId });
+  const fieldOptions = Array.from({ length: Math.max(1, Number(leagueDetails?.numberOfFields || 1)) }, (_, i) => `Field ${i + 1}`);
   const { canManageMatches, canEnterResults } = useLeaguePermissions();
 
   const createMatchMutation = useCreateMatch(leagueId);
@@ -230,6 +234,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
   });
 
   // Fetch team players for Goals & Assists UI when modal is open
+  const eligibleTeams = (round: number | string, excludedFixtureId?: string) => {
+    const used = new Set(matches.filter((match) => Number(match.round) === Number(round) && match._id !== excludedFixtureId).flatMap((match) => [match.homeTeam?._id, match.awayTeam?._id]));
+    return teams.filter((team) => !used.has(team._id));
+  };
+
   const { data: homeTeamPlayers } = useQuery({
     queryKey: ["teamPlayers", selectedMatch?.homeTeam?._id],
     queryFn: () => getTeamPlayers(selectedMatch!.homeTeam._id),
@@ -341,8 +350,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     setSelectedMatch(match);
     setEditForm({
       round: match.round,
-      matchDate: toDateOnly(match.matchDate || match.kickoffTime || ""),
-      time: match.time || "",
+      matchDate: match.matchDate || (match.kickoffTime ? toDateOnly(formatTimestampDate(match.kickoffTime, APP_TIME_ZONE)) : ""),
+      time: match.time || (match.kickoffTime ? formatTime(match.kickoffTime, APP_TIME_ZONE) : ""),
       field: match.field || match.venue || "",
       venue: match.venue || "",
       homeTeamId: match.homeTeam._id,
@@ -378,7 +387,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     setResultForm({
       homeScore: initialGoals.length > 0 ? homeGoalsCount : rawHomeScore,
       awayScore: initialGoals.length > 0 ? awayGoalsCount : rawAwayScore,
-      status: match.status || "Completed",
+      status: "COMPLETED",
       showStats: !!ms,
       homePossession: ms?.homePossession ?? 50,
       awayPossession: ms?.awayPossession ?? 50,
@@ -441,15 +450,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     const awayTeamObj = teams.find((t) => t._id === addForm.awayTeamId);
 
     const dateFormatted = addForm.matchDate
-      ? formatDateOnly(addForm.matchDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      ? formatDateOnly(addForm.matchDate)
       : addForm.matchDate;
 
-    let kickoffIso = zonedDateTimeToUtcISOString(addForm.matchDate, addForm.time);
-    try {
-      kickoffIso = zonedDateTimeToUtcISOString(addForm.matchDate, addForm.time);
-    } catch {
-      kickoffIso = new Date().toISOString();
-    }
+    let kickoffIso: string;
+    try { kickoffIso = zonedDateTimeToUtcISOString(addForm.matchDate, addForm.time); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Enter a valid date and time."); return; }
+    if (!homeTeamObj || !awayTeamObj || !eligibleTeams(addForm.round).some((t) => t._id === homeTeamObj._id) || !eligibleTeams(addForm.round).some((t) => t._id === awayTeamObj._id)) { toast.error("Select two available teams for this round."); return; }
 
     createMatchMutation.mutate(
       {
@@ -457,6 +464,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
         roundName: `Round ${addForm.round}`,
         kickoffTime: kickoffIso,
         matchDate: addForm.matchDate,
+        sessionDate: addForm.matchDate,
         matchDateFormatted: dateFormatted,
         time: addForm.time,
         field: addForm.field,
@@ -520,15 +528,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
     if (editForm.matchDate) {
       try {
         kickoffIso = zonedDateTimeToUtcISOString(editForm.matchDate, editForm.time);
-      } catch {
-        // fallback
-      }
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Enter a valid date and time."); return; }
     }
 
     updateMatchMutation.mutate(
       {
         matchId: selectedMatch._id,
         data: {
+          version: selectedMatch.version,
+          sessionDate: editForm.matchDate,
           round: Number(editForm.round),
           roundName: `Round ${editForm.round}`,
           kickoffTime: kickoffIso,
@@ -617,15 +625,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
       {
         matchId: selectedMatch._id,
         data: {
+          version: selectedMatch.version,
           homeScore: payloadHomeScore,
           awayScore: payloadAwayScore,
-          status: resultForm.status || "COMPLETED",
+          status: keepOpen ? "LIVE" : "COMPLETED",
           matchStatistics: matchStatisticsPayload,
           goals: payloadGoals,
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (saved) => {
+          setSelectedMatch({ ...selectedMatch, ...saved });
           if (keepOpen) {
             toast.success("Goals & scores updated!");
           } else {
@@ -1149,7 +1159,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                           const awayName = match.awayTeam.teamName || match.awayTeam.name || "Away";
                           const homeLogo = match.homeTeam.logo;
                           const awayLogo = match.awayTeam.logo;
-                          const fieldVenue = match.venue || match.field || "Field 1";
+                          const fieldVenue = [match.field, match.venue && !match.venue.includes(match.field || "Field ") ? match.venue : ""].filter(Boolean).join(" · ") || "Field not assigned";
                           const matchTime =
                             match.time ||
                             (match.kickoffTime
@@ -1590,7 +1600,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Match Date *
               </label>
-              <input
+              <DateInput
                 type="date"
                 value={addForm.matchDate}
                 onChange={(e) => setAddForm({ ...addForm, matchDate: e.target.value })}
@@ -1619,13 +1629,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Field / Pitch
               </label>
-              <input
-                type="text"
-                placeholder="e.g. Field 1"
-                value={addForm.field}
-                onChange={(e) => setAddForm({ ...addForm, field: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
-              />
+              <select value={addForm.field} onChange={(e) => setAddForm({ ...addForm, field: e.target.value })} className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500" required>{fieldOptions.map((field) => <option key={field} value={field}>{field}</option>)}</select>
             </div>
           </div>
 
@@ -1643,7 +1647,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
                   Select Home Team
                 </option>
-                {teams.map((t) => {
+                {eligibleTeams(addForm.round).filter((t) => t._id !== addForm.awayTeamId).map((t) => {
                   const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
                   return (
                     <option
@@ -1671,7 +1675,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
                   Select Away Team
                 </option>
-                {teams.map((t) => {
+                {eligibleTeams(addForm.round).filter((t) => t._id !== addForm.homeTeamId).map((t) => {
                   const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
                   return (
                     <option
@@ -1816,7 +1820,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
                   Select Home Team
                 </option>
-                {teams.map((t) => {
+                {eligibleTeams(editForm.round, selectedMatch?._id).filter((t) => t._id !== editForm.awayTeamId).map((t) => {
                   const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
                   return (
                     <option
@@ -1844,7 +1848,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                 <option value="" className="text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800">
                   Select Away Team
                 </option>
-                {teams.map((t) => {
+                {eligibleTeams(editForm.round, selectedMatch?._id).filter((t) => t._id !== editForm.homeTeamId).map((t) => {
                   const teamName = t.teamName || t.name || (t as any).title || "Unnamed Team";
                   return (
                     <option
@@ -1865,7 +1869,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Match Date
               </label>
-              <input
+              <DateInput
                 type="date"
                 value={editForm.matchDate}
                 onChange={(e) => setEditForm({ ...editForm, matchDate: e.target.value })}
@@ -1893,12 +1897,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Field
               </label>
-              <input
-                type="text"
-                value={editForm.field}
-                onChange={(e) => setEditForm({ ...editForm, field: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500"
-              />
+              <select value={editForm.field} onChange={(e) => setEditForm({ ...editForm, field: e.target.value })} className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700" required>{fieldOptions.map((field) => <option key={field} value={field}>{field}</option>)}</select>
             </div>
 
             <div>
@@ -1988,16 +1987,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Match Status
               </label>
-              <select
-                value={resultForm.status}
-                onChange={(e) => setResultForm({ ...resultForm, status: e.target.value as MatchStatus })}
-                className="w-full px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-emerald-500 cursor-pointer"
-              >
-                <option value="COMPLETED" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Completed</option>
-                <option value="LIVE" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Live</option>
-                <option value="POSTPONED" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Postponed</option>
-                <option value="SCHEDULED" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Scheduled</option>
-              </select>
+              <p className="text-xs text-slate-600 dark:text-slate-300">Save Final Result marks the match Completed, including 0–0. Submit Goal keeps the match Live.</p>
             </div>
 
             {/* Score Entry Box */}
@@ -2492,7 +2482,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ leagueId }) => {
                       disabled={isSaveDisabled}
                       className="disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      {updateMatchMutation.isPending ? "Updating..." : "Confirm & Save Result"}
+                      {updateMatchMutation.isPending ? "Updating..." : "Save Final Result"}
                     </Button>
                   </div>
                 </div>

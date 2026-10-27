@@ -24,6 +24,8 @@ export interface PlayerProgram {
 
 export interface Player {
   _id: string;
+  requestId?: string;
+  playerStatus?: string;
   firstName: string;
   lastName: string;
   fullName: string;

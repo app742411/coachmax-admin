@@ -33,13 +33,15 @@ export const useAddTeamToLeague = (leagueId: string) => {
       return addTeamToLeague(leagueId, teamIds);
     },
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueTeams", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
       toast.success("Team added to league");
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Failed to add team");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to add team");
     },
   });
 };
@@ -50,13 +52,15 @@ export const useRemoveTeamFromLeague = (leagueId: string) => {
   return useMutation({
     mutationFn: (teamId: string) => removeTeamFromLeague(leagueId, teamId),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueTeams", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
       toast.success("Team removed from league");
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Failed to remove team");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to remove team");
     },
   });
 };
@@ -68,11 +72,13 @@ export const useToggleTeamStatus = (leagueId: string) => {
     mutationFn: ({ teamId, status }: { teamId: string; status: "ACTIVE" | "INACTIVE" }) =>
       toggleTeamStatus(leagueId, teamId, status),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueTeams", leagueId] });
       toast.success("Team status updated");
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Failed to update team status");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update team status");
     },
   });
 };
@@ -84,6 +90,8 @@ export const useUpdateLeagueTeamStats = (leagueId: string) => {
     mutationFn: ({ teamId, stats }: { teamId: string; stats: Partial<TeamRecord> }) =>
       updateLeagueTeamStats(leagueId, teamId, stats),
     onSuccess: () => {
+      ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueTeams", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });
@@ -91,7 +99,7 @@ export const useUpdateLeagueTeamStats = (leagueId: string) => {
       toast.success("Team league statistics updated successfully");
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Failed to update team statistics");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update team statistics");
     },
   });
 };

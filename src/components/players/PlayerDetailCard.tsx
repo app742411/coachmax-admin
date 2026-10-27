@@ -9,6 +9,7 @@ import { ShieldAlert, Edit, Receipt } from "lucide-react";
 import RatingEditor from "./RatingEditor";
 import { StatusBadge } from "../common/StatusColorCode";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { ageGroupForYear, formatDateOnly, formatTimestampDate } from "../../utils/dateTime";
 
 const getBadgeStyles = (noteType: string) => {
   switch (noteType) {
@@ -36,9 +37,10 @@ interface PlayerDetailCardProps {
   onClose: () => void;
   onEditPlayer?: (player: Player) => void;
   isRegistrationRequest?: boolean;
+  contextYear?: number;
 }
 
-export default function PlayerDetailCard({ player: initialPlayer, onClose, onEditPlayer, isRegistrationRequest }: PlayerDetailCardProps) {
+export default function PlayerDetailCard({ player: initialPlayer, onClose, onEditPlayer, isRegistrationRequest, contextYear }: PlayerDetailCardProps) {
   const playerId = initialPlayer?._id || (initialPlayer as any)?.playerId || (initialPlayer as any)?.id;
   // Query full admin profile details (same source as PlayerProfilePage)
   const { data: adminDetailsRes } = useAdminPlayerDetails(playerId);
@@ -97,12 +99,10 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, onEdi
   const avatar = getMediaUrl(player.profileImage, getMediaFallback(player.fullName));
 
   // Safe date parsing to avoid "Invalid Date" values
-  const dob = player.dob ? new Date(player.dob) : null;
-  const age = dob && !isNaN(dob.getTime()) ? new Date().getFullYear() - dob.getFullYear() : null;
-  const dobString = dob && !isNaN(dob.getTime()) ? dob.toLocaleDateString() : null;
+  const age = ageGroupForYear(player.dob, contextYear);
+  const dobString = formatDateOnly(player.dob) || null;
 
-  const registrationDate = player.createdAt ? new Date(player.createdAt) : null;
-  const registrationDateString = registrationDate && !isNaN(registrationDate.getTime()) ? registrationDate.toLocaleDateString() : null;
+  const registrationDateString = formatTimestampDate(player.createdAt) || null;
 
   const activeStatus = player.playerStatus || player.status;
   const paymentStatus = player.paymentStatus;
@@ -226,7 +226,7 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, onEdi
                 <div>
                   <span className="text-slate-400 block mb-0.5">Date of Birth</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {dobString} {age !== null && <span className="text-slate-400 font-normal">({age} Yrs)</span>}
+                    {dobString} {age !== null && <span className="text-slate-400 font-normal">(U{age})</span>}
                   </span>
                 </div>
               )}
@@ -557,7 +557,7 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, onEdi
                         </button>
                       </div>
                       <span className="text-slate-500 dark:text-yellow-400/60">
-                        {new Date(note.createdAt).toLocaleDateString()}
+                        {formatTimestampDate(note.createdAt)}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">

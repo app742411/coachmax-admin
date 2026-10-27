@@ -11,6 +11,7 @@ import { chatApi } from "../../services/chatApi";
 import ChatActionButton from "../../components/chat/ChatActionButton";
 import RatingEditor from "../../components/players/RatingEditor";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { ageGroupForYear, formatDateOnly, formatTimestampDate } from "../../utils/dateTime";
 import {
   ArrowLeft,
   ShieldAlert,
@@ -85,9 +86,8 @@ export default function PlayerProfilePage() {
   }
 
   const avatar = getMediaUrl(player.profileImage, getMediaFallback(player.fullName));
-  const dob = player.dob ? new Date(player.dob) : null;
-  const age = dob ? new Date().getFullYear() - dob.getFullYear() : null;
-  const dobString = dob ? dob.toLocaleDateString() : null;
+  const age = ageGroupForYear(player.dob);
+  const dobString = formatDateOnly(player.dob) || null;
 
   const statistics = player.statistics || {};
   const statCards = [
@@ -217,7 +217,7 @@ export default function PlayerProfilePage() {
                 <div>
                   <span className="text-slate-450 text-[10px] block font-bold uppercase tracking-wider">Joined Date</span>
                   <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-                    {new Date(player.joinedDate).toLocaleDateString()}
+                    {formatTimestampDate(player.joinedDate)}
                   </span>
                 </div>
               )}
@@ -320,7 +320,7 @@ export default function PlayerProfilePage() {
                   <div>
                     <span className="text-slate-400 block mb-0.5">Date of Birth</span>
                     <span className="text-slate-800 dark:text-slate-200">
-                      {dobString} {age !== null && <span className="text-slate-400 font-normal">({age} Years)</span>}
+                      {dobString} {age !== null && <span className="text-slate-400 font-normal">(U{age})</span>}
                     </span>
                   </div>
                 )}
@@ -340,7 +340,7 @@ export default function PlayerProfilePage() {
                   <div>
                     <span className="text-slate-400 block mb-0.5">Registration Date</span>
                     <span className="text-slate-800 dark:text-slate-200">
-                      {new Date(player.createdAt).toLocaleDateString()}
+                      {formatTimestampDate(player.createdAt)}
                     </span>
                   </div>
                 )}

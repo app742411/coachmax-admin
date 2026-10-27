@@ -25,6 +25,7 @@ export interface TemporaryPlayerPayload {
   parentEmail: string;
   parentPhone: string;
   emergencyContact: string;
+  isMedicalCondition?: boolean;
   medicalConditions?: string;
   allergies?: string;
   classId: string;

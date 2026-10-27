@@ -87,7 +87,7 @@ export default function ChangePasswordCard() {
           <Label>New Password</Label>
           <Input
             type="password"
-            {...register("newPassword", { required: "New password is required" })}
+            {...register("newPassword", { required: "New password is required", minLength: { value: 8, message: "Use at least 8 characters" }, maxLength: { value: 128, message: "Use at most 128 characters" } })}
           />
           {errors.newPassword && (
             <p className="text-sm text-rose-500 mt-1">{errors.newPassword.message?.toString()}</p>

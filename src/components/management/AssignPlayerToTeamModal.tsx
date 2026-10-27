@@ -92,19 +92,12 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagu
   }, [isOpen]);
 
   const { data: playersResponse, isLoading } = useQuery({
-    queryKey: ["availablePlayersForTeam"],
+    queryKey: ["availablePlayersForTeam", teamId, leagueId],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get('/api/admin/available-players');
-        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        if (list.length > 0) return list;
-      } catch (e) {
-        console.error("available-players failed, falling back to all users", e);
-      }
-      const usersRes = await apiClient.get('/api/admin/getUsers', { params: { limit: 200 } });
-      return Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.data || [];
+      const res = await apiClient.get('/api/admin/available-players', { params: { teamId, leagueId } });
+      return Array.isArray(res.data) ? res.data : res.data?.data || [];
     },
-    enabled: isOpen,
+    enabled: isOpen && !!teamId,
   });
 
   const players: any[] = useMemo(() => {
@@ -242,7 +235,7 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagu
       }
       queryClient.invalidateQueries({ queryKey: ["team"] });
       queryClient.invalidateQueries({ queryKey: ["teamFullTable"] });
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      ["teams", "team", "leagueTeams", "league", "leagueStats", "leagueLadder", "teamPlayers", "invoices", "teamFullTable"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["availablePlayers"] });
       queryClient.invalidateQueries({ queryKey: ["availablePlayersForTeam"] });
       queryClient.invalidateQueries({ queryKey: ["players"] });

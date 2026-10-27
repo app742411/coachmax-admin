@@ -103,8 +103,8 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
   const [playerSearchQueryForAdd, setPlayerSearchQueryForAdd] = useState("");
 
   const { data: allTeamsData } = useQuery({
-    queryKey: ["allAcademyTeams"],
-    queryFn: () => getAllTeams(),
+    queryKey: ["allAcademyTeams", leagueData?.term],
+    queryFn: () => getAllTeams(typeof leagueData?.term === "object" ? leagueData.term._id : leagueData?.term),
     enabled: isAddModalOpen,
   });
   const allAcademyTeams: any[] = Array.isArray(allTeamsData)
@@ -139,8 +139,8 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
       teamName: "",
       teamType: "INTERNAL",
       ageGroup: "",
-      year: leagueData?.season || new Date().getFullYear().toString(),
-      term: "",
+      year: typeof leagueData?.term === "object" ? String(leagueData.term.year || new Date().getFullYear()) : new Date().getFullYear().toString(),
+      term: typeof leagueData?.term === "object" ? leagueData.term._id : leagueData?.term || "",
       coach: "",
       assistantCoach: "",
       venue: "",
@@ -202,30 +202,20 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
   };
 
   // Bulk Actions
-  const handleBulkActivate = () => {
-    selectedTeamIds.forEach((id) => {
-      toggleStatusMutation.mutate({ teamId: id, status: "ACTIVE" });
-    });
-    setSelectedTeamIds([]);
-    toast.success("Selected teams activated");
+  const handleBulkActivate = async () => {
+    const outcomes = await Promise.allSettled(selectedTeamIds.map((teamId) => toggleStatusMutation.mutateAsync({ teamId, status: "ACTIVE" })));
+    if (outcomes.every((result) => result.status === "fulfilled")) setSelectedTeamIds([]);
   };
 
-  const handleBulkDeactivate = () => {
-    selectedTeamIds.forEach((id) => {
-      toggleStatusMutation.mutate({ teamId: id, status: "INACTIVE" });
-    });
-    setSelectedTeamIds([]);
-    toast.success("Selected teams deactivated");
+  const handleBulkDeactivate = async () => {
+    const outcomes = await Promise.allSettled(selectedTeamIds.map((teamId) => toggleStatusMutation.mutateAsync({ teamId, status: "INACTIVE" })));
+    if (outcomes.every((result) => result.status === "fulfilled")) setSelectedTeamIds([]);
   };
 
-  const handleBulkRemove = () => {
-    if (confirm(`Remove ${selectedTeamIds.length} selected teams from the league?`)) {
-      selectedTeamIds.forEach((id) => {
-        removeTeamMutation.mutate(id);
-      });
-      setSelectedTeamIds([]);
-      toast.success("Teams removed from league");
-    }
+  const handleBulkRemove = async () => {
+    if (!confirm(`Remove ${selectedTeamIds.length} selected teams from the league?`)) return;
+    const outcomes = await Promise.allSettled(selectedTeamIds.map((id) => removeTeamMutation.mutateAsync(id)));
+    if (outcomes.every((result) => result.status === "fulfilled")) setSelectedTeamIds([]);
   };
 
   const handleExportSelected = () => {
@@ -290,6 +280,9 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
       toast.error("Please enter age group");
       return;
     }
+    if (!createFormData.term) { toast.error("Select a term for this team."); return; }
+    const leagueTerm = typeof leagueData?.term === "object" ? leagueData.term._id : leagueData?.term;
+    if (leagueTerm && createFormData.term !== leagueTerm) { toast.error("Team and league must belong to the same term."); return; }
     if (!createFormData.coach) {
       toast.error("Please select a head coach");
       return;

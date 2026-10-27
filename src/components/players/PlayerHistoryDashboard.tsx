@@ -100,8 +100,8 @@ export default function PlayerHistoryDashboard({ data, player }: { data: AnyReco
     });
     return [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, counts]) => ({
       label: aggregateByMonth
-        ? new Date(`${key}-01T12:00:00Z`).toLocaleDateString("en-AU", { month: "short", year: "2-digit", timeZone: "UTC" })
-        : new Date(`${key}T12:00:00Z`).toLocaleDateString("en-AU", { day: "numeric", month: "short", timeZone: "UTC" }),
+        ? `${key.slice(5, 7)}/${key.slice(0, 4)}`
+        : formatDateOnly(key),
       ...counts,
     }));
   }, [markedAttendance, range]);
@@ -117,7 +117,7 @@ export default function PlayerHistoryDashboard({ data, player }: { data: AnyReco
   const paymentChartRows = useMemo(() => {
     const buckets = new Map<string, { received: number; pending: number }>();
     payments.forEach((item) => {
-      const key = yearMonthInAppZone(item.createdAt || item.dueDate || "");
+      const key = item.createdAt ? yearMonthInAppZone(item.createdAt) : toDateOnly(item.dueDate).slice(0, 7);
       if (!key) return;
       if (!buckets.has(key)) buckets.set(key, { received: 0, pending: 0 });
       const bucket = buckets.get(key)!;
@@ -125,7 +125,7 @@ export default function PlayerHistoryDashboard({ data, player }: { data: AnyReco
       bucket.pending += Number(item.amountPending) || 0;
     });
     return [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => ({
-      label: new Date(`${key}-01T12:00:00Z`).toLocaleDateString("en-AU", { month: "short", year: "2-digit", timeZone: "UTC" }),
+      label: `${key.slice(5, 7)}/${key.slice(0, 4)}`,
       ...value,
     }));
   }, [payments]);
@@ -216,7 +216,7 @@ export default function PlayerHistoryDashboard({ data, player }: { data: AnyReco
         </div>
         <div className="overflow-hidden rounded-xl border border-gray-100">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><h3 className="font-bold text-gray-900">Attendance records</h3><p className="text-xs text-gray-500">{markedAttendance.length} marked session(s)</p></div><span className="text-xs text-gray-500">{absent} absent</span></div>
-          <div className="max-h-[420px] overflow-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Class / activity</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Attendance</th><th className="px-4 py-3">Open</th></tr></thead><tbody className="divide-y divide-gray-100">{attendance.map((item) => <tr key={item.attendanceId} className="hover:bg-gray-50"><td className="px-4 py-3">{dateLabel(item.sessionDate)}</td><td className="px-4 py-3 font-semibold text-gray-800">{item.contextName || item.className || "Session"}<span className="block text-xs font-normal text-gray-400">{item.termName || "No term linked"}</span></td><td className="px-4 py-3 text-gray-600">{typeLabel[item.contextType] || item.contextType || "Class"}</td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(item.status)}`}>{String(item.status || "NOT_MARKED").replace(/_/g, " ")}</span></td><td className="px-4 py-3">{(item.contextId || item.class?._id) && <button onClick={() => goToContext({ classId: item.contextType === "CLASS" ? item.contextId : null, teamId: item.contextType === "TEAM" ? item.contextId : null, leagueId: item.contextType === "LEAGUE" ? item.contextId : null, eventId: ["EVENT", "HOLIDAY_PROGRAM"].includes(item.contextType) ? item.contextId : null })} className="inline-flex items-center gap-1 text-xs font-bold text-blue-700">Open <ExternalLink size={12} /></button>}</td></tr>)}{attendance.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400">No attendance records in this scope.</td></tr>}</tbody></table></div>
+          <div className="max-h-[420px] overflow-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Class / activity</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Attendance</th><th className="px-4 py-3">Session note</th><th className="px-4 py-3">Open</th></tr></thead><tbody className="divide-y divide-gray-100">{attendance.map((item) => <tr key={item.attendanceId} className="hover:bg-gray-50"><td className="px-4 py-3">{formatDateOnly(item.sessionDate) || "—"}</td><td className="px-4 py-3 font-semibold text-gray-800">{item.contextName || item.className || "Session"}<span className="block text-xs font-normal text-gray-400">{item.termName || "No term linked"}</span></td><td className="px-4 py-3 text-gray-600">{typeLabel[item.contextType] || item.contextType || "Class"}</td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(item.status)}`}>{String(item.status || "NOT_MARKED").replace(/_/g, " ")}</span></td><td className="px-4 py-3 max-w-sm whitespace-pre-wrap break-words">{item.note || item.reason || item.remarks || item.comment || "—"}{item.noteAuthorName && <span className="mt-1 block text-xs text-gray-400">{item.noteAuthorName}{item.noteUpdatedAt ? ` · ${formatDateTime(item.noteUpdatedAt)}` : ""}</span>}</td><td className="px-4 py-3">{(item.contextId || item.class?._id) && <button onClick={() => goToContext({ classId: item.contextType === "CLASS" ? item.contextId : null, teamId: item.contextType === "TEAM" ? item.contextId : null, leagueId: item.contextType === "LEAGUE" ? item.contextId : null, eventId: ["EVENT", "HOLIDAY_PROGRAM"].includes(item.contextType) ? item.contextId : null })} className="inline-flex items-center gap-1 text-xs font-bold text-blue-700">Open <ExternalLink size={12} /></button>}</td></tr>)}{attendance.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">No attendance records in this scope.</td></tr>}</tbody></table></div>
         </div>
       </>}
 

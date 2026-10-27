@@ -1,3 +1,5 @@
+import DayTabs from "../../components/academy/DayTabs";
+import { occurrenceKey, dayLabel, scheduleDayQuery, distinctClassSlots, currentScheduleDay, currentScheduleMinutes } from "../../utils/classSchedule";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,7 +27,7 @@ import { useTerms } from "../../hooks/useTerms";
 import { findCurrentTerm } from "../../hooks/useCurrentTerm";
 import apiClient from "../../api/apiClient";
 
-const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const EMPTY_TIME_SLOTS: never[] = [];
 
 export default function Programs2() {
   const navigate = useNavigate();
@@ -36,16 +38,17 @@ export default function Programs2() {
   // Active day selection
   const [activeDay, setActiveDay] = useState<string>(() => {
     if (state?.day) return state.day.charAt(0).toUpperCase() + state.day.slice(1).toLowerCase();
-    return DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1] || "Monday";
+    if (state?.classId) return "View All";
+    return currentScheduleDay();
   });
 
   // Category and sub-program tabs
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedProgram, setSelectedProgram] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>(state?.categoryId || "");
+  const [selectedProgram, setSelectedProgram] = useState<string>(state?.programId || "");
 
   // Year & Term selectors
   const [selectedYear, setSelectedYear] = useState<string>("");
-  const [selectedTerm, setSelectedTerm] = useState<string>("");
+  const [selectedTerm, setSelectedTerm] = useState<string>(state?.termId || "");
   const [availableYears, setAvailableYears] = useState<string[]>([]);
 
   // Accordion and highlighting
@@ -121,21 +124,28 @@ export default function Programs2() {
   });
 
   // Time slots for schedule
-  const { data: filtersData } = useClassFiltersWithTimeSlots(
+  const { data: filtersData, isLoading: scheduleLoading, isError: scheduleError, refetch: refetchSchedule } = useClassFiltersWithTimeSlots(
     selectedCategory,
     selectedProgram,
-    activeDay.toUpperCase(),
+    scheduleDayQuery(activeDay),
     selectedTerm,
-    { allowUnfiltered: true }
+    { allowUnfiltered: true, enabled: !!selectedTerm }
   );
-  const timeSlots = filtersData?.timeSlots || [];
+  const timeSlots = filtersData?.timeSlots || EMPTY_TIME_SLOTS;
+  const assignmentSlots = distinctClassSlots<any>(timeSlots);
+
+  useEffect(() => {
+    if (!targetHighlightClassId) return;
+    const target = timeSlots.find((slot: any) => String(slot.classId) === String(targetHighlightClassId));
+    if (target) setExpandedClassIds((prev) => ({ ...prev, [occurrenceKey(target)]: true }));
+  }, [targetHighlightClassId, timeSlots]);
 
   // Category, program, and term are selected asynchronously after a fresh load.
   // Refetch the active day once they are ready so classes appear immediately.
   useEffect(() => {
     if (!selectedTerm) return;
     void queryClient.refetchQueries({
-      queryKey: ["classFiltersWithTimeSlots", selectedCategory, selectedProgram, activeDay.toUpperCase(), selectedTerm],
+      queryKey: ["classFiltersWithTimeSlots", selectedCategory, selectedProgram, scheduleDayQuery(activeDay), selectedTerm],
       type: "active",
     });
   }, [selectedCategory, selectedProgram, selectedTerm, activeDay, queryClient]);
@@ -191,13 +201,15 @@ export default function Programs2() {
   useEffect(() => {
     if (timeSlots && timeSlots.length > 0) {
       if (state?.classId && !hasInitializedFromState.current) {
-        setExpandedClassIds({ [state.classId]: true });
+        const target = timeSlots.find((slot: any) => String(slot.classId) === String(state.classId));
+        if (!target) return;
+        setExpandedClassIds({ [occurrenceKey(target)]: true });
         hasInitializedFromState.current = true;
         return;
       }
 
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      if (activeDay === "View All") return;
+      const currentMinutes = currentScheduleMinutes();
       let closestSlot = timeSlots[0];
       let minDiff = Infinity;
 
@@ -219,12 +231,12 @@ export default function Programs2() {
       }
 
       setExpandedClassIds((prev) => {
-        const hasAnyExpandedThisDay = timeSlots.some((slot: any) => prev[slot.classId]);
+        const hasAnyExpandedThisDay = timeSlots.some((slot: any) => prev[occurrenceKey(slot)]);
         if (hasAnyExpandedThisDay) return prev;
-        return { ...prev, [closestSlot.classId]: true };
+        return { ...prev, [occurrenceKey(closestSlot)]: true };
       });
     }
-  }, [timeSlots, activeDay]);
+  }, [timeSlots, activeDay, state?.classId]);
 
   // Smart 3-tier redirection handler when admin clicks "Go to Request"
   const handleNavigateToRequestedTarget = (player: any) => {
@@ -276,7 +288,8 @@ export default function Programs2() {
         setTargetHighlightClassId(primaryClass.id);
 
         setTimeout(() => {
-          const el = document.getElementById(`class-card-${primaryClass.id}`);
+          const target = timeSlots.find((slot: any) => String(slot.classId) === String(primaryClass.id));
+          const el = target ? document.getElementById(`class-card-${occurrenceKey(target)}`) : null;
           if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
           }
@@ -382,7 +395,7 @@ export default function Programs2() {
 
   useEffect(() => {
     if (pendingAssignPlayer) {
-      const expandedSlot = timeSlots.find((slot: any) => expandedClassIds[slot.classId]);
+      const expandedSlot = timeSlots.find((slot: any) => expandedClassIds[occurrenceKey(slot)]);
       if (expandedSlot) {
         setSelectedAssignClassId(expandedSlot.classId);
       } else if (timeSlots.length > 0) {
@@ -449,13 +462,13 @@ export default function Programs2() {
             value={selectedTerm}
             onChange={(val) => setSelectedTerm(val)}
             options={[
-              { label: "All Terms", value: "" },
+              { label: "Select Term", value: "" },
               ...filteredTerms.map((t: any) => ({
                 label: `${t.name}${t.year ? ` (${t.year})` : ""}`,
                 value: t._id,
               })),
             ]}
-            placeholder="All Terms"
+            placeholder="Select Term"
             className="w-full select-none"
             triggerClassName="h-[42px] w-full flex items-center justify-between appearance-none rounded-none border px-4 py-2 text-xs font-bold shadow-theme-xs outline-hidden bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-slate-800 dark:text-white transition-all cursor-pointer group"
           />
@@ -601,59 +614,52 @@ export default function Programs2() {
         </div>
       )}
 
-      {/* Day Tabs (Classes Management navy pill style) */}
-      <div className="flex border-b border-slate-100 dark:border-slate-800 mb-6 text-xs font-semibold overflow-x-auto no-scrollbar gap-1">
-        {DAYS_OF_WEEK.map((day) => (
-          <button
-            key={day}
-            onClick={() => setActiveDay(day)}
-            className={`py-3 px-4 sm:px-8 shrink-0 transition-all border-b-[3px] text-xs font-semibold tracking-wider cursor-pointer ${
-              activeDay === day
-                ? "bg-[#031549] text-white font-bold border-[#0047FF]"
-                : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40 border-transparent"
-            }`}
-          >
-            {day}
-          </button>
-        ))}
-      </div>
+      <DayTabs activeDay={activeDay} onChangeDay={setActiveDay} />
 
       {/* Content Area */}
       <div className="flex flex-col xl:flex-row gap-4 items-start w-full">
         {/* Left Side: Attendance Tables */}
         <div className="flex-1 w-full min-w-0">
-          {timeSlots.length > 0 ? (
+          {scheduleError ? (
+            <div role="alert" className="p-6 text-sm text-red-600">Classes could not be loaded. <button type="button" className="underline" onClick={() => void refetchSchedule()}>Retry</button></div>
+          ) : scheduleLoading ? <div role="status" className="p-6 text-sm text-slate-500">Loading classes…</div> : timeSlots.length > 0 ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm flex flex-col gap-3">
               {timeSlots.map((slot: any, idx: number) => {
-                const isExpanded = !!expandedClassIds[slot.classId];
+                const isExpanded = !!expandedClassIds[occurrenceKey(slot)];
+                const startsDay = activeDay === "View All" && (idx === 0 || timeSlots[idx - 1].dayOfWeek !== slot.dayOfWeek);
                 return (
+                  <div key={occurrenceKey(slot)} id={`class-card-${occurrenceKey(slot)}`}>
+                  {startsDay && <h3 className="mb-3 mt-4 border-b border-slate-200 pb-2 text-sm font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{dayLabel(slot.dayOfWeek)}</h3>}
                   <ClassFullTable
-                    key={slot.classId}
+                    classSummary={slot}
+                    occurrenceDay={slot.dayOfWeek}
+                    instanceId={`class-table-${occurrenceKey(slot)}`}
                     classId={slot.classId}
                     index={idx + 1}
-                    categoryId={selectedCategory}
-                    categoryName={currentCategoryName}
-                    programId={selectedProgram}
-                    programName={currentProgramName}
+                    categoryId={slot.category?._id || selectedCategory}
+                    categoryName={slot.category?.name || currentCategoryName}
+                    programId={slot.program?._id || selectedProgram}
+                    programName={slot.program?.name || currentProgramName}
                     timeSlotStr={`${slot.startTime} - ${slot.endTime}`}
                     isExpanded={isExpanded}
                     isHighlighted={targetHighlightClassId === slot.classId}
                     onToggle={() =>
                       setExpandedClassIds((prev) => ({
                         ...prev,
-                        [slot.classId]: !prev[slot.classId],
+                        [occurrenceKey(slot)]: !prev[occurrenceKey(slot)],
                       }))
                     }
                     onEditClass={handleEditClass}
                     onDuplicateClass={handleDuplicateClass}
                     onDeleteClass={(classId) => setDeleteClassId(classId)}
                   />
+                  </div>
                 );
               })}
             </div>
           ) : (
             <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm">
-              No classes scheduled for this day.
+              {activeDay === "View All" ? "No classes scheduled for the selected term and filters." : "No classes scheduled for this day."}
             </div>
           )}
         </div>
@@ -728,7 +734,7 @@ export default function Programs2() {
         }}
         prefilledCategoryId={selectedCategory}
         prefilledProgramId={selectedProgram}
-        prefilledDayOfWeek={activeDay.toUpperCase()}
+        prefilledDayOfWeek={activeDay === "View All" ? undefined : scheduleDayQuery(activeDay)}
         prefilledTermId={selectedTerm}
       />
 
@@ -822,9 +828,9 @@ export default function Programs2() {
                       onChange={(e) => setSelectedAssignClassId(e.target.value)}
                       className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded p-1.5 focus:outline-none cursor-pointer"
                     >
-                      {timeSlots.map((slot: any) => (
+                      {assignmentSlots.map((slot: any) => (
                         <option key={slot.classId} value={slot.classId}>
-                          {slot.startTime} - {slot.endTime}
+                          {slot.className} — {dayLabel(slot.dayOfWeek || "")} {slot.startTime} - {slot.endTime}
                         </option>
                       ))}
                     </select>
@@ -845,12 +851,10 @@ export default function Programs2() {
                 <option value="TRIAL">TRIAL</option>
                 <option value="PAID">PAID</option>
                 <option value="UNPAID">UNPAID</option>
-                <option value="PENDING">PENDING</option>
-                <option value="PARTIAL">PARTIAL</option>
+                <option value="HANDSHAKE">HANDSHAKE</option>
                 <option value="EXTRA">EXTRA</option>
                 <option value="TBC">TBC</option>
                 <option value="SUBSTITUTE">SUBSTITUTE</option>
-                <option value="OTHERS">OTHERS</option>
               </select>
             </div>
 

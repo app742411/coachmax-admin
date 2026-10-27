@@ -17,7 +17,7 @@ import { getPlayerStatusTextClass, StatusIcon, StatusUpdateMenuList } from "../c
 import { AttendanceCellFlag, AttendanceStatusDropdown } from "../common/AttendanceReasonMenu";
 import { Copy, Pencil, Trash2 } from "lucide-react";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
-import { formatDateOnly } from "../../utils/dateTime";
+import { formatDateOnly, toDateOnly } from "../../utils/dateTime";
 import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface ClassFullTableProps {
@@ -31,6 +31,9 @@ interface ClassFullTableProps {
   onToggle?: () => void;
   index?: number;
   hideHeader?: boolean;
+  occurrenceDay?: string;
+  instanceId?: string;
+  classSummary?: any;
   isHighlighted?: boolean;
   onEditClass?: (classId: string) => void;
   onDuplicateClass?: (classId: string) => void;
@@ -38,8 +41,9 @@ interface ClassFullTableProps {
   onCreateClassChat?: (classId: string) => void;
 }
 
-export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName, isExpanded = true, onToggle, index, hideHeader = false, isHighlighted = false, onEditClass, onDuplicateClass, onDeleteClass, onCreateClassChat }: ClassFullTableProps) {
-  const { data: schedule, isLoading } = useClassFullTable(classId);
+export default function ClassFullTable({ classId, timeSlotStr, categoryId, programId, categoryName, programName, isExpanded = true, onToggle, index, hideHeader = false, isHighlighted = false, onEditClass, onDuplicateClass, onDeleteClass, onCreateClassChat, occurrenceDay, instanceId, classSummary }: ClassFullTableProps) {
+  const { data: fullSchedule, isLoading, isError, refetch } = useClassFullTable(classId, { enabled: !classSummary || isExpanded });
+  const schedule = fullSchedule || classSummary;
   const navigate = useNavigate();
   const openParentChat = (row: any) => {
     const rawParent = row.parent?.id || row.parent?._id || row.parentId || row.parent;
@@ -68,12 +72,12 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
   const updatePosition = () => {
     if (!openMenuId) return;
-    const trigger = document.getElementById(`trigger-${openMenuId}`);
+    const trigger = document.getElementById(`trigger-${instanceId || classId}-${openMenuId}`);
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
     const menuWidth = 240;
 
-    const menuEl = document.getElementById("portal-action-menu");
+    const menuEl = document.getElementById(`portal-action-menu-${instanceId || classId}`);
     const menuHeight = menuEl ? menuEl.offsetHeight : 280;
 
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -121,8 +125,8 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
     if (!openMenuId) return;
 
     const handleOutsideClick = (e: MouseEvent) => {
-      const menu = document.getElementById("portal-action-menu");
-      const trigger = document.getElementById(`trigger-${openMenuId}`);
+      const menu = document.getElementById(`portal-action-menu-${instanceId || classId}`);
+      const trigger = document.getElementById(`trigger-${instanceId || classId}-${openMenuId}`);
       if (menu && !menu.contains(e.target as Node) && trigger && !trigger.contains(e.target as Node)) {
         setOpenMenuId(null);
       }
@@ -234,16 +238,21 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !schedule) {
     return <div className="p-4 text-center text-sm text-slate-500">Loading class data...</div>;
   }
 
   if (!schedule) {
-    return null;
+    return <div role="alert" className="p-4 text-sm text-slate-600">Unable to load class data. <button type="button" onClick={() => refetch()} className="underline">Retry</button></div>;
   }
 
   // Map API response to the table format
-  const sessions = schedule.sessions || [];
+  const sessions = (schedule.sessions || []).filter((value: string) => {
+    if (!occurrenceDay) return true;
+    const normalized = toDateOnly(value);
+    const weekday = normalized ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date(`${normalized}T00:00:00Z`).getUTCDay()] : "";
+    return weekday.toUpperCase() === occurrenceDay.toUpperCase();
+  });
   const players = sortPlayersByPaymentStatus(
     schedule.players || [],
     (player: any) => player.paymentStatus || player.status
@@ -402,7 +411,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
 
   return (
     <div
-      id={`class-card-${classId}`}
+      id={instanceId || `class-card-${classId}`}
       className={`relative border overflow-hidden shadow-theme-xs transition-all duration-300 ${
         isHighlighted
           ? "border-[#0047FF] ring-4 ring-blue-500/30 dark:ring-blue-400/30 shadow-xl"
@@ -426,17 +435,17 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
         >
           <div className="flex flex-wrap items-center gap-5 text-xs font-semibold flex-1">
             <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              <span>{schedule.className}</span>
+            </div>
+            <div className="flex items-center gap-2">
               {index !== undefined && <span className="text-slate-300 font-bold">{index}.</span>}
               <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>{timeSlotStr}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-              <span>{schedule.className}</span>
             </div>
             {schedule.coach?.name && (
               <div className="flex items-center gap-1.5 text-slate-200">
@@ -456,9 +465,9 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                 <span className="text-[#38bdf8]">{programName || schedule.program?.name || "N/A"}</span>
               </span>
             </div>
-            {players.length > 0 && (
+            {(players.length > 0 || Number(schedule.playerCount) > 0) && (
               <ChatActionButton
-                contextLabel={schedule?.name || "Class"}
+                contextLabel={schedule?.className || schedule?.name || "Class"}
                 ensureRoom={() => chatApi.openClassChat(classId)}
                 buttonText="Class Chat"
                 className="flex items-center gap-1.5 border border-white/20 hover:bg-white/10 text-white px-3 py-1.5 rounded-[4px] text-[10px] font-semibold transition-all active:scale-95 cursor-pointer ml-2 shadow-sm"
@@ -530,6 +539,8 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       {/* Attendance Grid Table */}
       {isExpanded && (
         <div className="overflow-x-auto custom-scrollbar">
+          {isError && <div role="alert" className="p-4 text-sm text-rose-600">Unable to load the class roster. <button type="button" className="underline" onClick={() => refetch()}>Retry</button></div>}
+          {isLoading && <div role="status" className="p-4 text-sm">Loading class roster...</div>}
           <table className="w-full text-left border-separate border-spacing-0 text-[11px]">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
@@ -675,7 +686,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                   <td className="sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1 text-center min-w-[40px] w-[40px] max-w-[40px] border-l border-b border-slate-50 dark:border-slate-800/40 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-10">
                     <div className="flex items-center justify-center relative">
                       <button
-                        id={`trigger-${row.playerId}`}
+                        id={`trigger-${instanceId || classId}-${row.playerId}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuId(openMenuId === row.playerId ? null : row.playerId);
@@ -689,7 +700,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
                     </div>
                     {openMenuId === row.playerId && menuPosition && createPortal(
                       <div
-                        id="portal-action-menu"
+                        id={`portal-action-menu-${instanceId || classId}`}
                         style={{
                           position: "absolute",
                           top: `${menuPosition.top}px`,
@@ -941,6 +952,7 @@ export default function ClassFullTable({ classId, timeSlotStr, categoryId, progr
       {selectedPlayer && (
         <PlayerDetailCard
           player={selectedPlayer}
+          contextYear={schedule.term?.year}
           onClose={() => setSelectedPlayer(null)}
         />
       )}

@@ -1,3 +1,4 @@
+import { formatDateOnly, formatTimestampDate, APP_TIME_ZONE } from "../../utils/dateTime";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -9,13 +10,7 @@ import PageMeta from "../../components/common/PageMeta";
 import { getCoachDetail } from "../../api/adminApi";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
 
-const dateLabel = (value?: string | null) => {
-  if (!value) return "Date not set";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Date not set" : new Intl.DateTimeFormat("en-AU", {
-    day: "numeric", month: "short", year: "numeric", timeZone: "Australia/Sydney",
-  }).format(date);
-};
+const dateLabel = (value?: string | null, timestamp = false) => (timestamp ? formatTimestampDate(value, APP_TIME_ZONE) : formatDateOnly(value)) || "Date not set";
 
 const formatTime = (value?: string) => value || "Time not set";
 const classLink = (navigate: ReturnType<typeof useNavigate>, classId?: string | null) => {
@@ -90,7 +85,7 @@ export default function CoachDetailPage() {
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
               {coach.email && <a href={`mailto:${coach.email}`} className="inline-flex items-center gap-2 hover:text-blue-700"><Mail size={15} /> {coach.email}</a>}
               {coach.mobile && <a href={`tel:${coach.mobile}`} className="inline-flex items-center gap-2 hover:text-blue-700"><Phone size={15} /> {coach.mobile}</a>}
-              <span className="inline-flex items-center gap-2"><Clock3 size={15} /> Coach since {dateLabel(coach.createdAt)}</span>
+              <span className="inline-flex items-center gap-2"><Clock3 size={15} /> Coach since {dateLabel(coach.createdAt, true)}</span>
             </div>
           </div>
         </div>
@@ -177,7 +172,7 @@ export default function CoachDetailPage() {
                       <div><p className="text-sm font-semibold capitalize text-gray-900">{item.title}</p><p className="mt-1 text-xs text-gray-500">{item.description}</p><p className="mt-1 text-xs text-gray-500">{item.className || "No class linked"}</p></div>
                     </div>
                     <div className="flex items-center justify-between gap-4 sm:justify-end">
-                      <time className="whitespace-nowrap text-xs text-gray-500">{dateLabel(item.date)}</time>
+                      <time className="whitespace-nowrap text-xs text-gray-500">{dateLabel(item.date, item.type !== "ATTENDANCE")}</time>
                       {item.classId && <button onClick={() => classLink(navigate, item.classId)} className="text-xs font-bold text-blue-700 hover:text-blue-900">Open class</button>}
                     </div>
                   </div>

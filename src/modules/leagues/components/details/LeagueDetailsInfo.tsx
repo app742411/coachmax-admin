@@ -1,3 +1,4 @@
+import DateInput from "../../../../components/form/DateInput";
 import { useState, useEffect, useRef } from "react";
 import { Info, Calendar, Settings, Save, Upload, Image as ImageIcon, X, Zap } from "lucide-react";
 import { League, LeagueType } from "../../types/league";
@@ -315,7 +316,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 League Start Date
               </label>
-              <input
+              <DateInput
                 type="date"
                 disabled={!canEdit}
                 value={formData.startDate}
@@ -328,7 +329,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 League End Date
               </label>
-              <input
+              <DateInput
                 type="date"
                 disabled={!canEdit}
                 value={formData.endDate}
@@ -341,7 +342,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Registration Opens
               </label>
-              <input
+              <DateInput
                 type="date"
                 disabled={!canEdit}
                 value={formData.registrationStartDate}
@@ -354,7 +355,7 @@ export const LeagueDetailsInfo: React.FC<LeagueDetailsInfoProps> = ({ league }) 
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Registration Closes
               </label>
-              <input
+              <DateInput
                 type="date"
                 disabled={!canEdit}
                 value={formData.registrationEndDate}

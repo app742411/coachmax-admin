@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
@@ -182,9 +183,7 @@ const OrderList = () => {
                         </td>
                         <td className="px-6 py-5">
                           <span className="text-xs font-medium text-gray-400">
-                            {new Date(order.createdAt).toLocaleDateString("en-US", {
-                              year: 'numeric', month: 'short', day: 'numeric'
-                            })}
+                            {formatTimestampDate(order.createdAt)}
                           </span>
                         </td>
                         <td className="px-6 py-5 text-right">

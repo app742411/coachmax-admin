@@ -14,8 +14,7 @@ const RoleBasedDashboard: React.FC = () => {
     console.error("Failed to parse user from local storage", error);
   }
 
-  // Check if user role is exactly "SUPER_ADMIN"
-  if (user?.role === "SUPER_ADMIN") {
+  if (["SUPER_ADMIN", "ADMIN"].includes(user?.role)) {
     return <Home />;
   }
 

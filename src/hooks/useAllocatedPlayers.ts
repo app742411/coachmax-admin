@@ -1,3 +1,4 @@
+import { formatDateTime } from "../utils/dateTime";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getAllocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
@@ -20,7 +21,7 @@ const mapAllocatedToCard = (data: any): UnallocatedPlayer => {
     : [];
 
   const requestedDate = new Date(data.joinedDate || data.createdAt);
-  const formattedRequested = `${requestedDate.toLocaleDateString("en-US", { weekday: 'short' })} ${requestedDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' })}`;
+  const formattedRequested = formatDateTime(requestedDate);
 
   return {
     id: data._id,

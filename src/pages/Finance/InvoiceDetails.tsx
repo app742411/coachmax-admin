@@ -1,3 +1,4 @@
+import { formatDateOnly, formatTimestampDate, formatDateTime } from "../../utils/dateTime";
 import { useEffect } from "react";
 import { useParams } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
@@ -5,27 +6,9 @@ import PageBreadcrumb from "../../components/common/PageBreadcrumb";
 import { useInvoiceDetails } from "../../hooks/useInvoices";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "N/A";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+const formatDate = (value: string) => formatDateOnly(value) || "N/A";
 
-const formatDateTime = (dateString: string) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "N/A";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${day}/${month}/${year}, ${hours}:${minutes}`;
-};
+
 
 export default function InvoiceDetails() {
   const { id } = useParams();
@@ -72,7 +55,7 @@ export default function InvoiceDetails() {
                 }`}>
                 {inv.paymentStatus || "UNPAID"}
               </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">Issued: {formatDate(inv.createdAt)}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">Issued: {formatTimestampDate(inv.createdAt)}</p>
               <p className="text-sm font-medium text-gray-900 dark:text-white">Due Date: {formatDate(inv.dueDate)}</p>
               <p className="text-sm text-gray-500">Type: {inv.type}</p>
             </div>

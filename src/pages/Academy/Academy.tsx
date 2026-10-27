@@ -1,3 +1,4 @@
+import { occurrenceKey, dayLabel, scheduleDayQuery, distinctClassSlots, currentScheduleDay, currentScheduleMinutes } from "../../utils/classSchedule";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ import apiClient from "../../api/apiClient";
 interface AcademyProps {
   programType?: string;
 }
+const EMPTY_TIME_SLOTS: never[] = [];
 
 export default function Academy({ programType = "Academy" }: AcademyProps) {
   const navigate = useNavigate();
@@ -32,7 +34,8 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
   const [activeDay, setActiveDay] = useState(() => {
     if (state?.day) return state.day.charAt(0).toUpperCase() + state.day.slice(1).toLowerCase();
-    return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()];
+    if (state?.classId) return "View All";
+    return currentScheduleDay();
   });
   const [categoryId, setCategoryId] = useState("");
   const [categoryName, setCategoryName] = useState("");
@@ -107,7 +110,8 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
         // Smoothly scroll to the target class accordion
         setTimeout(() => {
-          const el = document.getElementById(`class-card-${primaryClass.id}`);
+          const target = timeSlots.find((slot: any) => String(slot.classId) === String(primaryClass.id));
+          const el = target ? document.getElementById(`class-card-${occurrenceKey(target)}`) : null;
           if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
           }
@@ -140,8 +144,15 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   const [isDeletingClass, setIsDeletingClass] = useState(false);
   const [isTermModalOpen, setIsTermModalOpen] = useState(false);
 
-  const { data: filtersData } = useClassFiltersWithTimeSlots(categoryId, programId, activeDay.toUpperCase(), termId);
-  const timeSlots = filtersData?.timeSlots || [];
+  const { data: filtersData, isLoading: scheduleLoading, isError: scheduleError, refetch: refetchSchedule } = useClassFiltersWithTimeSlots(categoryId, programId, scheduleDayQuery(activeDay), termId, { enabled: !!termId });
+  const timeSlots = filtersData?.timeSlots || EMPTY_TIME_SLOTS;
+  const assignmentSlots = distinctClassSlots<any>(timeSlots);
+
+  useEffect(() => {
+    if (!targetHighlightClassId) return;
+    const target = timeSlots.find((slot: any) => String(slot.classId) === String(targetHighlightClassId));
+    if (target) setExpandedClassIds((prev) => ({ ...prev, [occurrenceKey(target)]: true }));
+  }, [targetHighlightClassId, timeSlots]);
 
   // The header selects category, program, and term asynchronously on a fresh page load.
   // Refetch once those values are ready so the initial day is populated without
@@ -149,7 +160,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   useEffect(() => {
     if (!categoryId || !programId || !termId) return;
     void queryClient.refetchQueries({
-      queryKey: ["classFiltersWithTimeSlots", categoryId, programId, activeDay.toUpperCase(), termId],
+      queryKey: ["classFiltersWithTimeSlots", categoryId, programId, scheduleDayQuery(activeDay), termId],
       type: "active",
     });
   }, [categoryId, programId, termId, activeDay, queryClient]);
@@ -207,13 +218,15 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
   useEffect(() => {
     if (timeSlots && timeSlots.length > 0) {
       if (state?.classId && !hasInitializedFromState.current) {
-        setExpandedClassIds({ [state.classId]: true });
+        const target = timeSlots.find((slot: any) => String(slot.classId) === String(state.classId));
+        if (!target) return;
+        setExpandedClassIds({ [occurrenceKey(target)]: true });
         hasInitializedFromState.current = true;
         return;
       }
 
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      if (activeDay === "View All") return;
+      const currentMinutes = currentScheduleMinutes();
 
       let closestSlot = timeSlots[0];
       let minDiff = Infinity;
@@ -236,12 +249,12 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
       }
 
       setExpandedClassIds(prev => {
-        const hasAnyExpandedThisDay = timeSlots.some((slot: any) => prev[slot.classId]);
+        const hasAnyExpandedThisDay = timeSlots.some((slot: any) => prev[occurrenceKey(slot)]);
         if (hasAnyExpandedThisDay) return prev;
-        return { ...prev, [closestSlot.classId]: true };
+        return { ...prev, [occurrenceKey(closestSlot)]: true };
       });
     }
-  }, [timeSlots, activeDay]);
+  }, [timeSlots, activeDay, state?.classId]);
 
   const [pendingAssignPlayer, setPendingAssignPlayer] = useState<any | null>(null);
   const [selectedAssignClassId, setSelectedAssignClassId] = useState<string>("");
@@ -249,7 +262,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
 
   useEffect(() => {
     if (pendingAssignPlayer) {
-      const expandedSlot = timeSlots.find((slot: any) => expandedClassIds[slot.classId]);
+      const expandedSlot = timeSlots.find((slot: any) => expandedClassIds[occurrenceKey(slot)]);
       if (expandedSlot) {
         setSelectedAssignClassId(expandedSlot.classId);
       } else if (timeSlots.length > 0) {
@@ -384,38 +397,46 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
       <div className="flex flex-col xl:flex-row gap-4 items-start w-full">
         {/* Left Side: Attendance Tables */}
         <div className="flex-1 w-full min-w-0">
-          {timeSlots.length > 0 ? (
+          {scheduleError ? (
+            <div role="alert" className="p-6 text-sm text-red-600">Classes could not be loaded. <button type="button" className="underline" onClick={() => void refetchSchedule()}>Retry</button></div>
+          ) : scheduleLoading ? <div role="status" className="p-6 text-sm text-slate-500">Loading classes…</div> : timeSlots.length > 0 ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm flex flex-col gap-3">
               {timeSlots.map((slot: any, idx: number) => {
-                const isExpanded = !!expandedClassIds[slot.classId];
+                const isExpanded = !!expandedClassIds[occurrenceKey(slot)];
+                const startsDay = activeDay === "View All" && (idx === 0 || timeSlots[idx - 1].dayOfWeek !== slot.dayOfWeek);
                 return (
+                  <div key={occurrenceKey(slot)} id={`class-card-${occurrenceKey(slot)}`}>
+                  {startsDay && <h3 className="mb-3 mt-4 border-b border-slate-200 pb-2 text-sm font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{dayLabel(slot.dayOfWeek)}</h3>}
                   <ClassFullTable
-                    key={slot.classId}
+                    classSummary={slot}
+                    occurrenceDay={slot.dayOfWeek}
+                    instanceId={`class-table-${occurrenceKey(slot)}`}
                     classId={slot.classId}
                     index={idx + 1}
-                    categoryId={categoryId}
-                    categoryName={categoryName}
-                    programId={programId}
-                    programName={programName}
+                    categoryId={slot.category?._id || categoryId}
+                    categoryName={slot.category?.name || categoryName}
+                    programId={slot.program?._id || programId}
+                    programName={slot.program?.name || programName}
                     timeSlotStr={`${slot.startTime} - ${slot.endTime}`}
                     isExpanded={isExpanded}
                     isHighlighted={targetHighlightClassId === slot.classId}
                     onToggle={() =>
                       setExpandedClassIds(prev => ({
                         ...prev,
-                        [slot.classId]: !prev[slot.classId],
+                        [occurrenceKey(slot)]: !prev[occurrenceKey(slot)],
                       }))
                     }
                     onEditClass={handleEditClass}
                     onDuplicateClass={handleDuplicateClass}
                     onDeleteClass={(classId) => setDeleteClassId(classId)}
                   />
+                  </div>
                 );
               })}
             </div>
           ) : (
             <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm">
-              No classes scheduled for this day.
+              {activeDay === "View All" ? "No classes scheduled for the selected term and filters." : "No classes scheduled for this day."}
             </div>
           )}
         </div>
@@ -494,7 +515,7 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
         }}
         prefilledCategoryId={categoryId}
         prefilledProgramId={programId}
-        prefilledDayOfWeek={activeDay.toUpperCase()}
+        prefilledDayOfWeek={activeDay === "View All" ? undefined : scheduleDayQuery(activeDay)}
         prefilledTermId={termId}
       />
 
@@ -572,9 +593,9 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                     onChange={(e) => setSelectedAssignClassId(e.target.value)}
                     className="text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded px-2 py-1 focus:outline-none cursor-pointer"
                   >
-                    {timeSlots.map((slot: any) => (
+                    {assignmentSlots.map((slot: any) => (
                       <option key={slot.classId} value={slot.classId}>
-                        {slot.startTime} - {slot.endTime} - {activeDay} ({slot.startTime} - {slot.endTime})
+                        {slot.className} — {dayLabel(slot.dayOfWeek || "")} {slot.startTime} - {slot.endTime}
                       </option>
                     ))}
                   </select>

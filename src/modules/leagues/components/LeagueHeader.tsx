@@ -1,3 +1,4 @@
+import DateInput from "../../../components/form/DateInput";
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import { Trophy, MoreVertical, Edit3, Trash2, RefreshCw, Share2 } from "lucide-react";
@@ -322,7 +323,7 @@ export const LeagueHeader: React.FC<LeagueHeaderProps> = ({ league, onRefresh })
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Start Date
               </label>
-              <input
+              <DateInput
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -334,7 +335,7 @@ export const LeagueHeader: React.FC<LeagueHeaderProps> = ({ league, onRefresh })
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 End Date
               </label>
-              <input
+              <DateInput
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}

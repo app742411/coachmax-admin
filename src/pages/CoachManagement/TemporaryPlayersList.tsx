@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import AssignClassModal from "../../components/players/AssignClassModal";
+import { Link, Navigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import { Player } from "../../types/player";
 import PlayerStatsCards from "../../components/players/PlayerStatsCards";
@@ -7,10 +8,11 @@ import PlayerFilters from "../../components/players/PlayerFilters";
 import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
 import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
-import { useCoachTemporaryPlayers, useDeleteTemporaryPlayer } from "../../hooks/useRegistrationRequests";
+import { useCoachTemporaryPlayers } from "../../hooks/useRegistrationRequests";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
 export default function TemporaryPlayersList() {
+  const [playerToAssign, setPlayerToAssign] = useState<Player | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -42,16 +44,6 @@ export default function TemporaryPlayersList() {
   }
   const isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(userRole);
 
-  const deletePlayerMutation = useDeleteTemporaryPlayer();
-
-  const handleDeletePlayer = (player: Player) => {
-    const idToDelete = (player as any).requestId || player._id;
-    deletePlayerMutation.mutate(idToDelete);
-    if (selectedPlayer?._id === player._id) {
-      setSelectedPlayer(null);
-    }
-  };
-
   // Filtering Logic
   const filteredPlayers = players.filter((p: Player) => {
     const email = p.parentId?.email || "";
@@ -70,11 +62,13 @@ export default function TemporaryPlayersList() {
     // Medical Filter
     const matchesMedical =
       medicalFilter === "All" ||
-      (medicalFilter === "YES" && p.isMedicalCondition) ||
-      (medicalFilter === "NO" && !p.isMedicalCondition);
+      (["YES", "true"].includes(medicalFilter) && p.isMedicalCondition === true) ||
+      (["NO", "false"].includes(medicalFilter) && p.isMedicalCondition !== true);
 
     return matchesSearch && matchesStatus && matchesMedical;
   });
+
+  if (isAdmin) return <Navigate to="/new-registration-request" replace />;
 
   return (
     <>
@@ -143,7 +137,11 @@ export default function TemporaryPlayersList() {
                 }
                 setCoachNotePlayer(player);
               }}
-              onDeletePlayer={isAdmin ? handleDeletePlayer : undefined}
+              onDeletePlayer={undefined}
+              onAssignClass={isAdmin ? (player) => setPlayerToAssign(player) : undefined}
+              onOpenRequestedClass={isAdmin ? (player) => setPlayerToAssign(player) : undefined}
+              showRequestDetails={isAdmin}
+              showPaymentStatus={false}
               showStatusColumn={true}
             />
           )}
@@ -155,6 +153,7 @@ export default function TemporaryPlayersList() {
         )}
       </div>
 
+      {playerToAssign && <AssignClassModal player={playerToAssign} onClose={() => setPlayerToAssign(null)} />}
       {coachNotePlayer && (
         <AddCoachNoteModal
           isOpen={coachNotePlayer !== null}

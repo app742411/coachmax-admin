@@ -1,3 +1,4 @@
+import { formatDateTime } from "../../utils/dateTime";
 import React, { useState } from "react";
 import { Modal } from "../ui/modal";
 import { Sponsor } from "../../api/sponsorApi";
@@ -36,10 +37,7 @@ const SponsorDetailsModal: React.FC<SponsorDetailsModalProps> = ({ isOpen, onClo
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
     try {
-      return new Date(dateStr).toLocaleString("en-US", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+      return formatDateTime(dateStr);
     } catch (e) {
       return dateStr;
     }

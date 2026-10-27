@@ -3,7 +3,8 @@ import { toast } from "react-hot-toast";
 
 // Create custom Axios instance
 const apiClient = axios.create({
-  baseURL: (import.meta.env.VITE_API_BASE_URL as string) || "https://api.example.com/v1",
+  baseURL: (import.meta.env.VITE_API_BASE_URL as string) || window.location.origin,
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json",
     "ngrok-skip-browser-warning": "true",
@@ -48,7 +49,7 @@ apiClient.interceptors.response.use(
     if (!error.response || error.message === "Network Error") {
       toast.error("Network error. Please check your connection.");
       (error as any)._handled = true;
-    } else if (error.response.status === 401 || error.response.status === 403) {
+    } else if (error.response.status === 401) {
       // Handle unauthorized/forbidden — clear token/user and redirect to login
       localStorage.removeItem("token");
       localStorage.removeItem("user");

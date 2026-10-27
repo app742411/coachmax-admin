@@ -1,3 +1,4 @@
+import DateInput from "../../components/form/DateInput";
 import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -185,7 +186,7 @@ export default function TeamDetailsPage() {
     mutationFn: deleteTeam,
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast.success(res?.message || "Team deleted successfully!");
+      toast.success(res?.message || "Team archived successfully!");
       navigate("/teams");
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to delete team"),
@@ -547,7 +548,7 @@ export default function TeamDetailsPage() {
                     <Calendar className="w-3.5 h-3.5 text-gray-400" />
                     <span>
                       Created{" "}
-                      {formatDateTime(team.createdAt || Date.now(), { month: "short", day: "numeric", year: "numeric" })}
+                      {formatDateTime(team.createdAt)}
                     </span>
                   </span>
 
@@ -1091,7 +1092,7 @@ export default function TeamDetailsPage() {
                       </div>
 
                       <div className="relative flex-1 flex items-center">
-                        <input
+                        <DateInput
                           id={`team-details-round-date-${idx}`}
                           type="date"
                           value={dateVal}
@@ -1274,8 +1275,8 @@ export default function TeamDetailsPage() {
         onConfirm={() => {
           if (teamId) deleteMutation.mutate(teamId);
         }}
-        title="Delete Team"
-        message={`Are you sure you want to permanently delete this team? This action cannot be undone.`}
+        title="Archive Team"
+        message={`Archive this team? Historical matches, attendance and payments will remain available.`}
       />
 
       {/* CONFIRM REMOVE SINGLE PLAYER MODAL */}

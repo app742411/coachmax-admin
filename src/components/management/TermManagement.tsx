@@ -9,11 +9,13 @@ import { Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import DatePicker from "../form/date-picker";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import TermCalendar from "./TermCalendar";
-import { dateOnlyToLocalDate } from "../../utils/dateTime";
+import { formatDateOnly, toDateOnly, ageGroupContextYear } from "../../utils/dateTime";
+
+import { smartErrorToast } from "../../utils/toast";
 
 const TermManagement: React.FC = () => {
     const [showCalendar, setShowCalendar] = useState(true);
-    const [showList, setShowList] = useState(false);
+    const [showList, setShowList] = useState(true);
     const [eventFilter, setEventFilter] = useState<"all" | "false" | "true">("all");
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,55 +25,14 @@ const TermManagement: React.FC = () => {
 
     const [formData, setFormData] = useState({
         name: "",
-        year: new Date().getFullYear(),
+        year: ageGroupContextYear(),
         startDate: "",
         endDate: "",
     });
 
-    const parseToLocalDate = (dateStr: string): Date | null => {
-        if (!dateStr) return null;
-        
-        const isoDate = dateStr.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
-        if (isoDate) {
-            const localDate = dateOnlyToLocalDate(isoDate);
-            if (localDate) return localDate;
-        }
+    const formatDate = (dateStr: string) => formatDateOnly(dateStr) || "N/A";
 
-        // Real timestamp values retain normal timezone conversion.
-        if (dateStr.includes("T") || dateStr.includes("Z")) {
-            const d = new Date(dateStr);
-            if (!isNaN(d.getTime())) return d;
-        }
-        
-        // If it's in YYYY-MM-DD format
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            const [year, month, day] = dateStr.split("-").map(Number);
-            return new Date(year, month - 1, day);
-        }
-        
-        // If it's in DD/MM/YYYY format
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-            const [day, month, year] = dateStr.split("/").map(Number);
-            return new Date(year, month - 1, day);
-        }
-        
-        const d = new Date(dateStr);
-        if (!isNaN(d.getTime())) return d;
-        
-        return null;
-    };
-
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return "N/A";
-        const date = parseToLocalDate(dateStr);
-        if (!date) return dateStr;
-        const day = String(date.getDate()).padStart(2, "0");
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-    };
-
-    const currentYear = new Date().getFullYear();
+    const currentYear = ageGroupContextYear();
     const [selectedYear, setSelectedYear] = useState<number>(currentYear);
     const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
 
@@ -96,31 +57,17 @@ const TermManagement: React.FC = () => {
         setFormData(prev => ({ ...prev, [name]: dateStr }));
     };
 
-    // Validates DD/MM/YYYY
-    const isValidDate = (date: string) => {
-        return /^\d{2}\/\d{2}\/\d{4}$/.test(date);
-    };
-
-    // Helper to force conversion if the input is YYYY-MM-DD
-    const formatToDDMMYYYY = (dateStr: string) => {
-        if (!dateStr) return "";
-        return formatDate(dateStr);
-    };
-
     const getDaysBetween = (start: string, end: string) => {
-        if (!start || !end) return null;
-        const s = parseToLocalDate(start);
-        const e = parseToLocalDate(end);
+        const s = toDateOnly(start);
+        const e = toDateOnly(end);
         if (!s || !e) return null;
-        const sLocal = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-        const eLocal = new Date(e.getFullYear(), e.getMonth(), e.getDate());
-        return Math.round(Math.abs(eLocal.getTime() - sLocal.getTime()) / (1000 * 3600 * 24));
+        return Math.round((Date.parse(`${e}T00:00:00Z`) - Date.parse(`${s}T00:00:00Z`)) / 86400000) + 1;
     };
 
     const handleOpenAdd = () => {
         setFormData({
             name: "",
-            year: new Date().getFullYear(),
+            year: selectedYear,
             startDate: "",
             endDate: "",
         });
@@ -130,20 +77,11 @@ const TermManagement: React.FC = () => {
     };
 
     const handleOpenEdit = (term: any) => {
-        const cleanDate = (dateStr: string) => {
-            if (!dateStr) return "";
-            const date = parseToLocalDate(dateStr);
-            if (!date) return "";
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, "0");
-            const d = String(date.getDate()).padStart(2, "0");
-            return `${y}-${m}-${d}`;
-        };
         setFormData({
             name: term.name || "",
-            year: term.year || new Date().getFullYear(),
-            startDate: cleanDate(term.startDate),
-            endDate: cleanDate(term.endDate),
+            year: term.year || selectedYear,
+            startDate: toDateOnly(term.startDate),
+            endDate: toDateOnly(term.endDate),
         });
         setIsEditing(true);
         setSelectedId(term._id);
@@ -162,8 +100,7 @@ const TermManagement: React.FC = () => {
                     setDeleteModalId(null);
                 },
                 onError: (error: any) => {
-                    const message = error?.response?.data?.message || "Failed to delete term";
-                    toast.error(message, { duration: 5000 });
+                    smartErrorToast(error, "Failed to delete term");
                     setDeleteModalId(null);
                 }
             });
@@ -173,19 +110,21 @@ const TermManagement: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const formattedStart = formatToDDMMYYYY(formData.startDate);
-        const formattedEnd = formatToDDMMYYYY(formData.endDate);
+        const formattedStart = toDateOnly(formData.startDate);
+        const formattedEnd = toDateOnly(formData.endDate);
 
-        if (!isValidDate(formattedStart) || !isValidDate(formattedEnd)) {
-            toast.error("Please enter dates in DD/MM/YYYY format");
+        if (!formattedStart || !formattedEnd) {
+            toast.error("Please choose valid start and end dates (DD/MM/YYYY)");
             return;
         }
+        if (formattedStart > formattedEnd) { toast.error("Start date cannot be after end date"); return; }
+        if (!formData.name.trim()) { toast.error("Term name is required"); return; }
 
         const payload = {
-            name: formData.name,
+            name: formData.name.trim(),
             year: formData.year,
-            startDate: formattedStart,
-            endDate: formattedEnd,
+            startDate: formatDateOnly(formattedStart),
+            endDate: formatDateOnly(formattedEnd),
         };
 
         if (isEditing && selectedId) {
@@ -196,7 +135,7 @@ const TermManagement: React.FC = () => {
                         toast.success("Term updated successfully");
                         setIsModalOpen(false);
                     },
-                    onError: () => toast.error("Failed to update term"),
+                    onError: (error: any) => smartErrorToast(error, "Failed to update term"),
                 }
             );
         } else {
@@ -205,7 +144,7 @@ const TermManagement: React.FC = () => {
                     toast.success("Term created successfully");
                     setIsModalOpen(false);
                 },
-                onError: () => toast.error("Failed to create term"),
+                onError: (error: any) => smartErrorToast(error, "Failed to create term"),
             });
         }
     };
@@ -329,8 +268,8 @@ const TermManagement: React.FC = () => {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center justify-center gap-3">
-                                                <button onClick={() => handleOpenEdit(term)} className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"><Pencil size={14} /></button>
-                                                <button onClick={() => handleDeleteClick(term._id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                                                <button aria-label={`Edit ${term.name}`} onClick={() => handleOpenEdit(term)} className="flex items-center gap-1 p-1.5 text-brand-600 hover:text-brand-500 transition-colors"><Pencil size={14} /> Edit</button>
+                                                <button aria-label={`Delete ${term.name}`} onClick={() => handleDeleteClick(term._id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                                             </div>
                                         </TableCell>
                                     </TableRow>

@@ -1,3 +1,4 @@
+import { formatTimestampDate } from "../../utils/dateTime";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
@@ -114,7 +115,7 @@ export default function OrdersList() {
                         <div className="font-semibold text-slate-500">{order.parent?.email}</div>
                       </td>
                       <td className="py-4 px-3 font-bold text-slate-800 dark:text-slate-200">${order.totalAmount || 0}</td>
-                      <td className="py-4 px-3 font-semibold text-slate-500">{new Date(order.createdAt).toLocaleDateString()}</td>
+                      <td className="py-4 px-3 font-semibold text-slate-500">{formatTimestampDate(order.createdAt)}</td>
                       <td className="py-4 px-4">
                         <span
                           className={`inline-flex items-center gap-1 font-bold ${

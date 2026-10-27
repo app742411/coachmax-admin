@@ -1,3 +1,4 @@
+import { ageGroupForYear } from "../../utils/dateTime";
 import { useExportUsersCSV } from "../../hooks/usePlayers";
 import { useTerms } from "../../hooks/useTerms";
 import { useCategories } from "../../hooks/useCategories";
@@ -64,16 +65,8 @@ export default function PlayerFilters({
     new Set(
       filterPlayers
         .map((player) => {
-          if (!player.dob) return null;
-          const dob = new Date(player.dob);
-          if (Number.isNaN(dob.getTime())) return null;
-          const today = new Date();
-          let age = today.getFullYear() - dob.getFullYear();
-          const birthdayPassed =
-            today.getMonth() > dob.getMonth() ||
-            (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate());
-          if (!birthdayPassed) age -= 1;
-          return age >= 0 ? age : null;
+          const selectedTerm = terms.find((term) => term._id === termFilter);
+          return ageGroupForYear(player.dob, selectedTerm?.year);
         })
         .filter((age): age is number => age !== null)
     )
@@ -82,11 +75,11 @@ export default function PlayerFilters({
   const ageSelectOptions = filterPlayersProp
     ? ageOptions.map((age) => ({ label: `U${age}`, value: `U${age}` }))
     : [
-      { label: "U6 - U8", value: "U8" },
-      { label: "U9 - U10", value: "U10" },
-      { label: "U11 - U12", value: "U12" },
-      { label: "U13 - U14", value: "U14" },
-      { label: "U15+", value: "U16" },
+      { label: "U6 - U8", value: "U6-U8" },
+      { label: "U9 - U10", value: "U9-U10" },
+      { label: "U11 - U12", value: "U11-U12" },
+      { label: "U13 - U14", value: "U13-U14" },
+      { label: "U15+", value: "U15+" },
     ];
 
   const termOptions = [

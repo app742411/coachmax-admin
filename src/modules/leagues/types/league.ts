@@ -22,6 +22,7 @@ export interface League {
   _id: string;
   name: string;
   season: string;
+  term?: string | { _id: string; year?: number; name?: string };
   type: LeagueType | string;
   competitionScope?: string;
   description?: string;
@@ -169,6 +170,7 @@ export interface MatchGoal {
 
 export interface Match {
   _id: string;
+  version?: number;
   leagueId?: string;
   league?: string;
   round: number;

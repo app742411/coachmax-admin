@@ -1,3 +1,4 @@
+import { formatDateOnly } from "../../utils/dateTime";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Player } from "../../types/player";
@@ -32,6 +33,8 @@ interface PlayerTableProps {
   onGenerateInvoice?: (player: Player) => void;
   onAddCoachNote?: (player: Player) => void;
   showStatusColumn?: boolean;
+  showRequestDetails?: boolean;
+  onOpenRequestedClass?: (player: Player) => void;
   showPaymentStatus?: boolean;
   selectedTerm?: string;
   page?: number;
@@ -151,6 +154,8 @@ export default function PlayerTable({
   onGenerateInvoice,
   onAddCoachNote,
   showStatusColumn = false,
+  showRequestDetails = false,
+  onOpenRequestedClass,
   showPaymentStatus = true,
   selectedTerm = "All",
   page = 1,
@@ -239,6 +244,7 @@ export default function PlayerTable({
               <th className="py-2.5 px-2 min-w-[70px] text-center">Skill</th>
               <th className="py-2.5 px-2 min-w-[80px] text-center">Category</th>
               <th className="py-2.5 px-2 min-w-[80px] text-center">Program</th>
+              {showRequestDetails && <th className="py-2.5 px-2 min-w-[190px]">Requested Class / Term</th>}
               <th className="py-2.5 px-2 min-w-[40px] text-center">Foot</th>
               <th className="py-2.5 px-2 min-w-[90px]">Contact</th>
               <th className="py-2.5 px-2 min-w-[110px]">Email</th>
@@ -261,10 +267,10 @@ export default function PlayerTable({
 
               return (
                 <tr
-                  key={player._id}
+                  key={player.requestId || player._id}
                   onClick={() => onSelectPlayer(player)}
                   className={`border-b border-slate-50 last:border-0 dark:border-slate-800/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 cursor-pointer transition-all ${
-                    selectedPlayerId === player._id
+                    selectedPlayerId === (player.requestId || player._id)
                       ? "bg-slate-50 dark:bg-slate-800/40"
                       : isUnread
                       ? "bg-blue-50/20 dark:bg-blue-950/10 font-bold"
@@ -417,10 +423,10 @@ export default function PlayerTable({
                     </div>
                   </td>
                   <td className="py-3 px-2 font-semibold text-slate-500">
-                    {player.dob ? new Date(player.dob).toLocaleDateString("en-GB") : "N/A"}
+                    {formatDateOnly(player.dob) || "N/A"}
                   </td>
                   <td className="py-3 px-2 text-center" title={player.medicalConditionDetails || player.medicalConditions}>
-                    {player.isMedicalCondition ? (
+                    {player.isMedicalCondition === true ? (
                       <span className="text-rose-600 font-bold text-xs">
                         Yes
                       </span>
@@ -496,6 +502,11 @@ export default function PlayerTable({
                       </span>
                     )}
                   </td>
+                  {showRequestDetails && <td className="py-3 px-2 text-xs text-slate-600 dark:text-slate-300">
+                    <div className="font-semibold">{player.preferredTerm?.name || "Term not specified"}</div>
+                    {player.preferredClasses?.length ? <button type="button" onClick={(event) => { event.stopPropagation(); onOpenRequestedClass?.(player); }} className="text-blue-600 underline text-left">{player.preferredClasses.map((cls) => cls?.name || "Unavailable class").join(", ")}</button> : <span>No class requested</span>}
+                    <div className="text-slate-400 mt-1">{player.requestType === "TEMPORARY_PLAYER" || player.requestType === "TEMPORARY" ? "Coach temporary player" : (player.requestType || "").replace(/_/g, " ")}</div>
+                  </td>}
                   <td className="py-3 px-2 font-bold text-slate-600 dark:text-slate-400 text-center">
                     {(player.preferredFoot || player.prefferedFoot) === "LEFT" ? "L" : (player.preferredFoot || player.prefferedFoot) === "RIGHT" ? "R" : "-"}
                   </td>
@@ -527,13 +538,13 @@ export default function PlayerTable({
                   <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      id={`trigger-${player._id}`}
-                      className={`text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs inline-flex items-center justify-center ${openDropdownId === player._id
+                      id={`trigger-${player.requestId || player._id}`}
+                      className={`text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 p-1 border rounded-none hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs inline-flex items-center justify-center ${openDropdownId === (player.requestId || player._id)
                         ? 'border-[#0047FF] bg-blue-50/50 dark:bg-blue-950/20 text-[#0047FF]'
                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
                         }`}
                       title="More Options"
-                      onClick={(e) => toggleDropdown(e, player._id)}
+                      onClick={(e) => toggleDropdown(e, player.requestId || player._id)}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -566,11 +577,12 @@ export default function PlayerTable({
             }}
             className="z-[9999] w-56 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xl rounded-md overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-100"
           >
-            {players.find(p => p._id === openDropdownId) && (() => {
-              const player = players.find(p => p._id === openDropdownId)!;
+            {players.find(p => (p.requestId || p._id) === openDropdownId) && (() => {
+              const player = players.find(p => (p.requestId || p._id) === openDropdownId)!;
 
               return (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {showPaymentStatus && <>
                   {/* UPDATE STATUS Section */}
                   <div className="py-1">
                     <div className="px-4 pt-1.5 pb-1 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider select-none">
@@ -685,6 +697,8 @@ export default function PlayerTable({
                     </div>
                   </div>
 
+                  </>}
+
                   {/* Chat */}
                   <div>
                     <ChatActionButton
@@ -695,6 +709,7 @@ export default function PlayerTable({
                     />
                   </div>
 
+                  {onGenerateInvoice && <>
                   {/* Generate Invoice */}
                   <div>
                     <button
@@ -714,6 +729,9 @@ export default function PlayerTable({
                     </button>
                   </div>
 
+                  </>}
+
+                  {onEditPlayer && <>
                   {/* Edit Player */}
                   <div>
                     <button
@@ -733,6 +751,9 @@ export default function PlayerTable({
                     </button>
                   </div>
 
+                  </>}
+
+                  {onAssignClass && (!player.requestId || player.status === "PENDING") && <>
                   {/* Add to Class */}
                   <div>
                     <button
@@ -752,6 +773,9 @@ export default function PlayerTable({
                     </button>
                   </div>
 
+                  </>}
+
+                  {!showRequestDetails && <>
                   {/* Add to Team */}
                   <div>
                     <button
@@ -773,6 +797,10 @@ export default function PlayerTable({
                     </button>
                   </div>
 
+                  </>}
+
+                  {onRejectPlayer && player.requestId && player.status === "PENDING" && <button type="button" onClick={() => { setOpenDropdownId(null); setMenuPosition(null); onRejectPlayer(player); }} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50">Reject request</button>}
+                  {onDeletePlayer && <>
                   {/* Delete Player */}
                   <div>
                     <button
@@ -789,6 +817,7 @@ export default function PlayerTable({
                       <span>Delete Player</span>
                     </button>
                   </div>
+                  </>}
                 </div>
               );
             })()}
