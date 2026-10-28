@@ -21,6 +21,7 @@ const TermManagement: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     const [formData, setFormData] = useState({
         name: "",
@@ -54,6 +55,7 @@ const TermManagement: React.FC = () => {
 
     const handleDateChange = (name: string, dateStr: string) => {
         setFormData(prev => ({ ...prev, [name]: dateStr }));
+        setFormErrors((previous) => ({ ...previous, [name]: "", startDate: "", endDate: "" }));
     };
 
     const getDaysBetween = (start: string, end: string) => {
@@ -64,6 +66,7 @@ const TermManagement: React.FC = () => {
     };
 
     const handleOpenAdd = () => {
+        setFormErrors({});
         setFormData({
             name: "",
             year: selectedYear,
@@ -76,6 +79,7 @@ const TermManagement: React.FC = () => {
     };
 
     const handleOpenEdit = (term: any) => {
+        setFormErrors({});
         setFormData({
             name: term.name || "",
             year: term.year || selectedYear,
@@ -112,12 +116,14 @@ const TermManagement: React.FC = () => {
         const formattedStart = toDateOnly(formData.startDate);
         const formattedEnd = toDateOnly(formData.endDate);
 
-        if (!formattedStart || !formattedEnd) {
-            toast.error("Please choose valid start and end dates (DD/MM/YYYY)");
-            return;
-        }
-        if (formattedStart > formattedEnd) { toast.error("Start date cannot be after end date"); return; }
-        if (!formData.name.trim()) { toast.error("Term name is required"); return; }
+        const errors: Record<string, string> = {};
+        if (!formData.name.trim()) errors.name = "Term name is required.";
+        if (!Number.isInteger(Number(formData.year)) || Number(formData.year) < 2000 || Number(formData.year) > 2100) errors.year = "Enter a valid year between 2000 and 2100.";
+        if (!formattedStart) errors.startDate = "Start date is required.";
+        if (!formattedEnd) errors.endDate = "End date is required.";
+        if (formattedStart && formattedEnd && formattedStart > formattedEnd) errors.endDate = "End date must be on or after the start date.";
+        setFormErrors(errors);
+        if (Object.keys(errors).length > 0) return;
 
         const payload = {
             name: formData.name.trim(),
@@ -262,48 +268,69 @@ const TermManagement: React.FC = () => {
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 overflow-visible">
                 <h4 className="text-xl font-bold mb-2">{isEditing ? "Modify Term" : "Schedule New Term"}</h4>
                 <p className="text-xs text-gray-500 mb-6 font-medium">Coordinate the seasonal training timeline.</p>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                    <form data-coachmax-form noValidate onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="col-span-2">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Term Name</label>
+                            <label htmlFor="term-name" className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Term Name <span className="text-error-600">*</span></label>
                             <input
+                                id="term-name"
                                 type="text"
                                 name="name"
                                 value={formData.name}
                                 onChange={handleChange}
                                 className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
                                 placeholder="Summer Term"
-                                required
+                                aria-required="true"
+                                aria-invalid={Boolean(formErrors.name)}
+                                aria-describedby={formErrors.name ? "term-name-error" : undefined}
                             />
+                            {formErrors.name && <p id="term-name-error" role="alert" className="mt-1.5 text-sm text-error-600">{formErrors.name}</p>}
                         </div>
                         <div className="col-span-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Year</label>
+                            <label htmlFor="term-year" className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Year <span className="text-error-600">*</span></label>
                             <input
+                                id="term-year"
                                 type="number"
+                                min={2000}
+                                max={2100}
+                                step={1}
                                 name="year"
                                 value={formData.year}
                                 onChange={handleChange}
                                 className="w-full rounded-none border border-gray-100 bg-gray-50 px-3 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
-                                required
+                                aria-required="true"
+                                aria-invalid={Boolean(formErrors.year)}
+                                aria-describedby={formErrors.year ? "term-year-error" : undefined}
                             />
+                            {formErrors.year && <p id="term-year-error" role="alert" className="mt-1.5 text-xs text-error-600">{formErrors.year}</p>}
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                        <DatePicker
-                            id="startDate"
-                            label="Start Date"
-                            defaultDate={formData.startDate}
-                            onChange={(_, dateStr) => handleDateChange("startDate", dateStr)}
-                        />
-                        <DatePicker
-                            id="endDate"
-                            label="End Date"
-                            defaultDate={formData.endDate}
-                            onChange={(_, dateStr) => handleDateChange("endDate", dateStr)}
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <DatePicker
+                                id="term-start"
+                                label="Start Date *"
+                                defaultDate={formData.startDate}
+                                onChange={(_, dateStr) => handleDateChange("startDate", dateStr)}
+                                required
+                                error={formErrors.startDate}
+                            />
+                            {formErrors.startDate && <p id="term-start-error" role="alert" className="mt-1 text-xs text-error-600">{formErrors.startDate}</p>}
+                        </div>
+                        <div>
+                            <DatePicker
+                                id="term-end"
+                                label="End Date *"
+                                defaultDate={formData.endDate}
+                                onChange={(_, dateStr) => handleDateChange("endDate", dateStr)}
+                                required
+                                error={formErrors.endDate}
+                            />
+                            {formErrors.endDate && <p id="term-end-error" role="alert" className="mt-1 text-xs text-error-600">{formErrors.endDate}</p>}
+                        </div>
                     </div>
                     <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                        <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
                         <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
                             {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Commit Term"}
                         </Button>

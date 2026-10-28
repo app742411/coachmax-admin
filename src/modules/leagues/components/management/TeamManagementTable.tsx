@@ -25,6 +25,7 @@ import { useLeague } from "../../hooks/useLeague";
 import { LeagueTeam } from "../../types/league";
 import { useLeaguePermissions } from "../../hooks/useLeaguePermissions";
 import { Modal } from "../../../../components/ui/modal";
+import ImageCropModal from "../../../../components/common/ImageCropModal";
 import Button from "../../../../components/ui/button/Button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllTeams, createTeam, getAllCoaches, getAvailablePlayers } from "../../../../api/adminApi";
@@ -87,6 +88,8 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [previewLogoImage, setPreviewLogoImage] = useState<string | null>(null);
+  const [pendingLogoCrop, setPendingLogoCrop] = useState<File | null>(null);
+  const [createFormErrors, setCreateFormErrors] = useState<Record<string, string>>({});
   const [isSubmittingCreateTeam, setIsSubmittingCreateTeam] = useState(false);
 
   const [createFormData, setCreateFormData] = useState({
@@ -165,6 +168,8 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
     });
     setSelectedLogoFile(null);
     setPreviewLogoImage(null);
+    setPendingLogoCrop(null);
+    setCreateFormErrors({});
     setSelectedPlayerIdsForAdd([]);
     setSelectedPlayerStatusesForAdd({});
     setPlayerSearchQueryForAdd("");
@@ -177,13 +182,15 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
       try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
       const validationError = await validateUploadFile(normalized, "logo");
       if (validationError) { toast.error(validationError); e.target.value = ""; return; }
-      setSelectedLogoFile(normalized);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewLogoImage(reader.result as string);
-      };
-      reader.readAsDataURL(normalized);
+      setPendingLogoCrop(normalized);
+      e.target.value = "";
     }
+  };
+
+  const handleLogoCrop = (cropped: File) => {
+    setSelectedLogoFile(cropped);
+    setPreviewLogoImage(URL.createObjectURL(cropped));
+    setPendingLogoCrop(null);
   };
 
   const filteredTeams = teams.filter((t) => {
@@ -289,19 +296,13 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
 
   const handleCreateAndAssignTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createFormData.teamName.trim()) {
-      toast.error("Please enter team name");
-      return;
-    }
-    if (!createFormData.ageGroup.trim()) {
-      toast.error("Please enter age group");
-      return;
-    }
-    if (!leagueTermId) { toast.error("Select a term for this league before creating a team."); return; }
-    if (!createFormData.coach) {
-      toast.error("Please select a head coach");
-      return;
-    }
+    const errors: Record<string, string> = {};
+    if (!createFormData.teamName.trim()) errors.teamName = "Team name is required.";
+    if (!createFormData.ageGroup.trim()) errors.ageGroup = "Age group is required.";
+    if (!leagueTermId) errors.term = "Select a term for this league before creating a team.";
+    if (!createFormData.coach) errors.coach = "Select an assigned head coach.";
+    setCreateFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     try {
       setIsSubmittingCreateTeam(true);
@@ -315,6 +316,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
       payload.append("teamType", createFormData.teamType);
       payload.append("isExternal", createFormData.teamType === "EXTERNAL" ? "true" : "false");
       payload.append("term", leagueTermId);
+      payload.append("year", displayedLeagueYear || createFormData.year || String(new Date().getFullYear()));
       if (createFormData.venue) payload.append("venue", createFormData.venue);
       if (createFormData.location) payload.append("location", createFormData.location);
 
@@ -793,7 +795,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
               </button>
             </div>
 
-            <form onSubmit={handleAssignExistingSubmit} className="space-y-4">
+            <form data-coachmax-form onSubmit={handleAssignExistingSubmit} className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input
@@ -922,25 +924,30 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
               </button>
             </div>
 
-            <form onSubmit={handleCreateAndAssignTeam} className="space-y-6">
+            <form data-coachmax-form noValidate onSubmit={handleCreateAndAssignTeam} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                 <div className="md:col-span-8 space-y-4">
                   {/* Basic Info */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Name *</label>
+                      <label htmlFor="league-team-name" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Team Name *</label>
                       <input
+                        id="league-team-name"
                         type="text"
                         value={createFormData.teamName}
-                        onChange={(e) => setCreateFormData({ ...createFormData, teamName: e.target.value })}
+                        onChange={(e) => { setCreateFormData({ ...createFormData, teamName: e.target.value }); setCreateFormErrors((previous) => ({ ...previous, teamName: "" })); }}
                         className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all dark:text-white"
                         placeholder="Under 16 Tigers"
-                        required
+                        aria-required="true"
+                        aria-invalid={Boolean(createFormErrors.teamName)}
+                        aria-describedby={createFormErrors.teamName ? "league-team-name-error" : undefined}
                       />
+                      {createFormErrors.teamName && <p id="league-team-name-error" role="alert" className="mt-1 text-sm text-error-600">{createFormErrors.teamName}</p>}
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Category *</label>
+                      <label htmlFor="league-team-type" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Team Category *</label>
                       <select
+                        id="league-team-type"
                         value={createFormData.teamType}
                         onChange={(e) => setCreateFormData({ ...createFormData, teamType: e.target.value })}
                         className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
@@ -954,16 +961,20 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group *</label>
+                      <label htmlFor="league-team-age-group" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Age Group *</label>
                       <input
+                        id="league-team-age-group"
                         type="text"
                         list="age-group-options"
                         value={createFormData.ageGroup}
-                        onChange={(e) => setCreateFormData({ ...createFormData, ageGroup: e.target.value })}
+                        onChange={(e) => { setCreateFormData({ ...createFormData, ageGroup: e.target.value }); setCreateFormErrors((previous) => ({ ...previous, ageGroup: "" })); }}
                         className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all dark:text-white"
                         placeholder="e.g. U16"
-                        required
+                        aria-required="true"
+                        aria-invalid={Boolean(createFormErrors.ageGroup)}
+                        aria-describedby={createFormErrors.ageGroup ? "league-team-age-error" : undefined}
                       />
+                      {createFormErrors.ageGroup && <p id="league-team-age-error" role="alert" className="mt-1 text-sm text-error-600">{createFormErrors.ageGroup}</p>}
                       <datalist id="age-group-options">
                         {Array.from({ length: 29 }, (_, i) => i + 2).map((num) => (
                           <option key={num} value={`U${num}`} />
@@ -971,8 +982,9 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                       </datalist>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Year</label>
+                      <label htmlFor="league-team-year" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Year</label>
                       <input
+                        id="league-team-year"
                         type="text"
                         value={displayedLeagueYear || createFormData.year}
                         readOnly
@@ -981,8 +993,9 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Academic Term</label>
+                      <label htmlFor="league-team-term" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Academic Term</label>
                       <select
+                        id="league-team-term"
                         value={leagueTermId}
                         disabled={!leagueTermId}
                         aria-label="League academic term"
@@ -996,18 +1009,22 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                   {/* Coaches */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Assigned Head Coach *</label>
+                      <label htmlFor="league-team-coach" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Assigned Head Coach *</label>
                       <select
+                        id="league-team-coach"
                         value={createFormData.coach}
-                        onChange={(e) => setCreateFormData({ ...createFormData, coach: e.target.value })}
+                        onChange={(e) => { setCreateFormData({ ...createFormData, coach: e.target.value }); setCreateFormErrors((previous) => ({ ...previous, coach: "" })); }}
                         className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
-                        required
+                        aria-required="true"
+                        aria-invalid={Boolean(createFormErrors.coach)}
+                        aria-describedby={createFormErrors.coach ? "league-team-coach-error" : undefined}
                       >
                         <option value="">Select Head Coach</option>
                         {coaches.map((c: any) => (
                           <option key={c._id} value={c._id}>{c.fullName || c.name}</option>
                         ))}
                       </select>
+                      {createFormErrors.coach && <p id="league-team-coach-error" role="alert" className="mt-1 text-sm text-error-600">{createFormErrors.coach}</p>}
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Assistant Coach</label>
@@ -1027,17 +1044,17 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
 
                 {/* Logo Upload Panel */}
                 <div className="md:col-span-4 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 p-6 border border-gray-200 dark:border-gray-700">
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4 text-center">Team Logo</label>
-                  <div
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-4 text-center">Team Logo <span className="normal-case font-normal">(optional)</span></label>
+                  <button
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-36 h-36 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center bg-white dark:bg-slate-900 cursor-pointer overflow-hidden hover:border-[#0047FF] transition-colors group relative shadow-xs"
+                    aria-label={previewLogoImage ? "Replace team logo" : "Upload team logo"}
+                    className="w-36 h-36 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center bg-white dark:bg-slate-900 cursor-pointer overflow-hidden hover:border-[#0047FF] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 transition-colors group relative shadow-xs"
                   >
                     {previewLogoImage ? (
                       <>
-                        <img src={previewLogoImage} alt="Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ImageIcon className="text-white w-8 h-8" />
-                        </div>
+                        <img src={previewLogoImage} alt="Team logo preview" className="w-full h-full object-cover" />
+                        <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 flex items-center justify-center text-xs font-semibold text-white">Replace logo</span>
                       </>
                     ) : (
                       <div className="flex flex-col items-center text-gray-400 group-hover:text-[#0047FF] transition-colors">
@@ -1045,7 +1062,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                         <span className="text-[10px] font-bold uppercase tracking-widest">Upload Logo</span>
                       </div>
                     )}
-                  </div>
+                  </button>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1053,7 +1070,8 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                     accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                     onChange={handleLogoFileChange}
                   />
-                  <span className="text-[10px] text-gray-400 mt-3 text-center">JPEG, PNG, WebP, HEIC/HEIF · max 2MB</span>
+                  <span className="text-[10px] text-gray-500 mt-3 text-center">JPEG, PNG, WebP, HEIC/HEIF · max 2MB</span>
+                  <span className="text-[10px] text-gray-400 mt-1 text-center">Square crop · 512 × 512 px</span>
                 </div>
               </div>
 
@@ -1221,7 +1239,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
           </div>
         </div>
 
-        <form onSubmit={handleStatsSubmit} className="space-y-4">
+        <form data-coachmax-form onSubmit={handleStatsSubmit} className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
@@ -1355,6 +1373,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
           </div>
         </form>
       </Modal>
+      {pendingLogoCrop && <ImageCropModal file={pendingLogoCrop} policy="logo" onCancel={() => setPendingLogoCrop(null)} onCrop={handleLogoCrop} />}
 
       {/* Assign Players Modal */}
       {isAssignPlayersModalOpen && (

@@ -190,6 +190,60 @@ layer(base);
   }
 }
 
+/* Shared visual treatment for CoachMax admin forms. Keep checkboxes, radios,
+   file inputs, and range controls native so their intended affordances remain. */
+[data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+.coachmax-select-trigger {
+  min-height: 44px;
+  border-radius: 8px;
+  border-color: #d0d5dd;
+  background-color: #fff;
+  color: #101828;
+  font-family: Outfit, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+[data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):focus,
+.coachmax-select-trigger:focus-visible {
+  border-color: #0047ff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(0 71 255 / 14%);
+}
+
+[data-coachmax-form] textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+[data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea)[aria-invalid="true"],
+.coachmax-select-trigger[aria-invalid="true"] {
+  border-color: #d92d20;
+}
+
+[data-coachmax-form] label:not(:has(input[type="checkbox"], input[type="radio"])) {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.dark [data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+.dark .coachmax-select-trigger {
+  border-color: #475467;
+  background-color: #101828;
+  color: #f9fafb;
+}
+
+.dark [data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea)::placeholder {
+  color: #98a2b3;
+}
+
+.dark [data-coachmax-form] label:not(:has(input[type="checkbox"], input[type="radio"])) {
+  color: #d0d5dd;
+}
+
 @utility menu-item {
   @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-theme-sm transition-all duration-150;
 }

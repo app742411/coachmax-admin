@@ -102,6 +102,21 @@ export default function AddClassModal({
   const [bulkStartTime, setBulkStartTime] = useState("");
   const [bulkEndTime, setBulkEndTime] = useState("");
 
+  const getValidationError = (field: "name" | "term" | "category" | "program" | "coach" | "location" | "capacity" | "price" | "time") => {
+    const patterns: Record<typeof field, RegExp> = {
+      name: /class name/i,
+      term: /academic term/i,
+      category: /category/i,
+      program: /program/i,
+      coach: /coach/i,
+      location: /class location/i,
+      capacity: /capacity/i,
+      price: /price/i,
+      time: /(start time|end time)/i,
+    };
+    return validationErrors.find((message) => patterns[field].test(message));
+  };
+
   const handleApplyTimeToAll = () => {
     if (!bulkStartTime && !bulkEndTime) {
       toast.error("Please select a start time or end time to apply");
@@ -368,15 +383,19 @@ export default function AddClassModal({
       if (!formData.dayOfWeek) errors.push("Select a day of the week.");
       if (!formData.startTime) errors.push("Select a start time.");
       if (!formData.endTime) errors.push("Select an end time.");
+      if (formData.startTime && formData.endTime && convertTo24Hour(formData.startTime) >= convertTo24Hour(formData.endTime)) errors.push("End time must be after start time.");
     } else if (scheduleType === "WEEKDAYS") {
       if (!formData.startTime) errors.push("Select a start time for weekdays.");
       if (!formData.endTime) errors.push("Select an end time for weekdays.");
+      if (formData.startTime && formData.endTime && convertTo24Hour(formData.startTime) >= convertTo24Hour(formData.endTime)) errors.push("End time must be after start time for weekdays.");
     } else if (scheduleType === "CUSTOM") {
       if (customSchedules.length === 0) errors.push("Add at least one schedule slot.");
       for (let i = 0; i < customSchedules.length; i++) {
         const slot = customSchedules[i];
         if (!slot.dayOfWeek || !slot.startTime || !slot.endTime) {
           errors.push(`Complete the day, start time, and end time for schedule slot ${i + 1}.`);
+        } else if (convertTo24Hour(slot.startTime) >= convertTo24Hour(slot.endTime)) {
+          errors.push(`End time must be after start time for schedule slot ${i + 1}.`);
         }
       }
     }
@@ -388,6 +407,7 @@ export default function AddClassModal({
       const basePayload: any = {
         name: formData.name,
         term: formData.term,
+        year: Number(allTerms.find((item) => String(item._id) === String(formData.term))?.year || selectedYear) || undefined,
         program: formData.program,
         category: formData.category,
         location: formData.location,
@@ -510,7 +530,7 @@ export default function AddClassModal({
         </div>
 
         {/* Scrollable Form Body */}
-        <form id="create-class-form" noValidate onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 sm:p-6 xl:p-8 space-y-6 custom-scrollbar">
+        <form id="create-class-form" data-coachmax-form noValidate onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 sm:p-6 xl:p-8 space-y-6 custom-scrollbar">
 
           {validationErrors.length > 0 && (
             <div role="alert" aria-live="polite" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
@@ -544,7 +564,7 @@ export default function AddClassModal({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5">
               {/* Class Name */}
               <div className="space-y-1.5 md:col-span-1 lg:col-span-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-name" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Class Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -552,20 +572,24 @@ export default function AddClassModal({
                     <LayoutGrid className="w-5 h-5" />
                   </span>
                   <input
+                    id="class-name"
                     required
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("name"))}
+                    aria-describedby={getValidationError("name") ? "class-name-error" : undefined}
                     placeholder="e.g. U-12 Development Squad"
                     className="w-full pl-11 pr-4 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 transition-all placeholder:text-gray-400"
                   />
                 </div>
+                {getValidationError("name") && <p id="class-name-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("name")}</p>}
               </div>
 
               {/* Year */}
               <div className="space-y-1.5 md:col-span-1 lg:col-span-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-year" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Year
                 </label>
                 <div className="relative">
@@ -573,6 +597,7 @@ export default function AddClassModal({
                     <CalendarDays className="w-5 h-5" />
                   </span>
                   <select
+                    id="class-year"
                     name="year"
                     value={selectedYear}
                     onChange={handleYearChange}
@@ -593,7 +618,7 @@ export default function AddClassModal({
 
               {/* Term */}
               <div className="space-y-1.5 md:col-span-1 lg:col-span-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-term" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Term <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -601,10 +626,13 @@ export default function AddClassModal({
                     <Calendar className="w-5 h-5" />
                   </span>
                   <select
+                    id="class-term"
                     required
                     name="term"
                     value={formData.term}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("term"))}
+                    aria-describedby={getValidationError("term") ? "class-term-error" : undefined}
                     className="w-full pl-11 pr-9 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 appearance-none transition-all cursor-pointer"
                   >
                     <option value="">Select Term</option>
@@ -621,6 +649,7 @@ export default function AddClassModal({
                         </option>
                       ))}
                   </select>
+                  {getValidationError("term") && <p id="class-term-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("term")}</p>}
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <ChevronDown className="w-4 h-4" />
                   </span>
@@ -629,7 +658,7 @@ export default function AddClassModal({
 
               {/* Category */}
               <div className="space-y-1.5 lg:col-span-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-category" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Category <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -637,15 +666,19 @@ export default function AddClassModal({
                     <LayoutGrid className="w-5 h-5" />
                   </span>
                   <select
+                    id="class-category"
                     required
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("category"))}
+                    aria-describedby={getValidationError("category") ? "class-category-error" : undefined}
                     className="w-full pl-11 pr-9 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 appearance-none transition-all cursor-pointer"
                   >
                     <option value="">Select Category</option>
                     {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
+                  {getValidationError("category") && <p id="class-category-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("category")}</p>}
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <ChevronDown className="w-4 h-4" />
                   </span>
@@ -654,7 +687,7 @@ export default function AddClassModal({
 
               {/* Program */}
               <div className="space-y-1.5 md:col-span-1 lg:col-span-2">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-program" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Program <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -662,16 +695,20 @@ export default function AddClassModal({
                     <FileText className="w-5 h-5" />
                   </span>
                   <select
+                    id="class-program"
                     required
                     name="program"
                     value={formData.program}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("program"))}
+                    aria-describedby={getValidationError("program") ? "class-program-error" : undefined}
                     disabled={!formData.category}
                     className="w-full pl-11 pr-9 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 appearance-none transition-all disabled:opacity-60 cursor-pointer"
                   >
                     <option value="">Select Program</option>
                     {programs.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
                   </select>
+                  {getValidationError("program") && <p id="class-program-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("program")}</p>}
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <ChevronDown className="w-4 h-4" />
                   </span>
@@ -680,7 +717,7 @@ export default function AddClassModal({
 
               {/* Coach */}
               <div className="space-y-1.5 md:col-span-1 lg:col-span-2">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-coach" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Coach <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -688,15 +725,19 @@ export default function AddClassModal({
                     <User className="w-5 h-5" />
                   </span>
                   <select
+                    id="class-coach"
                     required
                     name="coach"
                     value={formData.coach}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("coach"))}
+                    aria-describedby={getValidationError("coach") ? "class-coach-error" : undefined}
                     className="w-full pl-11 pr-9 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 appearance-none transition-all cursor-pointer"
                   >
                     <option value="">Select Coach</option>
                     {coaches.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
+                  {getValidationError("coach") && <p id="class-coach-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("coach")}</p>}
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <ChevronDown className="w-4 h-4" />
                   </span>
@@ -812,10 +853,14 @@ export default function AddClassModal({
 
                 {/* Start Time */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <label htmlFor="class-start-time" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                     Start Time <span className="text-red-500">*</span>
                   </label>
                   <TimePicker
+                    id="class-start-time"
+                    ariaLabel="Start time"
+                    required
+                    error={getValidationError("time")}
                     value={formData.startTime}
                     onChange={(time) => setFormData(prev => ({ ...prev, startTime: time }))}
                     placeholder="Select start time"
@@ -824,10 +869,14 @@ export default function AddClassModal({
 
                 {/* End Time */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <label htmlFor="class-end-time" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                     End Time <span className="text-red-500">*</span>
                   </label>
                   <TimePicker
+                    id="class-end-time"
+                    ariaLabel="End time"
+                    required
+                    error={getValidationError("time")}
                     value={formData.endTime}
                     onChange={(time) => setFormData(prev => ({ ...prev, endTime: time }))}
                     placeholder="Select end time"
@@ -851,10 +900,14 @@ export default function AddClassModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xl:gap-5 pt-1">
                   {/* Start Time */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                    <label htmlFor="class-weekday-start-time" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                       Start Time (Monday - Friday) <span className="text-red-500">*</span>
                     </label>
                     <TimePicker
+                      id="class-weekday-start-time"
+                      ariaLabel="Start time Monday to Friday"
+                      required
+                      error={getValidationError("time")}
                       value={formData.startTime}
                       onChange={(time) => setFormData(prev => ({ ...prev, startTime: time }))}
                       placeholder="Select start time"
@@ -863,10 +916,14 @@ export default function AddClassModal({
 
                   {/* End Time */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                    <label htmlFor="class-weekday-end-time" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                       End Time (Monday - Friday) <span className="text-red-500">*</span>
                     </label>
                     <TimePicker
+                      id="class-weekday-end-time"
+                      ariaLabel="End time Monday to Friday"
+                      required
+                      error={getValidationError("time")}
                       value={formData.endTime}
                       onChange={(time) => setFormData(prev => ({ ...prev, endTime: time }))}
                       placeholder="Select end time"
@@ -981,6 +1038,10 @@ export default function AddClassModal({
                           Start <span className="text-red-500">*</span>
                         </label>
                         <TimePicker
+                          id={`class-custom-start-${index}`}
+                          ariaLabel={`Start time for schedule ${index + 1}`}
+                          required
+                          error={getValidationError("time")}
                           value={slot.startTime}
                           onChange={(time) => handleCustomSlotChange(index, "startTime", time)}
                           placeholder="Start time"
@@ -993,6 +1054,10 @@ export default function AddClassModal({
                           End <span className="text-red-500">*</span>
                         </label>
                         <TimePicker
+                          id={`class-custom-end-${index}`}
+                          ariaLabel={`End time for schedule ${index + 1}`}
+                          required
+                          error={getValidationError("time")}
                           value={slot.endTime}
                           onChange={(time) => handleCustomSlotChange(index, "endTime", time)}
                           placeholder="End time"
@@ -1033,7 +1098,7 @@ export default function AddClassModal({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 xl:gap-5">
               {/* Location */}
               <div className="space-y-1.5 md:col-span-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-location" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Location <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1041,20 +1106,24 @@ export default function AddClassModal({
                     <MapPin className="w-5 h-5" />
                   </span>
                   <input
+                    id="class-location"
                     required
                     type="text"
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("location"))}
+                    aria-describedby={getValidationError("location") ? "class-location-error" : undefined}
                     placeholder="e.g. Hall A / Petrie Terrace"
                     className="w-full pl-11 pr-4 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 transition-all placeholder:text-gray-400"
                   />
                 </div>
+                {getValidationError("location") && <p id="class-location-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("location")}</p>}
               </div>
 
               {/* Capacity */}
               <div className="space-y-1.5 md:col-span-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-capacity" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Capacity <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1062,21 +1131,25 @@ export default function AddClassModal({
                     <Users className="w-5 h-5" />
                   </span>
                   <input
+                    id="class-capacity"
                     required
                     type="number"
                     min="1"
                     name="capacity"
                     value={formData.capacity}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("capacity"))}
+                    aria-describedby={getValidationError("capacity") ? "class-capacity-error" : undefined}
                     placeholder="20"
                     className="w-full pl-11 pr-4 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 transition-all"
                   />
                 </div>
+                {getValidationError("capacity") && <p id="class-capacity-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("capacity")}</p>}
               </div>
 
               {/* Class Fee */}
               <div className="space-y-1.5 md:col-span-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <label htmlFor="class-price" className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   Class Fee ($)
                 </label>
                 <div className="relative">
@@ -1084,15 +1157,19 @@ export default function AddClassModal({
                     $
                   </span>
                   <input
+                    id="class-price"
                     type="number"
                     min="0"
                     name="price"
                     value={formData.price}
                     onChange={handleChange}
+                    aria-invalid={Boolean(getValidationError("price"))}
+                    aria-describedby={getValidationError("price") ? "class-price-error" : undefined}
                     placeholder="0"
                     className="w-full pl-11 pr-4 py-2.5 h-[44px] text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20 focus:border-[#0047FF] text-gray-800 dark:text-gray-200 transition-all"
                   />
                 </div>
+                {getValidationError("price") && <p id="class-price-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("price")}</p>}
               </div>
             </div>
           </div>

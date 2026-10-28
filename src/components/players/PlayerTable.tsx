@@ -40,6 +40,7 @@ interface PlayerTableProps {
   selectedTerm?: string;
   page?: number;
   limit?: number;
+  preserveOrder?: boolean;
 }
 
 export const resolvePlayerPaymentStatus = (player: Player, selectedTermId?: string): string => {
@@ -162,6 +163,7 @@ export default function PlayerTable({
   selectedTerm = "All",
   page = 1,
   limit = 10,
+  preserveOrder = false,
 }: PlayerTableProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteModalPlayer, setDeleteModalPlayer] = useState<Player | null>(null);
@@ -256,7 +258,7 @@ export default function PlayerTable({
             </tr>
           </thead>
           <tbody>
-            {sortPlayersByPaymentStatus(players, (player) => resolvePlayerPaymentStatus(player, selectedTerm)).map((player, index) => {
+            {(preserveOrder ? players : sortPlayersByPaymentStatus(players, (player) => resolvePlayerPaymentStatus(player, selectedTerm))).map((player, index) => {
               const serialNo = (page - 1) * limit + index + 1;
               const isRequest = !!(player as any).requestId || !!(player as any).requestType;
               const reqId = (player as any).requestId || player._id;

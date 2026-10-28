@@ -27,6 +27,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
  const [isDeleting, setIsDeleting] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [deletingId, setDeletingId] = useState<string | null>(null);
+ const [formError, setFormError] = useState("");
  
  const [formData, setFormData] = useState({
   name: "",
@@ -61,15 +62,17 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
  const resetForm = () => {
   setFormData({ name: "", description: "" });
   setEditingId(null);
+  setFormError("");
  };
 
  const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
   if (!formData.name.trim()) {
-   toast.error("Category name is required.");
+   setFormError("Category name is required.");
    return;
   }
+  setFormError("");
 
   setIsSubmitting(true);
   try {
@@ -129,23 +132,29 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
    </div>
 
    {/* Add/Edit Form */}
-   <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-none border border-gray-100 dark:border-gray-700 mb-6">
+  <form data-coachmax-form noValidate onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700 mb-6">
     <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4">
      {editingId ? "Edit Category" : "Add New Category"}
     </h3>
     <div className="space-y-4">
      <div>
-      <Label>Category Name</Label>
+      <Label htmlFor="store-category-name">Category Name <span className="text-error-600">*</span></Label>
       <Input
+       id="store-category-name"
        name="name"
        placeholder="e.g., Academy Apparel"
        value={formData.name}
        onChange={handleInputChange}
+       required
+       aria-invalid={Boolean(formError)}
+       aria-describedby={formError ? "store-category-error" : undefined}
       />
+      {formError && <p id="store-category-error" role="alert" className="mt-1.5 text-sm text-error-600">{formError}</p>}
      </div>
      <div>
-      <Label>Description</Label>
+      <Label htmlFor="store-category-description">Description <span className="text-xs font-normal text-gray-500">(optional)</span></Label>
       <Input
+       id="store-category-description"
        name="description"
        placeholder="Short description..."
        value={formData.description}

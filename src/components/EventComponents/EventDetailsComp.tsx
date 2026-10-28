@@ -342,13 +342,13 @@ const EventDetailsComp: React.FC = () => {
         {isOverviewExpanded && (
           <div className="border-t border-gray-200 dark:border-gray-800 transition-all duration-300">
             {/* Banner Section if has image */}
-            <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
+            <div className="relative h-40 w-full overflow-hidden bg-slate-100 dark:bg-slate-950 sm:h-48 lg:h-56">
               {event.bannerImage ? (
                 <img
                   src={getMediaUrl(event.bannerImage)}
                   alt={`${event.title} banner`}
                   onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaUrl(); }}
-                  className="absolute inset-0 h-full w-full object-contain"
+                  className="absolute inset-0 h-full w-full object-contain p-1"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-950/35 pointer-events-none">

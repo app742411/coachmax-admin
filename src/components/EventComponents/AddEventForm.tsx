@@ -69,6 +69,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [eventBannerPreview, setEventBannerPreview] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -253,10 +254,45 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setValidationErrors((previous) => ({ ...previous, [name]: "" }));
   };
 
   const handleDateChange = (date: Date | null, field: string) => {
     setFormData(prev => ({ ...prev, [field]: date }));
+    setValidationErrors((previous) => ({ ...previous, [field]: "", endDate: "", registrationDeadline: "" }));
+  };
+
+  const validateIdentity = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.title.trim()) errors.title = "Event title is required.";
+    if (!formData.category.trim()) errors.category = "Select an event category.";
+    if (!formData.description.trim()) errors.description = "Event description is required.";
+    if (!formData.eventType) errors.eventType = "Select an event type.";
+    setValidationErrors((previous) => ({ ...previous, ...errors }));
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateTimeline = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.startDate) errors.startDate = "Start date is required.";
+    if (!formData.endDate) errors.endDate = "End date is required.";
+    if (formData.startDate && formData.endDate && dateOnlyFormValue(formData.startDate) > dateOnlyFormValue(formData.endDate)) {
+      errors.endDate = "End date must be on or after the start date.";
+    }
+    if (formData.registrationDeadline && formData.startDate && dateOnlyFormValue(formData.registrationDeadline) > dateOnlyFormValue(formData.startDate)) {
+      errors.registrationDeadline = "Registration deadline must be on or before the start date.";
+    }
+    if (formData.maxParticipants && (!Number.isInteger(Number(formData.maxParticipants)) || Number(formData.maxParticipants) < 1)) {
+      errors.maxParticipants = "Participant limit must be a whole number greater than 0.";
+    }
+    if (formData.registrationFee && (!Number.isFinite(Number(formData.registrationFee)) || Number(formData.registrationFee) < 0)) {
+      errors.registrationFee = "Registration fee must be 0 or more.";
+    }
+    if (isHolidayCamp && !campSessions.some((session) => session.isEnabled && (session.hasFullDay || session.hasHalfDay))) {
+      errors.sessions = "Enable at least one camp day and session.";
+    }
+    setValidationErrors((previous) => ({ ...previous, ...errors }));
+    return Object.keys(errors).length === 0;
   };
 
   const handleFileChange = (files: File[]) => {
@@ -275,16 +311,14 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
       return;
     }
 
-    // The final action is a button click, and fields from the earlier steps
-    // are unmounted in this wizard. Validate them explicitly before sending.
-    if (!formData.title.trim()) {
+    // Fields from earlier wizard steps are unmounted, so validate each step
+    // again before sending the final payload.
+    if (!validateIdentity()) {
       setCurrentStep(1);
-      toast.error("Enter an event title before creating the event.");
       return;
     }
-    if (!formData.description.trim()) {
-      setCurrentStep(1);
-      toast.error("Enter an event description before creating the event.");
+    if (!validateTimeline()) {
+      setCurrentStep(2);
       return;
     }
 
@@ -397,7 +431,11 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
     }
   };
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 3));
+  const nextStep = () => {
+    if (currentStep === 1 && !validateIdentity()) return;
+    if (currentStep === 2 && !validateTimeline()) return;
+    setCurrentStep((prev) => Math.min(prev + 1, 3));
+  };
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const steps = [
@@ -428,7 +466,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
         ))}
       </div>
 
-      <form
+      <form data-coachmax-form noValidate
         onSubmit={(e) => {
           e.preventDefault();
           if (currentStep === 3) handleSubmit(e);
@@ -447,41 +485,61 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
             <SectionHeader icon={Info} title="Event Identity" />
             <div className="space-y-6">
               <div>
-                <Label>Event Title</Label>
+                  <Label htmlFor="event-title">Event Title <span className="text-error-600">*</span></Label>
                 <Input
+                  id="event-title"
                   placeholder="e.g., Summer Youth Cup"
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
-                  required
+                  aria-required="true"
+                  aria-invalid={Boolean(validationErrors.title)}
+                  aria-describedby={validationErrors.title ? "event-title-error" : undefined}
                 />
+                {validationErrors.title && <p id="event-title-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.title}</p>}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label>Category</Label>
+                  <Label htmlFor="event-category">Category <span className="text-error-600">*</span></Label>
                   <Select
+                    id="event-category"
+                    aria-label="Event category"
+                    aria-required
+                    aria-invalid={Boolean(validationErrors.category)}
+                    aria-describedby={validationErrors.category ? "event-category-error" : undefined}
                     options={categories}
                     placeholder="Select Event Category"
                     value={formData.category}
-                    onChange={(val: string) => setFormData(prev => ({ ...prev, category: val }))}
+                    onChange={(val: string) => { setFormData(prev => ({ ...prev, category: val })); setValidationErrors((previous) => ({ ...previous, category: "" })); }}
                   />
+                  {validationErrors.category && <p id="event-category-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.category}</p>}
                 </div>
                 <div>
                   <Label>Max Participants</Label>
                   <div className="relative">
                     <Input
+                      id="event-max-participants"
+                      min="1"
+                      step="1"
                       type="number"
                       placeholder="e.g., 20"
                       name="maxParticipants"
                       value={formData.maxParticipants}
                       onChange={handleInputChange}
+                      aria-invalid={Boolean(validationErrors.maxParticipants)}
+                      aria-describedby={validationErrors.maxParticipants ? "event-max-participants-error" : undefined}
                     />
+                    {validationErrors.maxParticipants && <p id="event-max-participants-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.maxParticipants}</p>}
                     <Users size={16} className="absolute right-3 top-3.5 text-gray-400" />
                   </div>
                 </div>
                 <div>
-                  <Label>Event Type</Label>
+                  <Label htmlFor="event-type">Event Type <span className="text-error-600">*</span></Label>
                   <Select
+                    id="event-type"
+                    aria-label="Event type"
+                    aria-required
+                    aria-invalid={Boolean(validationErrors.eventType)}
                     options={[
                       { value: "TOURNAMENT", label: "Tournament" },
                       { value: "LEAGUE", label: "League" },
@@ -495,13 +553,17 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                         eventType: val,
                         category: val === "CAMP" ? "Camp" : prev.category
                       }));
+                      setValidationErrors((previous) => ({ ...previous, eventType: "", category: val === "CAMP" ? "" : previous.category }));
                     }}
                   />
                 </div>
                 <div>
                   <Label>Registration Fee</Label>
                   <Input
+                    id="event-registration-fee"
                     type="number"
+                    min="0"
+                    step="0.01"
                     placeholder={isHolidayCamp ? "Calculated via sessions" : "e.g., 25"}
                     name="registrationFee"
                     value={formData.registrationFee}
@@ -521,7 +583,10 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                     name="documentsRequired"
                     value={formData.documentsRequired}
                     onChange={handleInputChange}
+                    aria-invalid={Boolean(validationErrors.registrationFee)}
+                    aria-describedby={validationErrors.registrationFee ? "event-registration-fee-error" : undefined}
                   />
+                  {validationErrors.registrationFee && <p id="event-registration-fee-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.registrationFee}</p>}
                 </div>
                 <div>
                   <Label>Organizer</Label>
@@ -543,15 +608,19 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                 </div>
               </div>
               <div>
-                <Label>Event Description</Label>
+                <Label htmlFor="event-description">Event Description <span className="text-error-600">*</span></Label>
                 <textarea
+                  id="event-description"
                   className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400 min-h-[150px]"
                   placeholder="Tell us more about the weekend match..."
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  required
+                  aria-required="true"
+                  aria-invalid={Boolean(validationErrors.description)}
+                  aria-describedby={validationErrors.description ? "event-description-error" : undefined}
                 ></textarea>
+                {validationErrors.description && <p id="event-description-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.description}</p>}
               </div>
             </div>
           </FormCard>
@@ -563,20 +632,28 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label>Start Date</Label>
                   <DatePicker
+                    id="event-start-date"
+                    label="Start Date *"
                     defaultDate={formData.startDate || undefined}
                     onChange={(dates: Date[]) => handleDateChange(dates[0] || null, "startDate")}
                     placeholder="Select Date"
+                    required
+                    error={validationErrors.startDate}
                   />
+                  {validationErrors.startDate && <p id="event-start-date-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.startDate}</p>}
                 </div>
                 <div>
-                  <Label>End Date</Label>
                   <DatePicker
+                    id="event-end-date"
+                    label="End Date *"
                     defaultDate={formData.endDate || undefined}
                     onChange={(dates: Date[]) => handleDateChange(dates[0] || null, "endDate")}
                     placeholder="Select Date"
+                    required
+                    error={validationErrors.endDate}
                   />
+                  {validationErrors.endDate && <p id="event-end-date-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.endDate}</p>}
                 </div>
                 <div>
                   <Label>Start Time</Label>
@@ -595,12 +672,14 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                   />
                 </div>
                 <div className="col-span-2">
-                  <Label>Registration Deadline</Label>
                   <DatePicker
+                    id="event-registration-deadline"
+                    label="Registration Deadline (optional)"
                     defaultDate={formData.registrationDeadline || undefined}
                     onChange={(dates: Date[]) => handleDateChange(dates[0] || null, "registrationDeadline")}
                     placeholder="Last day to enroll..."
                   />
+                  {validationErrors.registrationDeadline && <p id="event-registration-deadline-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.registrationDeadline}</p>}
                 </div>
               </div>
 
@@ -615,6 +694,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                   onDefaultHalfPriceChange={setDefaultHalfPrice}
                 />
               )}
+              {validationErrors.sessions && <p role="alert" className="text-sm text-error-600">{validationErrors.sessions}</p>}
             </div>
           </FormCard>
         )}
@@ -681,7 +761,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
               </div>
 
               <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
-                <Label>Official Event Banner</Label>
+                <Label>Official Event Banner <span className="text-xs font-normal text-gray-500">(optional)</span></Label>
                 <DropzoneComponent policy="eventBanner" onUpload={handleFileChange} previewUrl={eventBannerPreview} />
                 {formData.eventImg && (
                   <p className="mt-2 text-xs font-bold text-success-600">Selected: {formData.eventImg.name}</p>

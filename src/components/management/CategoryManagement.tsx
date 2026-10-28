@@ -18,6 +18,7 @@ const CategoryManagement: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "" });
+  const [formError, setFormError] = useState("");
 
   const { categories, isLoading: loading } = useCategories();
 
@@ -27,6 +28,7 @@ const CategoryManagement: React.FC = () => {
 
   const handleOpenAdd = () => {
     setFormData({ name: "" });
+    setFormError("");
     setIsEditing(false);
     setSelectedId(null);
     setIsModalOpen(true);
@@ -34,6 +36,7 @@ const CategoryManagement: React.FC = () => {
 
   const handleOpenEdit = (cat: any) => {
     setFormData({ name: cat.name || "" });
+    setFormError("");
     setIsEditing(true);
     setSelectedId(cat._id);
     setIsModalOpen(true);
@@ -61,9 +64,16 @@ const CategoryManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const name = formData.name.trim();
+    if (!name) {
+      setFormError("Category name is required.");
+      return;
+    }
+    setFormError("");
+    const payload = { name };
     if (isEditing && selectedId) {
       updateMutation.mutate(
-        { id: selectedId, data: formData },
+        { id: selectedId, data: payload },
         {
           onSuccess: () => {
             toast.success("Category updated");
@@ -73,7 +83,7 @@ const CategoryManagement: React.FC = () => {
         }
       );
     } else {
-      createMutation.mutate(formData, {
+      createMutation.mutate(payload, {
         onSuccess: () => {
           toast.success("Category created");
           setIsModalOpen(false);
@@ -140,20 +150,25 @@ const CategoryManagement: React.FC = () => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[400px] p-6 lg:p-8">
         <h4 className="text-xl font-bold mb-2">{isEditing ? "Edit Category" : "New Category"}</h4>
         <p className="text-xs text-gray-500 mb-6">Manage high-level academy groupings.</p>
-        <form onSubmit={handleSubmit}>
+        <form data-coachmax-form noValidate onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Category Name</label>
+            <label htmlFor="academy-category-name" className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Category Name <span className="text-error-600">*</span></label>
             <input
+              id="academy-category-name"
               type="text"
+              name="name"
               value={formData.name}
               onChange={(e) => handleNameChange(e.target.value)}
               className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
               placeholder="e.g. Academy"
-              required
+              aria-required="true"
+              aria-invalid={Boolean(formError)}
+              aria-describedby={formError ? "academy-category-error" : undefined}
             />
+            {formError && <p id="academy-category-error" role="alert" className="mt-1.5 text-sm text-error-600">{formError}</p>}
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
               {createMutation.isPending || updateMutation.isPending ? "Saving..." : (isEditing ? "Update Category" : "Add Category")}
             </Button>

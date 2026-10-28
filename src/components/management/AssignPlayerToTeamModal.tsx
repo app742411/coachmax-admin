@@ -239,6 +239,8 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagu
       queryClient.invalidateQueries({ queryKey: ["availablePlayers"] });
       queryClient.invalidateQueries({ queryKey: ["availablePlayersForTeam"] });
       queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["registrationRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebarBadges"] });
       onClose();
       setSelectedPlayerIds([]);
       setPlayerStatusMap({});

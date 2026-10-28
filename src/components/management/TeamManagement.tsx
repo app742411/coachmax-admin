@@ -11,6 +11,7 @@ import { toast } from "react-hot-toast";
 import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 import { getMediaUrl } from "../../utils/media";
 import { User, Shield, Image as ImageIcon, Search } from "lucide-react";
+import ImageCropModal from "../common/ImageCropModal";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "./AssignPlayerToTeamModal";
 import AddTemporaryPlayersModal from "./AddTemporaryPlayersModal";
@@ -23,7 +24,7 @@ const TeamManagement: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
@@ -81,10 +82,21 @@ const TeamManagement: React.FC = () => {
   ]);
   const [, setCustomSchedules] = useState<{ dayOfWeek: string; startTime: string; endTime: string }[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [cropLogoFile, setCropLogoFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedPlayerIdsForAdd, setSelectedPlayerIdsForAdd] = useState<string[]>([]);
   const [selectedPlayerStatusesForAdd, setSelectedPlayerStatusesForAdd] = useState<Record<string, string>>({});
   const [playerSearchQueryForAdd, setPlayerSearchQueryForAdd] = useState("");
+
+  const clearValidationError = (field: string, isValid: boolean) => {
+    if (!isValid) return;
+    setValidationErrors((previous) => {
+      if (!previous[field]) return previous;
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Query available players for initial team creation
   const { data: availablePlayersRes } = useQuery({
@@ -161,7 +173,7 @@ const TeamManagement: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
-    setValidationErrors([]);
+    setValidationErrors({});
     setFormData({
       teamName: "",
       coach: "",
@@ -195,7 +207,7 @@ const TeamManagement: React.FC = () => {
   };
 
   const handleOpenEdit = (team: any) => {
-    setValidationErrors([]);
+    setValidationErrors({});
     const feeVal = team.fee || team.teamFee || "";
     const yearVal = team.year || team.term?.year || new Date().getFullYear();
     setFormData({
@@ -262,34 +274,42 @@ const TeamManagement: React.FC = () => {
       try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
       const validationError = await validateUploadFile(normalized, "logo");
       if (validationError) { toast.error(validationError); e.target.value = ""; return; }
-      setSelectedFile(normalized);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
-      };
-      reader.readAsDataURL(normalized);
+      setCropLogoFile(normalized);
+      e.target.value = "";
     }
+  };
+
+  const handleLogoCrop = (cropped: File) => {
+    setSelectedFile(cropped);
+    setPreviewImage(URL.createObjectURL(cropped));
+    setCropLogoFile(null);
+  };
+
+  const handleRemoveLogo = () => {
+    setSelectedFile(null);
+    setPreviewImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const errors: string[] = [];
-    if (!formData.teamName.trim()) errors.push("Team name is required.");
-    if (!formData.teamType) errors.push("Select a team category.");
-    if (!formData.ageGroup.trim()) errors.push("Age group is required.");
-    if (!formData.term) errors.push("Select an academic term.");
-    if (!formData.coach) errors.push("Select an assigned head coach.");
+    const errors: Record<string, string> = {};
+    if (!formData.teamName.trim()) errors.teamName = "Team name is required.";
+    if (!formData.teamType) errors.teamType = "Select a team category.";
+    if (!formData.ageGroup.trim()) errors.ageGroup = "Age group is required.";
+    if (!formData.term) errors.term = "Select an academic term.";
+    if (!formData.coach) errors.coach = "Select an assigned head coach.";
     if (scheduleMode === "ROUNDS") {
       const validDates = sessionDates.filter(Boolean);
       const rounds = Number(roundCount);
-      if (!Number.isInteger(rounds) || rounds < 1) errors.push("Round count must be at least 1.");
-      if (validDates.length === 0) errors.push("Add at least one session date.");
+      if (!Number.isInteger(rounds) || rounds < 1) errors.roundCount = "Round count must be a whole number of at least 1.";
+      if (validDates.length === 0) errors.sessionDates = "Add at least one session date.";
       else if (Number.isInteger(rounds) && rounds > 0 && validDates.length !== rounds) {
-        errors.push(`Add one session date for each round (${validDates.length} of ${rounds} selected).`);
+        errors.sessionDates = `Add one session date for each round (${validDates.length} of ${rounds} selected).`;
       }
     }
     setValidationErrors(errors);
-    if (errors.length) return;
+    if (Object.keys(errors).length) return;
 
     const payload = new FormData();
     payload.append("teamName", formData.teamName);
@@ -309,9 +329,9 @@ const TeamManagement: React.FC = () => {
       payload.append("teamType", formData.teamType);
       payload.append("isExternal", formData.teamType === "EXTERNAL" ? "true" : "false");
     }
-    if (formData.year) {
-      payload.append("year", formData.year);
-    }
+    const selectedTermYear = terms.find((item: any) => String(item._id || item.id) === String(formData.term))?.year;
+    const effectiveYear = formData.year || (selectedTermYear ? String(selectedTermYear) : "");
+    if (effectiveYear) payload.append("year", effectiveYear);
     if (formData.term) {
       payload.append("term", formData.term);
     }
@@ -431,6 +451,7 @@ const TeamManagement: React.FC = () => {
             <thead>
               <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                 <th className="py-3 px-4 min-w-[200px]">Team Detail</th>
+                <th className="py-3 px-4 min-w-[140px]">Year / Term</th>
                 <th className="py-3 px-4 min-w-[110px]">Type</th>
                 <th className="py-3 px-4 min-w-[150px]">Coach</th>
                 <th className="py-3 px-4 min-w-[100px]">Age Group</th>
@@ -441,14 +462,14 @@ const TeamManagement: React.FC = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-20">
+                <tr><td colSpan={8} className="text-center py-20">
                   <div className="flex flex-col items-center gap-3 text-gray-400">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-500 border-t-transparent shadow-sm"></div>
                     <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Teams...</span>
                   </div>
                 </td></tr>
               ) : filteredTeams.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-20 text-gray-500 font-medium italic">No teams found.</td></tr>
+                <tr><td colSpan={8} className="text-center py-20 text-gray-500 font-medium italic">No teams found.</td></tr>
               ) : (
                 filteredTeams.map((team: any) => (
                   <tr
@@ -484,6 +505,12 @@ const TeamManagement: React.FC = () => {
                             </div>
                           ) : null}
                         </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex flex-col gap-1 text-xs">
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{team.year || team.term?.year || "Year not set"}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{team.term?.name || team.termName || "Term not set"}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -633,54 +660,60 @@ const TeamManagement: React.FC = () => {
             <p className="text-xs text-slate-500 font-medium">Configure team details, coaches, schedule, and venue information.</p>
           </div>
         </div>
-        <form noValidate onSubmit={handleSubmit} className="space-y-6">
-          {validationErrors.length > 0 && (
-            <div role="alert" aria-live="polite" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-              <p className="font-bold">Please fix these required fields:</p>
-              <ul className="mt-1 list-disc pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
-            </div>
-          )}
+        <form data-coachmax-form noValidate onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-8 space-y-4">
               {/* Basic Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Name *</label>
+                  <label htmlFor="team-name" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Name *</label>
                   <input
+                    id="team-name"
                     type="text"
                     value={formData.teamName}
-                    onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all dark:text-white"
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, teamName: value }); clearValidationError("teamName", Boolean(value.trim())); }}
+                    className={`w-full rounded-none border ${validationErrors.teamName ? "border-error-500 focus:border-error-500" : "border-gray-200 dark:border-gray-700"} bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all dark:text-white`}
                     placeholder="Under 16 Tigers"
-                    required
+                    aria-required="true"
+                    aria-invalid={Boolean(validationErrors.teamName)}
+                    aria-describedby={validationErrors.teamName ? "team-name-error" : undefined}
                   />
+                  {validationErrors.teamName && <p id="team-name-error" className="mt-1 text-xs text-error-600" role="alert">{validationErrors.teamName}</p>}
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Category *</label>
+                  <label htmlFor="team-type" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Team Category *</label>
                   <select
+                    id="team-type"
                     value={formData.teamType}
-                    onChange={(e) => setFormData({ ...formData, teamType: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
-                    required
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, teamType: value }); clearValidationError("teamType", Boolean(value)); }}
+                    className={`w-full rounded-none border ${validationErrors.teamType ? "border-error-500 focus:border-error-500" : "border-gray-200 dark:border-gray-700"} bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white`}
+                    aria-required="true"
+                    aria-invalid={Boolean(validationErrors.teamType)}
+                    aria-describedby={validationErrors.teamType ? "team-type-error" : undefined}
                   >
                     <option value="INTERNAL">Our Team (Academy)</option>
                     <option value="EXTERNAL">External Team (Opponent)</option>
                   </select>
+                  {validationErrors.teamType && <p id="team-type-error" className="mt-1 text-xs text-error-600" role="alert">{validationErrors.teamType}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group *</label>
+                  <label htmlFor="team-age-group" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Age Group *</label>
                   <input
+                    id="team-age-group"
                     type="text"
                     list="age-group-options"
                     value={formData.ageGroup}
-                    onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all dark:text-white"
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, ageGroup: value }); clearValidationError("ageGroup", Boolean(value.trim())); }}
+                    className={`w-full rounded-none border ${validationErrors.ageGroup ? "border-error-500 focus:border-error-500" : "border-gray-200 dark:border-gray-700"} bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all dark:text-white`}
                     placeholder="e.g. U16"
-                    required
+                    aria-required="true"
+                    aria-invalid={Boolean(validationErrors.ageGroup)}
+                    aria-describedby={validationErrors.ageGroup ? "team-age-group-error" : undefined}
                   />
+                  {validationErrors.ageGroup && <p id="team-age-group-error" className="mt-1 text-xs text-error-600" role="alert">{validationErrors.ageGroup}</p>}
                   <datalist id="age-group-options">
                     {Array.from({ length: 29 }, (_, i) => i + 2).map((num) => (
                       <option key={num} value={`U${num}`} />
@@ -688,8 +721,9 @@ const TeamManagement: React.FC = () => {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Year</label>
+                  <label htmlFor="team-year" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Year</label>
                   <select
+                    id="team-year"
                     value={formData.year}
                     onChange={(e) => setFormData({ ...formData, year: e.target.value, term: "" })}
                     className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
@@ -703,38 +737,46 @@ const TeamManagement: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Academic Term *</label>
+                  <label htmlFor="team-term" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Academic Term *</label>
                   <select
+                    id="team-term"
                     value={formData.term}
-                    onChange={(e) => setFormData({ ...formData, term: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
-                    required
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, term: value }); clearValidationError("term", Boolean(value)); }}
+                    className={`w-full rounded-none border ${validationErrors.term ? "border-error-500 focus:border-error-500" : "border-gray-200 dark:border-gray-700"} bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white`}
+                    aria-required="true"
+                    aria-invalid={Boolean(validationErrors.term)}
+                    aria-describedby={validationErrors.term ? "team-term-error" : undefined}
                   >
                     <option value="">Select Academic Term</option>
                     {terms.map((t: any) => (
                       <option key={t._id || t.id} value={t._id || t.id}>
-                        {t.name || t.termName || t.title || "Term"}
+                        {t.name || t.termName || t.title || "Term"}{t.year ? ` (${t.year})` : ""}
                       </option>
                     ))}
                   </select>
+                  {validationErrors.term && <p id="team-term-error" className="mt-1 text-xs text-error-600" role="alert">{validationErrors.term}</p>}
                 </div>
               </div>
 
               {/* Coaches */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Assigned Head Coach *</label>
+                  <label htmlFor="team-coach" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Assigned Head Coach *</label>
                   <select
+                    id="team-coach"
                     value={formData.coach}
-                    onChange={(e) => setFormData({ ...formData, coach: e.target.value })}
-                    className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
-                    required
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, coach: value }); clearValidationError("coach", Boolean(value)); }}
+                    className={`w-full rounded-none border ${validationErrors.coach ? "border-error-500 focus:border-error-500" : "border-gray-200 dark:border-gray-700"} bg-gray-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white`}
+                    aria-required="true"
+                    aria-invalid={Boolean(validationErrors.coach)}
+                    aria-describedby={validationErrors.coach ? "team-coach-error" : undefined}
                   >
                     <option value="">Select Head Coach</option>
                     {coaches.map((c: any) => (
                       <option key={c._id} value={c._id}>{c.fullName || c.name}</option>
                     ))}
                   </select>
+                  {validationErrors.coach && <p id="team-coach-error" className="mt-1 text-xs text-error-600" role="alert">{validationErrors.coach}</p>}
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Assistant Coach</label>
@@ -803,16 +845,16 @@ const TeamManagement: React.FC = () => {
             {/* Logo Upload Panel */}
             <div className="md:col-span-4 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 p-6 border border-gray-200 dark:border-gray-700">
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4 text-center">Team Logo</label>
-              <div
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-36 h-36 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center bg-white dark:bg-slate-900 cursor-pointer overflow-hidden hover:border-[#0047FF] transition-colors group relative shadow-xs"
+                aria-label={previewImage ? "Replace team logo" : "Upload team logo"}
+                className="w-36 h-36 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center bg-white dark:bg-slate-900 cursor-pointer overflow-hidden hover:border-[#0047FF] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 transition-colors group relative shadow-xs"
               >
                 {previewImage ? (
                   <>
-                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ImageIcon className="text-white w-8 h-8" />
-                    </div>
+                    <img src={previewImage} alt="Team logo preview" className="w-full h-full object-cover" />
+                    <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 flex items-center justify-center text-xs font-semibold text-white">Replace logo</span>
                   </>
                 ) : (
                   <div className="flex flex-col items-center text-gray-400 group-hover:text-[#0047FF] transition-colors">
@@ -820,7 +862,8 @@ const TeamManagement: React.FC = () => {
                     <span className="text-[10px] font-bold uppercase tracking-widest">Upload Logo</span>
                   </div>
                 )}
-              </div>
+              </button>
+              {previewImage && <button type="button" onClick={handleRemoveLogo} className="mt-2 text-xs font-semibold text-error-600 hover:underline">Remove logo</button>}
               <input
                 type="file"
                 ref={fileInputRef}
@@ -828,7 +871,8 @@ const TeamManagement: React.FC = () => {
                 accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                 onChange={handleFileChange}
               />
-              <span className="text-[10px] text-gray-400 mt-3 text-center">JPEG, PNG, WebP, HEIC/HEIF · max 2MB</span>
+              <span className="text-[10px] text-gray-500 mt-3 text-center">Optional · JPEG, PNG, WebP, HEIC/HEIF · max 2MB</span>
+              <span className="text-[10px] text-gray-400 mt-1 text-center">Square crop · 512 × 512 px</span>
             </div>
           </div>
 
@@ -970,6 +1014,7 @@ const TeamManagement: React.FC = () => {
         </form>
       </Modal>
 
+      {cropLogoFile && <ImageCropModal file={cropLogoFile} policy="logo" onCancel={() => setCropLogoFile(null)} onCrop={handleLogoCrop} />}
       <ConfirmDeleteModal
         isOpen={!!deleteModalId}
         onClose={() => setDeleteModalId(null)}

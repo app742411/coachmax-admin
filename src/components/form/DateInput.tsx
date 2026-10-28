@@ -56,6 +56,9 @@ const DateInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElem
     }
   }, [disabled, required]);
 
-  return <input {...props} className={className || "h-11 w-full rounded-none border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"} disabled={disabled} required={required} type="text" ref={inputRef} defaultValue="" placeholder="DD/MM/YYYY" />;
+  // Flatpickr creates the visible DD/MM/YYYY alternate input and keeps this
+  // input as the canonical value for form state. Keep its React type hidden so
+  // later renders cannot expose the internal YYYY-MM-DD value beside it.
+  return <input {...props} className={className || "h-11 w-full rounded-none border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"} disabled={disabled} required={required} value={value ?? ""} type="hidden" ref={inputRef} placeholder="DD/MM/YYYY" />;
 });
 export default DateInput;

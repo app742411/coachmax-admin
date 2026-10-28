@@ -108,7 +108,7 @@ const formatBytes = (bytes: number) => `${(bytes / MB).toFixed(bytes % MB === 0 
 
 export const getUploadPolicyDescription = (policy: UploadPolicy) => {
   const config = uploadPolicies[policy];
-  return `${config.extensions} · max file ${formatBytes(config.maxBytes)}`;
+  return `${config.extensions} · max file ${formatBytes(config.maxBytes)} · recommended ${config.recommended}`;
 };
 
 export async function validateUploadFile(file: File, policy: UploadPolicy, _options: { checkDimensions?: boolean } = {}): Promise<string | null> {

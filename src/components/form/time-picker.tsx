@@ -10,6 +10,9 @@ type TimePickerProps = {
   placeholder?: string;
   className?: string;
   leftIcon?: React.ReactNode;
+  ariaLabel?: string;
+  required?: boolean;
+  error?: string;
 };
 
 export default function TimePicker({
@@ -19,6 +22,9 @@ export default function TimePicker({
   placeholder = "Select time",
   className = "",
   leftIcon,
+  ariaLabel,
+  required = false,
+  error,
 }: TimePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +34,7 @@ export default function TimePicker({
     const fp = flatpickr(inputRef.current, {
       enableTime: true,
       noCalendar: true,
+      allowInput: true,
       dateFormat: "h:i K",
       time_24hr: false,
       defaultDate: value,
@@ -53,6 +60,10 @@ export default function TimePicker({
       <input
         ref={inputRef}
         id={id}
+        aria-label={ariaLabel}
+        aria-required={required}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id}-error` : undefined}
         placeholder={placeholder}
         className={`h-[46px] w-full rounded-none border appearance-none ${
           leftIcon ? "pl-10" : "px-4"

@@ -201,6 +201,7 @@ const LeagueManagement: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       term: termId,
+      year: selectedTermObj?.year ? String(selectedTermObj.year) : prev.year,
       season: selectedTermObj ? (selectedTermObj.name || selectedTermObj.termName || `${prev.year}`) : prev.season,
       startDate: termStart || (termId ? "" : prev.startDate),
       endDate: termEnd || (termId ? "" : prev.endDate),
@@ -458,6 +459,18 @@ const LeagueManagement: React.FC = () => {
     return errors.length === 0;
   };
 
+  const getValidationError = (field: "name" | "term" | "type" | "fee" | "rounds" | "dates") => {
+    const patterns: Record<typeof field, RegExp> = {
+      name: /league name/i,
+      term: /academic term/i,
+      type: /league type/i,
+      fee: /league fee/i,
+      rounds: /round count/i,
+      dates: /session date/i,
+    };
+    return validationErrors.find((message) => patterns[field].test(message));
+  };
+
   const validateStep2 = () => {
     const errors: string[] = [];
     const validDates = sessionDates.filter(Boolean);
@@ -516,14 +529,15 @@ const LeagueManagement: React.FC = () => {
 
     setValidationErrors([]);
     const payload = new FormData();
-    payload.append("name", formData.name);
-    if (formData.year) payload.append("year", formData.year);
+    payload.append("name", formData.name.trim());
     if (formData.term) {
       payload.append("term", formData.term);
       payload.append("termId", formData.term);
     }
     const selectedTermObj = terms.find((t: any) => (t._id || t.id) === formData.term);
-    const seasonVal = selectedTermObj?.name || formData.season || (formData.year ? `${formData.year}` : "");
+    const leagueYear = selectedTermObj?.year ? String(selectedTermObj.year) : formData.year;
+    if (leagueYear) payload.append("year", leagueYear);
+    const seasonVal = selectedTermObj?.name || formData.season || (leagueYear ? `${leagueYear}` : "");
     if (seasonVal) {
       payload.append("season", seasonVal);
     }
@@ -679,7 +693,7 @@ const LeagueManagement: React.FC = () => {
             <thead>
               <tr className="bg-[#031549] text-white text-[10px] font-bold uppercase tracking-wider">
                 <th className="py-3 px-4 min-w-[200px]">League Detail</th>
-                <th className="py-3 px-4 min-w-[100px]">Term / Season</th>
+                <th className="py-3 px-4 min-w-[140px]">Term / Year</th>
                 <th className="py-3 px-4 min-w-[140px]">Type</th>
                 <th className="py-3 px-4 min-w-[100px]">Status</th>
                 <th className="py-3 px-4 min-w-[100px]">Teams</th>
@@ -720,10 +734,9 @@ const LeagueManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-bold tracking-tight">
-                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-none border border-slate-200 dark:border-slate-700 uppercase">
-                          {league.term?.name || league.termName || league.season || "N/A"}
-                        </span>
+                      <div className="flex flex-col gap-1 text-xs text-slate-700 dark:text-slate-300 font-bold tracking-tight">
+                        <span>{league.term?.name || league.termName || league.season || "Term not set"}</span>
+                        <span className="text-[10px] font-medium text-slate-500">{league.year || league.term?.year || (league.term?.startDate ? toDateOnly(league.term.startDate).slice(0, 4) : "Year not set")}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -908,7 +921,7 @@ const LeagueManagement: React.FC = () => {
           </div>
         </div>
 
-        <div
+        <div data-coachmax-form
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
               e.preventDefault();
@@ -936,24 +949,29 @@ const LeagueManagement: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label htmlFor="league-name" className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   League Name <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  id="league-name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   placeholder="e.g. Premier Youth League"
-                  required
+                  aria-required="true"
+                  aria-invalid={Boolean(getValidationError("name"))}
+                  aria-describedby={getValidationError("name") ? "league-name-error" : undefined}
                 />
+                {getValidationError("name") && <p id="league-name-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("name")}</p>}
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label htmlFor="league-year" className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   Year
                 </label>
                 <select
+                  id="league-year"
                   value={formData.year}
                   onChange={(e) => {
                     setFormData({ ...formData, year: e.target.value, term: "", startDate: "", endDate: "" });
@@ -971,33 +989,40 @@ const LeagueManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label htmlFor="league-term" className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   Academic Term <span className="text-rose-500">*</span>
                 </label>
                 <select
+                  id="league-term"
                   value={formData.term}
                   onChange={(e) => handleTermChange(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
-                  required
+                  aria-required="true"
+                  aria-invalid={Boolean(getValidationError("term"))}
+                  aria-describedby={getValidationError("term") ? "league-term-error" : undefined}
                 >
                   <option value="">Select Academic Term</option>
                   {terms.map((t: any) => (
                     <option key={t._id || t.id} value={t._id || t.id}>
-                      {t.name || t.termName || t.title || "Term"}
+                      {t.name || t.termName || t.title || "Term"}{t.year ? ` (${t.year})` : ""}
                     </option>
                   ))}
                 </select>
+                {getValidationError("term") && <p id="league-term-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("term")}</p>}
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label htmlFor="league-type" className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   League Type <span className="text-rose-500">*</span>
                 </label>
                 <select
+                  id="league-type"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
-                  required
+                  aria-required="true"
+                  aria-invalid={Boolean(getValidationError("type"))}
+                  aria-describedby={getValidationError("type") ? "league-type-error" : undefined}
                 >
                   <option value="INTERNATIONAL">INTERNATIONAL</option>
                   <option value="NATIONAL">NATIONAL</option>
@@ -1005,6 +1030,7 @@ const LeagueManagement: React.FC = () => {
                   <option value="LOCAL">LOCAL</option>
                   <option value="OTHERS">OTHERS</option>
                 </select>
+                {getValidationError("type") && <p id="league-type-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("type")}</p>}
               </div>
 
               <div>
@@ -1061,9 +1087,11 @@ const LeagueManagement: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-5">
-                  <div
+                  <button
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center cursor-pointer overflow-hidden group hover:border-brand-500 transition-colors shrink-0 shadow-xs"
+                    aria-label={previewImage ? "Replace league logo" : "Upload league logo"}
+                    className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center cursor-pointer overflow-hidden group hover:border-brand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 transition-colors shrink-0 shadow-xs"
                   >
                     {previewImage ? (
                       <img src={previewImage} alt="Logo preview" className="w-full h-full object-contain p-1.5" />
@@ -1073,7 +1101,7 @@ const LeagueManagement: React.FC = () => {
                         <span className="text-[9px] font-bold uppercase tracking-wider">Upload</span>
                       </div>
                     )}
-                  </div>
+                  </button>
 
                   <div className="flex flex-col gap-2">
                     <input
@@ -1105,7 +1133,7 @@ const LeagueManagement: React.FC = () => {
                       )}
                     </div>
                     <span className="text-[11px] text-slate-400">
-                      JPEG, PNG, WebP, HEIC/HEIF · max 2MB. Displays in header, ladder, and standings.
+                      Optional · square crop 512 × 512 px · JPEG, PNG, WebP, HEIC/HEIF · max 2MB. Displays in header, ladder, and standings.
                     </span>
                   </div>
                 </div>
@@ -1230,10 +1258,11 @@ const LeagueManagement: React.FC = () => {
 
               {/* Number of Rounds */}
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label htmlFor="league-round-count" className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   Number of Rounds <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  id="league-round-count"
                   type="number"
                   min={1}
                   max={50}
@@ -1241,7 +1270,10 @@ const LeagueManagement: React.FC = () => {
                   onChange={(e) => handleRoundsChange(Number(e.target.value))}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   placeholder="e.g. 3"
+                  aria-invalid={Boolean(getValidationError("rounds"))}
+                  aria-describedby={getValidationError("rounds") ? "league-round-count-error" : undefined}
                 />
+                {getValidationError("rounds") && <p id="league-round-count-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("rounds")}</p>}
                 <p className="text-[10px] text-slate-400 mt-1">Session dates below are auto-synced to this count.</p>
               </div>
 
@@ -1307,10 +1339,11 @@ const LeagueManagement: React.FC = () => {
             {/* League Fee & Venue */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  League Fee Per Player ($)
+                <label htmlFor="league-fee" className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  League Fee Per Player ($) <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  id="league-fee"
                   type="number"
                   min={0}
                   step="any"
@@ -1318,8 +1351,11 @@ const LeagueManagement: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, fee: e.target.value === "" ? "" : Number(e.target.value) })}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   placeholder="e.g. 150 (0 = free)"
-                  required
+                  aria-required="true"
+                  aria-invalid={Boolean(getValidationError("fee"))}
+                  aria-describedby={getValidationError("fee") ? "league-fee-error" : undefined}
                 />
+                {getValidationError("fee") && <p id="league-fee-error" role="alert" className="mt-1 text-xs text-error-600">{getValidationError("fee")}</p>}
                 <p className="text-[10px] text-slate-400 mt-1">If &gt; 0, invoices are auto-generated for UNPAID players.</p>
               </div>
               <div>
@@ -1417,6 +1453,7 @@ const LeagueManagement: React.FC = () => {
                 </span>
               </div>
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {getValidationError("dates") && <p id="league-dates-error" role="alert" className="text-xs text-error-600">{getValidationError("dates")}</p>}
                 {sessionDates.map((dateVal, idx) => {
                   let formattedDay = "";
                   if (dateVal) {
@@ -1439,6 +1476,8 @@ const LeagueManagement: React.FC = () => {
                         onChange={(e) => handleSessionDateChange(idx, e.target.value)}
                         className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold dark:text-white focus:border-brand-500 outline-none cursor-pointer"
                         required
+                        aria-invalid={Boolean(getValidationError("dates") && !dateVal)}
+                        aria-describedby={getValidationError("dates") ? "league-dates-error" : undefined}
                       />
                       {formattedDay && (
                         <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 min-w-[85px] text-right shrink-0">

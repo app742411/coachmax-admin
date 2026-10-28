@@ -68,9 +68,11 @@ const sizeOptions = [
 interface SizeInputProps {
   value: string[];
   onChange: (selected: string[]) => void;
+  id: string;
+  error?: string;
 }
 
-const SizeInput: React.FC<SizeInputProps> = ({ value, onChange }) => {
+const SizeInput: React.FC<SizeInputProps> = ({ value, onChange, id, error }) => {
   const [inputValue, setInputValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -153,6 +155,13 @@ const SizeInput: React.FC<SizeInputProps> = ({ value, onChange }) => {
       <div className="relative">
         <input
           type="text"
+          id={id}
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          aria-label="Search sizes or type a custom size"
           placeholder="Search sizes or type custom size..."
           value={inputValue}
           onChange={(e) => {
@@ -161,10 +170,17 @@ const SizeInput: React.FC<SizeInputProps> = ({ value, onChange }) => {
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
+          onKeyDownCapture={(event) => {
+            if (event.key === "ArrowDown" && isOpen) {
+              event.preventDefault();
+              requestAnimationFrame(() => dropdownRef.current?.querySelector<HTMLButtonElement>("[role='option']")?.focus());
+            }
+          }}
           className="h-11 w-full rounded-none border px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 bg-white dark:bg-gray-900 text-gray-850 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-800 transition-all"
         />
         <button
           type="button"
+          aria-label={isOpen ? "Close sizes" : "Open sizes"}
           onClick={() => setIsOpen(!isOpen)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
         >
@@ -175,27 +191,33 @@ const SizeInput: React.FC<SizeInputProps> = ({ value, onChange }) => {
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-none overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div id={`${id}-options`} role="listbox" aria-label="Available sizes" className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           {showCustomOption && (
-            <div
+            <button
+              type="button"
+              role="option"
+              aria-selected="false"
               onClick={handleAddCustom}
               className="px-4 py-2.5 text-sm font-bold text-brand-500 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-600 cursor-pointer border-b border-gray-100 dark:border-gray-800 flex justify-between items-center transition-colors group"
             >
               <span>Add custom size: "{inputValue.trim()}"</span>
               <span className="text-[10px] bg-brand-50 text-brand-500 group-hover:bg-white/20 group-hover:text-white px-2 py-0.5 rounded transition-colors">Enter</span>
-            </div>
+            </button>
           )}
 
           {filteredOptions.length > 0 ? (
             filteredOptions.map((opt) => (
-              <div
+              <button
+                type="button"
+                role="option"
+                aria-selected="false"
                 key={opt.value}
                 onClick={() => handleSelect(opt.value)}
                 className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-600 cursor-pointer flex justify-between items-center transition-colors group"
               >
                 <span>{opt.text}</span>
                 <span className="text-xs text-gray-400 group-hover:text-white/80 font-bold transition-colors">{opt.value}</span>
-              </div>
+              </button>
             ))
           ) : (
             !showCustomOption && (
@@ -217,6 +239,7 @@ interface ProductFormProps {
 
 const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = false }) => {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<{ value: string, label: string }[]>([]);
   const [images, setImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -241,6 +264,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
     if (!data.category) errors.category = "Please select a category.";
     if (!data.price.trim() || isNaN(Number(data.price)) || Number(data.price) <= 0)
       errors.price = "A valid price is required.";
+    if (!Number.isInteger(Number(data.stock)) || Number(data.stock) < 0) errors.stock = "Stock must be a whole number of 0 or more.";
     if (!data.sizes || data.sizes.length === 0) errors.sizes = "At least one size is required.";
     if (!data.colors.trim()) errors.colors = "At least one color is required.";
     return errors;
@@ -313,7 +337,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
     }
 
     const payload = new FormData();
-    payload.append("name", formData.name);
+    setIsSubmitting(true);
+    payload.append("name", formData.name.trim());
     payload.append("shortHighlight", formData.shortHighlight);
     payload.append("description", formData.description);
     payload.append("category", formData.category);
@@ -363,12 +388,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
         error?.message ||
         "Failed to save product.";
       toast.error(backendMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6">
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <form data-coachmax-form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
         {/* Left Column: Basic Details & Pricing */}
         <div className="lg:col-span-7 space-y-6">
@@ -376,21 +403,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
             <SectionHeader icon={Tag} title="Core Product Identity" />
             <div className="space-y-5">
               <div>
-                <Label>Product Name <span className="text-red-500">*</span></Label>
+                <Label htmlFor="product-name">Product Name <span className="text-error-600">*</span></Label>
                 <Input
+                  id="product-name"
                   placeholder="e.g., CM Training Kit - Personalized"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   onBlur={() => handleBlur("name")}
+                  aria-required="true"
+                  aria-invalid={Boolean(touched.name && formErrors.name)}
+                  aria-describedby={touched.name && formErrors.name ? "product-name-error" : undefined}
                 />
                 {touched.name && formErrors.name && (
-                  <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.name}</p>
+                  <p id="product-name-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.name}</p>
                 )}
               </div>
               <div>
-                <Label>Short Highlight (Subtitle)</Label>
+                  <Label htmlFor="product-highlight">Short Highlight (Subtitle) <span className="text-xs font-normal text-gray-500">(optional)</span></Label>
                 <Input
+                    id="product-highlight"
                   placeholder="e.g., Jersey + Shorts + Sock Sleeve"
                   name="shortHighlight"
                   value={formData.shortHighlight}
@@ -399,25 +431,31 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <Label>Price (AUD) <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="product-price">Price (AUD) <span className="text-error-600">*</span></Label>
                   <div className="relative">
                     <Input
+                      id="product-price"
                       type="number"
+                      min="0.01"
+                      step="0.01"
                       placeholder="90.00"
                       name="price"
                       value={formData.price}
                       onChange={handleInputChange}
                       onBlur={() => handleBlur("price")}
+                      aria-required="true"
+                      aria-invalid={Boolean(touched.price && formErrors.price)}
+                      aria-describedby={touched.price && formErrors.price ? "product-price-error" : undefined}
                     />
                     <span className="absolute right-3 top-3.5 text-[10px] font-bold text-gray-400">AUD</span>
                   </div>
                   {touched.price && formErrors.price && (
-                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.price}</p>
+                    <p id="product-price-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.price}</p>
                   )}
                 </div>
                 <div>
                   <div className="flex justify-between items-end mb-1">
-                    <Label>Category <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="product-category">Category <span className="text-error-600">*</span></Label>
                     <button
                       type="button"
                       onClick={() => setShowCategoryModal(true)}
@@ -427,6 +465,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                     </button>
                   </div>
                   <Select
+                    id="product-category"
+                    aria-label="Product category"
+                    aria-required
+                    aria-invalid={Boolean(touched.category && formErrors.category)}
+                    aria-describedby={touched.category && formErrors.category ? "product-category-error" : undefined}
                     options={categories}
                     value={formData.category}
                     onChange={(val: string) => {
@@ -439,7 +482,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                     }}
                   />
                   {touched.category && formErrors.category && (
-                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.category}</p>
+                    <p id="product-category-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.category}</p>
                   )}
                 </div>
               </div>
@@ -448,7 +491,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
 
           <FormCard>
             <SectionHeader icon={Info} title="Extended Description" />
+            <div>
+            <Label htmlFor="product-description">Description <span className="text-xs font-normal text-gray-500">(optional)</span></Label>
             <textarea
+              id="product-description"
               className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
               placeholder="Detailed product specifics, material info, or sizing guide..."
               rows={8}
@@ -456,6 +502,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
               value={formData.description}
               onChange={handleInputChange}
             ></textarea>
+            </div>
           </FormCard>
         </div>
 
@@ -466,43 +513,58 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Available Sizes <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="product-sizes">Available Sizes <span className="text-error-600">*</span></Label>
                   <SizeInput
+                    id="product-sizes"
                     value={formData.sizes}
                     onChange={handleSizesChange}
+                    error={touched.sizes ? formErrors.sizes : undefined}
                   />
                   {touched.sizes && formErrors.sizes && (
-                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.sizes}</p>
+                    <p id="product-sizes-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.sizes}</p>
                   )}
                 </div>
                 <div>
-                  <Label>Colors <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="product-colors">Colors <span className="text-error-600">*</span></Label>
                   <Input
+                    id="product-colors"
                     placeholder="e.g., Red, Blue"
                     name="colors"
                     value={formData.colors}
                     onChange={handleInputChange}
                     onBlur={() => handleBlur("colors")}
+                    aria-required="true"
+                    aria-invalid={Boolean(touched.colors && formErrors.colors)}
+                    aria-describedby={touched.colors && formErrors.colors ? "product-colors-error" : undefined}
                   />
                   {touched.colors && formErrors.colors && (
-                    <p className="text-xs text-red-500 font-semibold mt-1">{formErrors.colors}</p>
+                    <p id="product-colors-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.colors}</p>
                   )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Starting Stock</Label>
+                  <Label htmlFor="product-stock">Starting Stock</Label>
                   <Input
+                    id="product-stock"
                     type="number"
+                    min="0"
+                    step="1"
                     placeholder="50"
                     name="stock"
                     value={formData.stock}
                     onChange={handleInputChange}
+                    onBlur={() => handleBlur("stock")}
+                    aria-invalid={Boolean(touched.stock && formErrors.stock)}
+                    aria-describedby={touched.stock && formErrors.stock ? "product-stock-error" : undefined}
                   />
+                  {touched.stock && formErrors.stock && <p id="product-stock-error" role="alert" className="mt-1 text-xs text-error-600">{formErrors.stock}</p>}
                 </div>
                 <div>
-                  <Label>Availability Status</Label>
+                  <Label htmlFor="product-availability">Availability Status</Label>
                   <Select
+                    id="product-availability"
+                    aria-label="Availability status"
                     options={[
                       { value: "IN_STOCK", label: "In Stock" },
                       { value: "OUT_OF_STOCK", label: "Out of Stock" },
@@ -523,10 +585,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                 <p className="font-bold text-brand-800 dark:text-brand-300 mb-1">
                   Recommended for CoachMax / Sports Products
                 </p>
-                <div className="flex items-center gap-3 text-brand-700 dark:text-brand-400 font-medium">
-                  <span>✅ 1:1 (Square)</span>
-                  <span>1200 × 1200 px</span>
-                </div>
+                <p className="text-brand-700 dark:text-brand-400 font-medium">Optional · 1:1 square · 1200 × 1200 px crop · JPEG, PNG, WebP, HEIC/HEIF · max 5MB per image</p>
               </div>
               <MultiImageDropzone
                 maxFiles={5}
@@ -541,13 +600,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
           <div className="flex flex-col gap-3">
             <Button
               type="submit"
-              disabled={!isFormValid}
-              className={`w-full rounded-none py-4 font-bold shadow-2xl shadow-brand-500/30 active:scale-95 transition-all text-base ${!isFormValid ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={isSubmitting}
+              className="w-full rounded-lg py-4 font-bold shadow-2xl shadow-brand-500/30 active:scale-95 transition-all text-base disabled:opacity-50"
             >
-              {isEdit ? "Update Merchandise" : "Publish to Store"}
+              {isSubmitting ? "Saving…" : isEdit ? "Update Merchandise" : "Publish to Store"}
             </Button>
             {!isFormValid && (
-              <p className="text-xs text-center text-slate-400 font-medium">
+              <p className="text-xs text-center text-slate-500 font-medium" aria-live="polite">
                 Fill in all required fields to enable publishing.
               </p>
             )}

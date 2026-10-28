@@ -34,7 +34,7 @@ export const useAddTeamToLeague = (leagueId: string) => {
     },
     onSuccess: () => {
       ["league", "leagueMaster", "leagueTeams", "leagueLadder", "leagueSchedule", "leagueStats", "leagueGraphs", "leagueMatches"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key, leagueId] }));
-      ["teams", "team", "teamPlayers", "playerProfile", "players"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
+      ["teams", "team", "teamPlayers", "playerProfile", "players", "registrationRequests", "sidebarBadges"].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       queryClient.invalidateQueries({ queryKey: ["leagueTeams", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueLadder", leagueId] });
       queryClient.invalidateQueries({ queryKey: ["leagueStats", leagueId] });

@@ -15,6 +15,7 @@ import {
   Check
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { registerForEvent } from "../../api/eventApi";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
 import apiClient from "../../api/apiClient";
@@ -60,6 +61,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
   onClose,
   onSuccess,
 }) => {
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1); // 1: Select Days, 2: Review, 3: Payment, 4: Confirmed
   const [internalPlayers, setInternalPlayers] = useState<any[]>(playersList);
   const [fetchingPlayers, setFetchingPlayers] = useState(false);
@@ -253,6 +255,7 @@ export const HolidayCampRegistrationModal: React.FC<HolidayCampRegistrationModal
         setCompletedRegistration(res.data);
         setCurrentStep(4);
         toast.success("Camp registration confirmed!");
+        await Promise.all(["registrationRequests", "players", "sidebarBadges"].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
         if (onSuccess) onSuccess();
       }
     } catch (err: any) {

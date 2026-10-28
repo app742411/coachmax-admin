@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { smartErrorToast } from "../../utils/toast";
 import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 import { getMediaUrl } from "../../utils/media";
+import ImageCropModal from "../common/ImageCropModal";
 import { updateNews } from "../../api/adminApi";
 import HtmlEditor from "../form/HtmlEditor";
 
@@ -38,6 +39,8 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [cropImageFile, setCropImageFile] = useState<File | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -50,8 +53,14 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
       });
       setImageFile(null);
       setImagePreview(getMediaUrl(newsItem.image) || null);
+      setFormErrors({});
+      setCropImageFile(null);
     }
   }, [newsItem, isOpen]);
+
+  useEffect(() => () => {
+    if (imagePreview?.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -64,53 +73,53 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      let normalized: File;
-      try { normalized = await normalizeUploadImage(file); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); e.target.value = ""; return; }
-      const validationError = await validateUploadFile(normalized, "news");
-      if (validationError) { toast.error(validationError); e.target.value = ""; return; }
-      setImageFile(normalized);
-      setImagePreview(URL.createObjectURL(normalized));
+      await prepareImage(e.target.files[0]);
+      e.target.value = "";
     }
+  };
+
+  const prepareImage = async (file: File) => {
+    let normalized: File;
+    try { normalized = await normalizeUploadImage(file); }
+    catch (reason) { toast.error(reason instanceof Error ? reason.message : "Could not convert this image."); return; }
+    const validationError = await validateUploadFile(normalized, "news");
+    if (validationError) { toast.error(validationError); return; }
+    setCropImageFile(normalized);
+  };
+
+  const handleImageCrop = (cropped: File) => {
+    setImageFile(cropped);
+    setImagePreview(URL.createObjectURL(cropped));
+    setCropImageFile(null);
   };
 
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setCropImageFile(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith("image/")) {
-        setImageFile(file);
-        setImagePreview(URL.createObjectURL(file));
-      } else {
-        toast.error("Please drop an image file.");
-      }
+      await prepareImage(e.dataTransfer.files[0]);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title.trim()) {
-      toast.error("Headline Title is required");
-      return;
-    }
-    if (!formData.description.trim()) {
-      toast.error("News Description is required");
-      return;
-    }
-    if (!formData.category) {
-      toast.error("Please enter a category");
-      return;
-    }
+    const errors: Record<string, string> = {};
+    if (!formData.title.trim()) errors.title = "Headline title is required.";
+    if (!formData.category.trim()) errors.category = "Category is required.";
+    const descriptionText = formData.description.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ").trim();
+    if (!descriptionText) errors.description = "News description is required.";
+    setFormErrors(errors);
+    if (Object.keys(errors).length) return;
 
     try {
       setLoading(true);
@@ -145,7 +154,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
           <h5 className="text-lg font-bold text-white">Edit News Article</h5>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form data-coachmax-form noValidate onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             {/* Top Left: Headline Title, Category & Pin as Featured */}
@@ -164,7 +173,11 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all"
                   required
+                  aria-required="true"
+                  aria-invalid={Boolean(formErrors.title)}
+                  aria-describedby={formErrors.title ? "edit-news-title-error" : undefined}
                 />
+                {formErrors.title && <p id="edit-news-title-error" role="alert" className="text-sm text-error-600">{formErrors.title}</p>}
               </div>
 
               {/* Category & Featured Row */}
@@ -184,7 +197,11 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 rounded-none border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none text-sm font-semibold text-gray-900 dark:text-white transition-all"
                     required
+                    aria-required="true"
+                    aria-invalid={Boolean(formErrors.category)}
+                    aria-describedby={formErrors.category ? "edit-news-category-error" : undefined}
                   />
+                  {formErrors.category && <p id="edit-news-category-error" role="alert" className="text-sm text-error-600">{formErrors.category}</p>}
                 </div>
 
                 {/* Featured */}
@@ -234,6 +251,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
                   >
                     <input
                       type="file"
+                      aria-label="Choose news banner image"
                       accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
                       onChange={handleImageChange}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -245,7 +263,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
                       Drag & drop banner here
                     </h3>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      JPG, PNG, WebP, HEIC/HEIF (max 5MB)
+                      Optional · 16:9 crop · 1200 × 675 px · JPG, PNG, WebP, HEIC/HEIF · max 5MB
                     </p>
                     <span className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline">
                       Browse Local Files
@@ -284,6 +302,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
                 placeholder="Write your news article description here..."
                 className="min-h-[160px]"
               />
+              {formErrors.description && <p role="alert" className="text-sm text-error-600">{formErrors.description}</p>}
             </div>
           </div>
 
@@ -316,6 +335,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
           </div>
         </form>
       </div>
+      {cropImageFile && <ImageCropModal file={cropImageFile} policy="news" onCancel={() => setCropImageFile(null)} onCrop={handleImageCrop} />}
     </Modal>
   );
 };

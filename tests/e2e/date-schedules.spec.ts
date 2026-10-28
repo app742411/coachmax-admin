@@ -126,11 +126,13 @@ test.describe("Mocked-backend browser acceptance", () => {
     expect(state.unexpectedRequests, "all external and API requests are isolated by the fixture").toEqual([]);
   });
 
-  test("term create and edit preserve ISO payload and slash display in any viewer timezone", async ({ page }) => {
+  test("term create and edit preserve the server date format and slash display in any viewer timezone", async ({ page }) => {
     await page.goto("/programs-2");
     await page.getByRole("button", { name: "Term Settings", exact: true }).click();
     await page.locator("select").filter({ has: page.locator('option[value="2027"]') }).selectOption("2027");
     await page.getByRole("button", { name: "Add Term", exact: true }).click();
+    await page.getByRole("button", { name: "Commit Term", exact: true }).click();
+    await expect(page.locator("#term-name-error")).toHaveText("Term name is required.");
     await page.locator('input[name="name"]').fill("Term roundtrip");
     await expect(page.locator('input[name="year"]')).toHaveValue("2027");
     await chooseDate(page, page.getByLabel("Start Date (DD/MM/YYYY)", { exact: true }), "2027-01-15");
@@ -139,13 +141,13 @@ test.describe("Mocked-backend browser acceptance", () => {
     await page.screenshot({ path: test.info().outputPath("term-date-form.png"), fullPage: false, animations: "disabled", timeout: 10000 });
     await page.getByRole("button", { name: "Commit Term", exact: true }).click();
     await expect.poll(() => state.creates.length).toBe(1);
-    expect(state.creates[0]).toMatchObject({ year: 2027, startDate: "2027-01-15", endDate: "2027-03-31" });
+    expect(state.creates[0]).toMatchObject({ year: 2027, startDate: "15/01/2027", endDate: "31/03/2027" });
     await page.getByRole("button", { name: "Edit Term roundtrip", exact: true }).click();
     await expect(page.getByLabel("Start Date (DD/MM/YYYY)", { exact: true })).toHaveValue("15/01/2027");
     await chooseDate(page, page.getByLabel("Start Date (DD/MM/YYYY)", { exact: true }), "2027-01-16");
     await page.getByRole("button", { name: "Commit Term", exact: true }).click();
     await expect.poll(() => state.updates.length).toBe(1);
-    expect(state.updates[0]).toMatchObject({ startDate: "2027-01-16", endDate: "2027-03-31" });
+    expect(state.updates[0]).toMatchObject({ startDate: "16/01/2027", endDate: "31/03/2027" });
     await expect(page.getByText("16/01/2027", { exact: true })).toBeVisible();
   });
 
