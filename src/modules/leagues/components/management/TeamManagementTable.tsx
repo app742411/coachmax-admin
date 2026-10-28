@@ -46,6 +46,9 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: leagueData } = useLeague(leagueId);
+  const leagueTerm = leagueData?.term && typeof leagueData.term === "object" ? leagueData.term : null;
+  const leagueTermId = leagueTerm?._id || (typeof leagueData?.term === "string" ? leagueData.term : "");
+  const leagueTermYear = leagueTerm?.year ? String(leagueTerm.year) : "";
 
   const { data: teams = [], isLoading } = useLeagueTeams(leagueId);
   const { canManageTeams } = useLeaguePermissions();
@@ -102,14 +105,25 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
   const [selectedPlayerStatusesForAdd, setSelectedPlayerStatusesForAdd] = useState<Record<string, string>>({});
   const [playerSearchQueryForAdd, setPlayerSearchQueryForAdd] = useState("");
 
-  const { data: allTeamsData } = useQuery({
-    queryKey: ["allAcademyTeams", leagueData?.term],
-    queryFn: () => getAllTeams(typeof leagueData?.term === "object" ? leagueData.term._id : leagueData?.term),
-    enabled: isAddModalOpen,
+  const { data: allTeamsData, isLoading: isLoadingAcademyTeams } = useQuery({
+    queryKey: ["allAcademyTeams", leagueId, leagueTermId],
+    queryFn: () => getAllTeams(leagueTermId),
+    enabled: isAddModalOpen && Boolean(leagueTermId),
   });
-  const allAcademyTeams: any[] = Array.isArray(allTeamsData)
+  const fetchedAcademyTeams: any[] = Array.isArray(allTeamsData)
     ? allTeamsData
     : allTeamsData?.data || [];
+  const allAcademyTeams = fetchedAcademyTeams.filter((team: any) => {
+    const teamTermId = typeof team.term === "object" ? team.term?._id : team.term;
+    return Boolean(leagueTermId) && String(teamTermId || "") === String(leagueTermId);
+  });
+  const filteredAcademyTeams = allAcademyTeams.filter((team: any) => {
+    const name = (team.teamName || team.name || "").toLowerCase();
+    const coachName = (typeof team.coach === "object" && team.coach?.name ? team.coach.name : typeof team.coach === "string" ? team.coach : "").toLowerCase();
+    const ageGroup = (team.ageGroup || "").toLowerCase();
+    const query = existingTeamsSearch.toLowerCase();
+    return name.includes(query) || coachName.includes(query) || ageGroup.includes(query);
+  });
 
   const { data: coachesData } = useQuery({
     queryKey: ["coaches"],
@@ -119,11 +133,14 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
   const coaches: any[] = Array.isArray(coachesData) ? coachesData : coachesData?.data || [];
 
   const { data: termsData } = useQuery({
-    queryKey: ["terms", createFormData.year],
-    queryFn: () => getAllTerms(createFormData.year ? Number(createFormData.year) : undefined),
-    enabled: isAddModalOpen && addModalTab === "CREATE",
+    queryKey: ["terms", leagueTermYear || "all", leagueTermId],
+    queryFn: () => getAllTerms(leagueTermYear ? Number(leagueTermYear) : undefined),
+    enabled: isAddModalOpen && addModalTab === "CREATE" && Boolean(leagueTermId),
   });
-  const terms: any[] = Array.isArray(termsData) ? termsData : (termsData?.data || termsData?.terms || []);
+  const fetchedTerms: any[] = Array.isArray(termsData) ? termsData : (termsData?.data || termsData?.terms || []);
+  const terms = fetchedTerms.filter((item: any) => String(item._id || item.id || "") === String(leagueTermId));
+  const leagueTermLabel = leagueTerm?.name || terms[0]?.name || terms[0]?.termName || terms[0]?.title || "League term";
+  const displayedLeagueYear = leagueTermYear || (terms[0]?.year ? String(terms[0].year) : "");
 
   const { data: availablePlayersRes } = useQuery({
     queryKey: ["availablePlayersForTeamModal"],
@@ -139,8 +156,8 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
       teamName: "",
       teamType: "INTERNAL",
       ageGroup: "",
-      year: typeof leagueData?.term === "object" ? String(leagueData.term.year || new Date().getFullYear()) : new Date().getFullYear().toString(),
-      term: typeof leagueData?.term === "object" ? leagueData.term._id : leagueData?.term || "",
+      year: leagueTermYear || String(terms[0]?.year || new Date().getFullYear()),
+      term: leagueTermId,
       coach: "",
       assistantCoach: "",
       venue: "",
@@ -280,9 +297,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
       toast.error("Please enter age group");
       return;
     }
-    if (!createFormData.term) { toast.error("Select a term for this team."); return; }
-    const leagueTerm = typeof leagueData?.term === "object" ? leagueData.term._id : leagueData?.term;
-    if (leagueTerm && createFormData.term !== leagueTerm) { toast.error("Team and league must belong to the same term."); return; }
+    if (!leagueTermId) { toast.error("Select a term for this league before creating a team."); return; }
     if (!createFormData.coach) {
       toast.error("Please select a head coach");
       return;
@@ -299,8 +314,7 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
       payload.append("ageGroup", createFormData.ageGroup.trim());
       payload.append("teamType", createFormData.teamType);
       payload.append("isExternal", createFormData.teamType === "EXTERNAL" ? "true" : "false");
-      if (createFormData.year) payload.append("year", createFormData.year);
-      if (createFormData.term) payload.append("term", createFormData.term);
+      payload.append("term", leagueTermId);
       if (createFormData.venue) payload.append("venue", createFormData.venue);
       if (createFormData.location) payload.append("location", createFormData.location);
 
@@ -790,16 +804,18 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                   className="w-full pl-9 pr-4 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
+              <p className="text-[11px] text-slate-500">
+                {leagueTermId ? `Showing teams for ${leagueTermLabel}${displayedLeagueYear ? ` ${displayedLeagueYear}` : ""}.` : "Select a term for this league before adding teams."}
+              </p>
 
               <div className="max-h-[300px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 custom-scrollbar">
-                {allAcademyTeams
-                  .filter((t: any) => {
-                    const name = (t.teamName || t.name || "").toLowerCase();
-                    const coachName = (typeof t.coach === 'object' && t.coach?.name ? t.coach.name : typeof t.coach === 'string' ? t.coach : "").toLowerCase();
-                    const q = existingTeamsSearch.toLowerCase();
-                    return name.includes(q) || coachName.includes(q) || (t.ageGroup || "").toLowerCase().includes(q);
-                  })
-                  .map((t: any) => {
+                {!leagueTermId ? (
+                  <div className="p-6 text-center text-xs text-slate-500">This league does not have a selected term.</div>
+                ) : isLoadingAcademyTeams ? (
+                  <div className="p-6 text-center text-xs text-slate-500">Loading teams for {leagueTermLabel}…</div>
+                ) : filteredAcademyTeams.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-500">No teams found for {leagueTermLabel}{displayedLeagueYear ? ` ${displayedLeagueYear}` : ""}.</div>
+                ) : filteredAcademyTeams.map((t: any) => {
                     const isAlreadyInLeague = teams.some((leagueTeam) => leagueTeam._id === t._id);
                     const isSelected = selectedExistingTeamIds.includes(t._id);
 
@@ -956,30 +972,23 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Year</label>
-                      <select
-                        value={createFormData.year}
-                        onChange={(e) => setCreateFormData({ ...createFormData, year: e.target.value, term: "" })}
-                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
-                      >
-                        <option value="">All Years</option>
-                        {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((yr) => (
-                          <option key={yr} value={yr}>{yr}</option>
-                        ))}
-                      </select>
+                      <input
+                        type="text"
+                        value={displayedLeagueYear || createFormData.year}
+                        readOnly
+                        aria-label="League year"
+                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold text-gray-600 dark:text-slate-300 cursor-not-allowed"
+                      />
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Academic Term</label>
                       <select
-                        value={createFormData.term}
-                        onChange={(e) => setCreateFormData({ ...createFormData, term: e.target.value })}
-                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer dark:text-white"
+                        value={leagueTermId}
+                        disabled={!leagueTermId}
+                        aria-label="League academic term"
+                        className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold text-gray-600 dark:text-slate-300 cursor-not-allowed"
                       >
-                        <option value="">Select Academic Term</option>
-                        {terms.map((t: any) => (
-                          <option key={t._id || t.id} value={t._id || t.id}>
-                            {t.name || t.termName || t.title || "Term"}
-                          </option>
-                        ))}
+                        {leagueTermId ? <option value={leagueTermId}>{leagueTermLabel}</option> : <option value="">No term selected for this league</option>}
                       </select>
                     </div>
                   </div>

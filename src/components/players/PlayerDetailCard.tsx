@@ -32,15 +32,28 @@ const getBadgeStyles = (noteType: string) => {
   }
 };
 
+const getRequestTypeLabel = (requestType?: string) => {
+  const labels: Record<string, string> = {
+    TEMPORARY: "Temporary Player",
+    TEMPORARY_PLAYER: "Temporary Player",
+    NEW_PLAYER: "New Player",
+    ADD_PROGRAM: "Additional Program",
+    HOLIDAY_PROGRAM: "Holiday Program",
+    EVENT_REGISTRATION: "Event Registration",
+  };
+  return requestType ? labels[requestType] || requestType.toLowerCase().replace(/(^|_)\w/g, (part) => part.replace("_", " ").toUpperCase()) : "";
+};
+
 interface PlayerDetailCardProps {
   player: Player;
   onClose: () => void;
+  onAssignClass?: (player: Player) => void;
   onEditPlayer?: (player: Player) => void;
   isRegistrationRequest?: boolean;
   contextYear?: number;
 }
 
-export default function PlayerDetailCard({ player: initialPlayer, onClose, onEditPlayer, isRegistrationRequest, contextYear }: PlayerDetailCardProps) {
+export default function PlayerDetailCard({ player: initialPlayer, onClose, onAssignClass, onEditPlayer, isRegistrationRequest, contextYear }: PlayerDetailCardProps) {
   const playerId = initialPlayer?._id || (initialPlayer as any)?.playerId || (initialPlayer as any)?.id;
   // Query full admin profile details (same source as PlayerProfilePage)
   const { data: adminDetailsRes } = useAdminPlayerDetails(playerId);
@@ -361,13 +374,13 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, onEdi
                   <div>
                     <span className="text-slate-450 block mb-0.5">Request Type</span>
                     <span className="font-semibold text-slate-850 dark:text-slate-200">
-                      {player.requestType.replace("_", " ")}
+                      {getRequestTypeLabel(player.requestType)}
                     </span>
                   </div>
                 )}
                 {player.preferredTerm && (
                   <div>
-                    <span className="text-slate-450 block mb-0.5">Preferred Term</span>
+                    <span className="text-slate-450 block mb-0.5">{player.requestType === "HOLIDAY_PROGRAM" ? "Preferred Holiday Program" : "Preferred Term"}</span>
                     <span className="font-bold text-[#0047FF] dark:text-blue-400">
                       {player.preferredTerm.name || player.preferredTerm}
                     </span>
@@ -384,6 +397,17 @@ export default function PlayerDetailCard({ player: initialPlayer, onClose, onEdi
                   </div>
                 )}
               </div>
+              {onAssignClass && player.requestId && player.status === "PENDING" && (
+                <button
+                  type="button"
+                  onClick={() => onAssignClass(initialPlayer)}
+                  className="mt-4 w-full bg-[#0047FF] px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  {player.requestType === "HOLIDAY_PROGRAM"
+                    ? player.preferredClasses?.length ? "Assign Holiday Program" : "Choose Holiday Program"
+                    : player.preferredClasses?.length ? "Assign Requested Class" : "Choose Term, Program, Sub-program & Session"}
+                </button>
+              )}
             </div>
           )}
 

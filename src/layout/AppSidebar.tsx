@@ -112,7 +112,7 @@ const AppSidebar: React.FC = () => {
               path: "/temporary-players-list",
               badgeCount: badges.temporaryPlayers || 0
             },
-            { name: "Add Temporary Players", path: "/add-temporary-players" },
+            { name: "Add Players", path: "/add-temporary-players" },
             { name: "My Notes", path: "/coach-notes" }
           ],
         },
@@ -166,9 +166,9 @@ const AppSidebar: React.FC = () => {
           badgeCount: badges.playersManagementTotal || 0,
           subItems: [
             { name: "Players", path: "/players" },
-            { name: "Add Temporary Players", path: "/add-temporary-players" },
+            { name: "Add Players", path: "/add-temporary-players" },
             {
-              name: "Verification Requests",
+              name: "New Players Request",
               path: "/new-registration-request",
               badgeCount: badges.verificationRequests || 0
             }

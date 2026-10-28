@@ -75,6 +75,7 @@ export interface Player {
   preferredTerm?: any;
   preferredClasses?: any[];
   requestType?: string;
+  addedBy?: string;
   createdBy?: string;
   assignedBy?: any;
   joinedDate: string;

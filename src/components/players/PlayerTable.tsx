@@ -34,6 +34,7 @@ interface PlayerTableProps {
   onAddCoachNote?: (player: Player) => void;
   showStatusColumn?: boolean;
   showRequestDetails?: boolean;
+  showAddedBy?: boolean;
   onOpenRequestedClass?: (player: Player) => void;
   showPaymentStatus?: boolean;
   selectedTerm?: string;
@@ -155,6 +156,7 @@ export default function PlayerTable({
   onAddCoachNote,
   showStatusColumn = false,
   showRequestDetails = false,
+  showAddedBy = false,
   onOpenRequestedClass,
   showPaymentStatus = true,
   selectedTerm = "All",
@@ -245,6 +247,7 @@ export default function PlayerTable({
               <th className="py-2.5 px-2 min-w-[80px] text-center">Category</th>
               <th className="py-2.5 px-2 min-w-[80px] text-center">Program</th>
               {showRequestDetails && <th className="py-2.5 px-2 min-w-[190px]">Requested Class / Term</th>}
+              {showAddedBy && <th className="py-2.5 px-2 min-w-[130px]">Added By</th>}
               <th className="py-2.5 px-2 min-w-[40px] text-center">Foot</th>
               <th className="py-2.5 px-2 min-w-[90px]">Contact</th>
               <th className="py-2.5 px-2 min-w-[110px]">Email</th>
@@ -505,8 +508,9 @@ export default function PlayerTable({
                   {showRequestDetails && <td className="py-3 px-2 text-xs text-slate-600 dark:text-slate-300">
                     <div className="font-semibold">{player.preferredTerm?.name || "Term not specified"}</div>
                     {player.preferredClasses?.length ? <button type="button" onClick={(event) => { event.stopPropagation(); onOpenRequestedClass?.(player); }} className="text-blue-600 underline text-left">{player.preferredClasses.map((cls) => cls?.name || "Unavailable class").join(", ")}</button> : <span>No class requested</span>}
-                    <div className="text-slate-400 mt-1">{player.requestType === "TEMPORARY_PLAYER" || player.requestType === "TEMPORARY" ? "Coach temporary player" : (player.requestType || "").replace(/_/g, " ")}</div>
+                    <div className="text-slate-400 mt-1">{player.requestType === "TEMPORARY_PLAYER" || player.requestType === "TEMPORARY" ? "Admin/coach temporary player" : (player.requestType || "").replace(/_/g, " ")}</div>
                   </td>}
+                  {showAddedBy && <td className="py-3 px-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{player.addedBy || "Unknown"}</td>}
                   <td className="py-3 px-2 font-bold text-slate-600 dark:text-slate-400 text-center">
                     {(player.preferredFoot || player.prefferedFoot) === "LEFT" ? "L" : (player.preferredFoot || player.prefferedFoot) === "RIGHT" ? "R" : "-"}
                   </td>

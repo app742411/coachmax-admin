@@ -24,7 +24,7 @@ export const rejectVerificationRequest = async (requestId: string, reason: strin
 };
 
 export const fetchAllocationClasses = async (term?: string, category?: string, program?: string) => {
-  const response = await apiClient.get("/api/admin/getAllClassesForAssign", { params: { ...(term ? { term } : {}), ...(category ? { category } : {}), ...(program ? { program } : {}) } });
+  const response = await apiClient.get("/api/admin/getAllClassesForAssign", { params: { ...(term ? { term } : {}), ...(category ? { categoryId: category } : {}), ...(program ? { programId: program } : {}) } });
   if (!Array.isArray(response.data?.data)) throw new Error("Invalid class response");
   return response.data.data;
 };

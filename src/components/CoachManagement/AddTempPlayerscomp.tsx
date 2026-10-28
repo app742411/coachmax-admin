@@ -1,5 +1,5 @@
 import { dateOnlyFormValue } from "../../utils/dateTime";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import apiClient from "../../api/apiClient";
@@ -12,6 +12,8 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import DatePicker from "../form/date-picker";
 import MultiSelect from "../form/MultiSelect";
+import { Image as ImageIcon, X } from "lucide-react";
+import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 
 interface ClassItem {
   classId?: string;
@@ -27,6 +29,9 @@ export default function AddTempPlayerscomp() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const profileImageInputRef = useRef<HTMLInputElement>(null);
 
   const currentDate = useCurrentDate();
 
@@ -90,6 +95,32 @@ export default function AddTempPlayerscomp() {
   const watchYear = watch("selectedYear");
   const watchPreferredClasses = watch("preferredClasses") || [];
 
+  const handleProfileImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    let normalized: File;
+    try {
+      normalized = await normalizeUploadImage(file);
+    } catch (reason) {
+      toast.error(reason instanceof Error ? reason.message : "Could not convert this image.");
+      input.value = "";
+      return;
+    }
+    const validationError = await validateUploadFile(normalized, "profile");
+    if (validationError) {
+      toast.error(validationError);
+      input.value = "";
+      return;
+    }
+
+    setProfileImageFile(normalized);
+    const reader = new FileReader();
+    reader.onloadend = () => setProfileImagePreview(typeof reader.result === "string" ? reader.result : null);
+    reader.readAsDataURL(normalized);
+  };
+
   const { categories, isLoading: loadingCategories } = useCategories({ isEvent: "all" });
   const { allTerms, availableYears: years, currentTerm, isLoading: loadingTerms } = useCurrentTerm();
   const { programs, isLoading: loadingPrograms } = useProgramsByCategory(watchCategory);
@@ -149,7 +180,14 @@ export default function AddTempPlayerscomp() {
     setValue("preferredTerm", "");
   };
 
+  const handleRemoveProfileImage = () => {
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
+    if (profileImageInputRef.current) profileImageInputRef.current.value = "";
+  };
+
   const handleClearForm = () => {
+    handleRemoveProfileImage();
     reset({
       name: "",
       dob: "",
@@ -194,13 +232,10 @@ export default function AddTempPlayerscomp() {
         prefferedFoot: data.prefferedFoot || undefined,
         preferredFoot: data.prefferedFoot || undefined,
         gender: data.gender || undefined,
+        profileImage: profileImageFile || undefined,
       };
       const result = await addTemporaryPlayer(payload);
-      if (result?.emailSent === false) {
-        toast.error(result?.message || "Player was added, but the sign-in email could not be sent. Please contact an administrator.");
-      } else {
-        toast.success(result?.message || "Temporary player added. The parent access email is queued.");
-      }
+      toast.success(result?.message || (result?.emailSent ? "Temporary player added. Parent access email sent." : "Temporary player added. No parent access email was sent."));
       handleClearForm();
     } catch (error: any) {
       console.error("Failed to add temporary player:", error);
@@ -233,6 +268,42 @@ export default function AddTempPlayerscomp() {
                 hint={errors.name?.message}
                 {...register("name", { required: "Player name is required" })}
               />
+            </div>
+
+            <div className="flex items-center gap-4 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-3">
+              <button
+                type="button"
+                onClick={() => profileImageInputRef.current?.click()}
+                aria-label="Choose player profile image"
+                className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center hover:border-brand-500 transition-colors"
+              >
+                {profileImagePreview ? (
+                  <img src={profileImagePreview} alt="Player profile preview" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-6 w-6 text-gray-400" />
+                )}
+              </button>
+              <div className="min-w-0 flex-1">
+                <Label>Profile Image <span className="font-medium normal-case text-gray-400">(optional)</span></Label>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => profileImageInputRef.current?.click()} className="text-xs font-bold text-brand-500 hover:underline">
+                    {profileImagePreview ? "Change image" : "Choose image"}
+                  </button>
+                  {profileImagePreview && (
+                    <button type="button" onClick={handleRemoveProfileImage} className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-red-600">
+                      <X size={12} /> Remove
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-[10px] text-gray-500">JPEG, PNG, WebP, HEIC/HEIF · max 5MB</p>
+                <input
+                  ref={profileImageInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
+                  onChange={handleProfileImageChange}
+                  className="hidden"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -339,6 +410,7 @@ export default function AddTempPlayerscomp() {
                 hint={errors.parentPhone?.message}
                 {...register("parentPhone", { required: "Parent phone is required" })}
               />
+              <p className="mt-1 text-xs text-gray-500">No email or phone OTP is required here. If an existing parent account is reused, its saved contact details stay unchanged.</p>
             </div>
 
             <div>

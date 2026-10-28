@@ -37,6 +37,7 @@ export interface TemporaryPlayerPayload {
   prefferedFoot?: string;
   preferredFoot?: string;
   gender?: string;
+  profileImage?: File;
 }
 
 export const getAllCoaches = async (page = 1, limit = 10): Promise<CoachesResponse> => {
@@ -62,7 +63,19 @@ export const deleteCoach = async (id: string): Promise<any> => {
 };
 
 export const addTemporaryPlayer = async (data: TemporaryPlayerPayload): Promise<any> => {
-  const response = await apiClient.post("/api/coach/temporary-players", data);
+  const { profileImage, ...fields } = data;
+  let payload: TemporaryPlayerPayload | FormData = fields;
+  if (profileImage) {
+    const formData = new FormData();
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, Array.isArray(value) ? JSON.stringify(value) : String(value));
+      }
+    });
+    formData.append("profileImage", profileImage);
+    payload = formData;
+  }
+  const response = await apiClient.post("/api/coach/temporary-players", payload);
   return response.data;
 };
 

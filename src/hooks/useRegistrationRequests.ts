@@ -44,6 +44,7 @@ const mapRegistrationToPlayer = (reg: any): Player => {
     preferredTerm: reg.preferredTerm,
     preferredClasses: reg.preferredClasses,
     requestType: reg.requestType,
+    addedBy: reg.addedBy || "Unknown",
     createdBy: reg.createdBy,
     assignedBy: reg.assignedBy,
     rating: reg.player?.rating || 0,

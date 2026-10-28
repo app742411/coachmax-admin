@@ -16,7 +16,6 @@ import { smartErrorToast } from "../../utils/toast";
 const TermManagement: React.FC = () => {
     const [showCalendar, setShowCalendar] = useState(true);
     const [showList, setShowList] = useState(true);
-    const [eventFilter, setEventFilter] = useState<"all" | "false" | "true">("all");
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -38,7 +37,7 @@ const TermManagement: React.FC = () => {
 
     const { terms, isLoading: loading } = useTerms({
         year: selectedYear,
-        isEvent: eventFilter,
+        isEvent: "all",
     });
 
     const createMutation = useCreateTerm();
@@ -172,26 +171,6 @@ const TermManagement: React.FC = () => {
                         {showList ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                         {showList ? "Hide List" : "Show List"}
                     </button>
-
-                    {/* isEvent filter tabs */}
-                    <div className="flex items-center rounded-none border border-gray-200 overflow-hidden">
-                        {([
-                            { value: "all", label: "All" },
-                            { value: "false", label: "Terms" },
-                            { value: "true", label: "Holiday Programs" },
-                        ] as const).map(({ value, label }) => (
-                            <button
-                                key={value}
-                                onClick={() => setEventFilter(value)}
-                                className={`px-3 py-2 text-xs font-bold transition-colors border-r last:border-r-0 border-gray-200 ${eventFilter === value
-                                    ? "bg-[#031549] text-white"
-                                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                                    }`}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
 
                     <select
                         value={selectedYear}
