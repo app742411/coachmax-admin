@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { Player } from "../../types/player";
 import PlayerStatsCards from "../../components/players/PlayerStatsCards";
+import type { PlayerMetric } from "../../components/players/PlayerStatsCards";
 import PlayerFilters from "../../components/players/PlayerFilters";
 import PlayerTable from "../../components/players/PlayerTable";
 import PlayerDetailCard from "../../components/players/PlayerDetailCard";
@@ -10,8 +11,13 @@ import GenerateInvoiceModal from "../../components/InvoiceManagement/GenerateInv
 import AddCoachNoteModal from "../../components/CoachManagement/AddCoachNoteModal";
 import EditPlayerModal from "../../components/players/EditPlayerModal";
 import { usePlayers, useDeletePlayer, usePlayerStats, usePlayerFilterOptions } from "../../hooks/usePlayers";
+import { getPlayers } from "../../api/players";
+import { useTerms } from "../../hooks/useTerms";
+import { findCurrentTerm, getCurrentYearString } from "../../hooks/useCurrentTerm";
+import { downloadPlayersCsv, type PlayerExportColumn } from "../../components/players/playerExport";
 import Pagination from "../../components/common/Pagination";
 import { UserPlus } from "lucide-react";
+import toast from "react-hot-toast";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -27,20 +33,33 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function PlayersManagement() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [yearFilter, setYearFilter] = useState(getCurrentYearString);
   const [termFilter, setTermFilter] = useState("All");
+  const [initialTermSelected, setInitialTermSelected] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [programFilter, setProgramFilter] = useState("All");
   const [subProgramFilter, setSubProgramFilter] = useState("All");
   const [ageFilter, setAgeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [assignmentFilter, setAssignmentFilter] = useState<"ALL" | "ELITE" | "SCHOOL" | "BOTH" | "UNASSIGNED">("ALL");
   const [medicalFilter, setMedicalFilter] = useState("All");
   
   // Pagination state for backend pagination
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const { terms, isLoading: termsLoading } = useTerms({ isEvent: "all" });
+
+  useEffect(() => {
+    if (initialTermSelected || termsLoading) return;
+    const currentYearTerms = terms.filter((term) => String(term.year) === yearFilter);
+    const currentTerm = findCurrentTerm(currentYearTerms.filter((term) => !term.isEvent)) || findCurrentTerm(currentYearTerms);
+    setTermFilter(currentTerm?._id || "All");
+    setInitialTermSelected(true);
+  }, [initialTermSelected, termsLoading, terms, yearFilter]);
 
   // Fetch dynamic player statistics scoped to selected term
-  const { data: statsResponse } = usePlayerStats(termFilter);
+  const { data: statsResponse } = usePlayerStats(termFilter, yearFilter);
   const { data: filterOptions = [] } = usePlayerFilterOptions();
 
   // Fetch players per page from the backend with all active filters
@@ -53,7 +72,10 @@ export default function PlayersManagement() {
     termFilter,
     medicalFilter,
     ageFilter,
-    subProgramFilter
+    subProgramFilter,
+    "ALL",
+    assignmentFilter === "ALL" ? undefined : assignmentFilter,
+    yearFilter
   );
   const players = playersResponse?.users || [];
   const totalPages = playersResponse?.totalPages || 1;
@@ -70,7 +92,37 @@ export default function PlayersManagement() {
   // Reset page to 1 when filters or limit change to avoid out-of-bound pages
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, termFilter, programFilter, subProgramFilter, statusFilter, ageFilter, medicalFilter, limit]);
+  }, [searchQuery, yearFilter, termFilter, programFilter, subProgramFilter, statusFilter, assignmentFilter, ageFilter, medicalFilter, limit]);
+
+  const handleExport = async (columns: PlayerExportColumn[]) => {
+    if (isExporting) return false;
+    setIsExporting(true);
+    try {
+      const getExportPage = (exportPage: number) => getPlayers(
+        exportPage, 100, debouncedSearchQuery, programFilter, statusFilter,
+        termFilter, medicalFilter, ageFilter, subProgramFilter, "ALL",
+        assignmentFilter === "ALL" ? undefined : assignmentFilter, yearFilter
+      );
+      const first = await getExportPage(1);
+      const exportPlayers = [...(first.users || [])];
+      for (let exportPage = 2; exportPage <= first.totalPages; exportPage += 1) {
+        const next = await getExportPage(exportPage);
+        exportPlayers.push(...(next.users || []));
+      }
+      if (exportPlayers.length === 0) {
+        toast.error("No players match the selected filters.");
+        return false;
+      }
+      downloadPlayersCsv(exportPlayers, columns, termFilter, yearFilter);
+      toast.success(`Exported ${exportPlayers.length} players.`);
+      return true;
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || error?.message || "Could not export players.");
+      return false;
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleDeletePlayer = (player: Player) => {
     deletePlayerMutation.mutate(player._id);
@@ -86,6 +138,12 @@ export default function PlayersManagement() {
   const handleGenerateInvoice = (player: Player) => {
     setPlayerForInvoice(player);
   };
+
+  const handleMetricClick = (metric: PlayerMetric) => {
+    setAssignmentFilter(metric);
+  };
+
+  const activeMetric = assignmentFilter;
 
   return (
     <>
@@ -112,15 +170,21 @@ export default function PlayersManagement() {
           <PlayerStatsCards
             totalCount={stats?.totalCount ?? totalPlayers}
             approvedCount={stats?.approvedCount ?? 0}
-            pendingCount={stats?.pendingCount ?? 0}
             rejectedCount={stats?.rejectedCount ?? 0}
             eliteCount={stats?.eliteCount ?? 0}
             schoolCount={stats?.schoolCount ?? 0}
+            bothCount={stats?.bothCount ?? 0}
+            unassignedCount={stats?.unassignedCount ?? 0}
+            showAssignmentMetrics
+            activeMetric={activeMetric}
+            onMetricClick={handleMetricClick}
           />
 
           <PlayerFilters
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            yearFilter={yearFilter}
+            setYearFilter={(year) => { setInitialTermSelected(true); setYearFilter(year); }}
             termFilter={termFilter}
             setTermFilter={setTermFilter}
             programFilter={programFilter}
@@ -134,6 +198,8 @@ export default function PlayersManagement() {
             setStatusFilter={setStatusFilter}
             medicalFilter={medicalFilter}
             setMedicalFilter={setMedicalFilter}
+            isExporting={isExporting}
+            onExport={handleExport}
           />
 
           {isLoading ? (
@@ -145,9 +211,7 @@ export default function PlayersManagement() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">No players found</h3>
               <p className="text-sm text-gray-500 text-center max-w-sm mb-6">
-                {searchQuery || programFilter !== "All" || subProgramFilter !== "All" || statusFilter !== "All" || termFilter !== "All" || medicalFilter !== "All" || ageFilter !== "All"
-                  ? "We couldn't find any players matching your current filters. Try adjusting your search criteria."
-                  : "Get started by inviting players to your academy. They'll receive an email to complete their profile."}
+                No players match the selected metric and filters. Try adjusting your search criteria.
               </p>
             </div>
           ) : (

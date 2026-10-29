@@ -26,6 +26,7 @@ export const useUpdateOrderStatus = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["order", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["storeProductInsights"] });
       toast.success("Order status updated successfully!");
     },
     onError: (error: any) => {

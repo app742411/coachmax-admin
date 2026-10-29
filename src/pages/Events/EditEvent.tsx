@@ -14,7 +14,7 @@ export default function EditEvent() {
     description="Modify and refine event details to ensure peak operational alignment."
    />
    <div className="space-y-6">
-    <PageBreadcrumb pageTitle="Refine Event Details" />
+    <PageBreadcrumb pageTitle="Edit Event" items={[{ name: "Event Inventory", path: "/events" }]} />
     
     <div className="">
      <AddEventForm eventId={id} />

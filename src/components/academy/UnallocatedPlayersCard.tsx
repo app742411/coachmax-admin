@@ -1,13 +1,13 @@
 import { UnallocatedPlayer } from "../../types/academy";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
-import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
+import SidebarPlayerPagination from "./SidebarPlayerPagination";
 
 interface UnallocatedPlayersCardProps {
   players: UnallocatedPlayer[];
   totalCount: number;
-  hasMore: boolean;
-  onLoadMore: () => void;
-  isLoadingMore?: boolean;
+  page: number;
+  onPageChange: (page: number) => void;
+  isLoading?: boolean;
   onAssignPlayer?: (player: any) => void;
   onViewAll?: () => void;
   onNavigateToTarget?: (player: UnallocatedPlayer) => void;
@@ -16,15 +16,14 @@ interface UnallocatedPlayersCardProps {
 export default function UnallocatedPlayersCard({
   players,
   totalCount,
-  hasMore,
-  onLoadMore,
-  isLoadingMore,
+  page,
+  onPageChange,
+  isLoading,
   onAssignPlayer,
   onViewAll,
   onNavigateToTarget
 }: UnallocatedPlayersCardProps) {
   const { markItemAsRead } = useSidebarBadges();
-  const orderedPlayers = sortPlayersByPaymentStatus(players, (player) => player.paymentStatus);
   return (
     <div className="bg-white border border-slate-200 dark:border-slate-700 dark:bg-slate-900 p-4 rounded-none shadow-sm mb-5 flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -45,12 +44,14 @@ export default function UnallocatedPlayersCard({
       </div>
 
       <div className="space-y-3 mb-4">
-        {players.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-6 text-slate-400 text-xs font-semibold">Loading players…</div>
+        ) : players.length === 0 ? (
           <div className="text-center py-6 text-slate-400 text-xs font-semibold">
             No unallocated players
           </div>
         ) : (
-          orderedPlayers.map((p) => {
+          players.map((p) => {
             const primaryClass = p.primaryClass || (p.preferredClasses && p.preferredClasses.length > 0 ? p.preferredClasses[0] : null);
 
             return (
@@ -224,19 +225,7 @@ export default function UnallocatedPlayersCard({
         )}
       </div>
 
-      {/* Load More Button */}
-      {hasMore && (
-        <div className="flex justify-center pt-2 pb-4 border-t border-slate-100 dark:border-slate-800 mb-3">
-          <button
-            type="button"
-            disabled={isLoadingMore}
-            onClick={onLoadMore}
-            className="w-full py-2 text-[9px] font-bold border border-slate-200 dark:border-slate-850 text-[#0047FF] hover:bg-[#0047FF]/5 disabled:opacity-50 rounded transition-all cursor-pointer select-none"
-          >
-            {isLoadingMore ? "Loading..." : "Load More"}
-          </button>
-        </div>
-      )}
+      <SidebarPlayerPagination label="Unallocated players" page={page} totalItems={totalCount} onPageChange={onPageChange} isLoading={isLoading} />
 
       {/* Drag area */}
       <div

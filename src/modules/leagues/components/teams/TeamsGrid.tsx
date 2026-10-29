@@ -35,7 +35,7 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({ leagueId }) => {
   const termId = typeof league?.term === "object" ? league.term._id : league?.term;
   const [createdTeamId, setCreatedTeamId] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const { data: coachesResponse } = useQuery({ queryKey: ["coaches"], queryFn: getAllCoaches });
+  const { data: coachesResponse } = useQuery({ queryKey: ["coaches"], queryFn: () => getAllCoaches() });
   const coaches = Array.isArray(coachesResponse) ? coachesResponse : coachesResponse?.data || [];
   const { canManageTeams } = useLeaguePermissions();
 

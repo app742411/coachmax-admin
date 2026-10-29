@@ -104,6 +104,7 @@ export default function TemporaryPlayersList() {
             totalCount={players.length}
             approvedCount={players.filter((p: Player) => p.status === 'APPROVED' || p.status === 'PAID').length}
             pendingCount={players.filter((p: Player) => p.status === 'PENDING' || p.status === 'PENDING_APPROVAL' || p.status === 'TRIAL').length}
+            showPendingCount
             rejectedCount={players.filter((p: Player) => p.status === 'REJECTED').length}
             eliteCount={0}
             schoolCount={0}

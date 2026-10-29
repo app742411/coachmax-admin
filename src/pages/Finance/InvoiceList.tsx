@@ -1,8 +1,9 @@
 import { formatDateOnly } from "../../utils/dateTime";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
+import Pagination from "../../components/common/Pagination";
 import { useInvoices, useUpdateInvoice } from "../../hooks/useInvoices";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
 
@@ -19,7 +20,7 @@ export default function InvoiceList() {
   const [search, setSearch] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("ALL");
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
   const { markItemAsRead, isItemRead } = useSidebarBadges();
 
   const { data, isLoading, isError } = useInvoices(search, paymentStatus, page, limit);
@@ -34,16 +35,12 @@ export default function InvoiceList() {
         : Array.isArray(data)
           ? data
           : [];
-  const total = data?.pagination?.total || data?.data?.pagination?.total || invoices.length;
-  const totalPages = data?.pagination?.pages || data?.data?.pagination?.pages || 1;
+  const total = data?.pagination?.total ?? data?.data?.pagination?.total ?? invoices.length;
+  const totalPages = Math.max(1, data?.pagination?.pages ?? data?.data?.pagination?.pages ?? 1);
 
-  const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
-  };
-
-  const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
-  };
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>, invoiceId: string) => {
     e.stopPropagation();
@@ -63,14 +60,14 @@ export default function InvoiceList() {
               type="text"
               placeholder="Search by Invoice # (e.g. INV-2026)"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full rounded-none border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900"
             />
           </div>
           <div className="flex items-center gap-3">
             <select
               value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value)}
+              onChange={(e) => { setPaymentStatus(e.target.value); setPage(1); }}
               className="rounded-none border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900"
             >
               <option value="ALL">All Status</option>
@@ -176,27 +173,15 @@ export default function InvoiceList() {
           </div>
 
           {!isLoading && total > 0 && (
-            <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 dark:border-gray-800">
-              <span className="text-sm text-gray-500">
-                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} entries
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePreviousPage}
-                  disabled={page === 1}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={handleNextPage}
-                  disabled={page === totalPages}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(nextLimit) => { setLimit(nextLimit); setPage(1); }}
+              limitOptions={[10, 20, 50, 100]}
+            />
           )}
         </div>
       </div>

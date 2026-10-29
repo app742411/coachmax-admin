@@ -10,9 +10,19 @@ import {
   useDeleteProgram,
 } from "../../hooks/usePrograms";
 import { toast } from "react-hot-toast";
-import { Edit, Trash, Filter, Layers } from "lucide-react";
+import { Edit, Trash, Filter, Layers, X } from "lucide-react";
 import Select from "../form/Select";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import FormHeader from "../form/FormHeader";
+import { requiredText, validateWithSchema } from "../../utils/formValidation";
+import { z } from "zod";
+import FormField from "../form/FormField";
+import FormActions from "../form/FormActions";
+
+const programSchema = z.object({
+  category: requiredText("Parent category"),
+  name: requiredText("Program name"),
+});
 
 const ProgramManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,6 +35,7 @@ const ProgramManagement: React.FC = () => {
     name: "",
     category: "",
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { categories } = useCategories();
 
@@ -46,12 +57,14 @@ const ProgramManagement: React.FC = () => {
 
   const handleOpenAdd = () => {
     setFormData({ name: "", category: selectedCategoryFilter });
+    setFormErrors({});
     setIsEditing(false);
     setSelectedId(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (prog: any) => {
+    setFormErrors({});
     setFormData({
       name: prog.name || prog.title || "",
       category: prog.category?._id || prog.category || "",
@@ -79,6 +92,10 @@ const ProgramManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validation = validateWithSchema(programSchema, formData);
+    setFormErrors(validation.errors);
+    if (!validation.success) return;
+
     if (isEditing && selectedId) {
       updateMutation.mutate(
         { id: selectedId, data: formData },
@@ -170,16 +187,28 @@ const ProgramManagement: React.FC = () => {
         </Table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 rounded-none shadow-2xl">
-        <h4 className="text-xl font-bold mb-2 tracking-tight">{isEditing ? "Modify Program" : "New Curriculum Module"}</h4>
-        <p className="text-xs text-gray-500 mb-8 font-medium">Define the core objectives for this training level.</p>
-        <form onSubmit={handleSubmit}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[500px] overflow-visible p-6 shadow-2xl lg:p-8" showCloseButton={false}>
+        <FormHeader
+          icon={Layers}
+          title={isEditing ? "Modify Program" : "New Curriculum Module"}
+          description="Define the core objectives for this training level."
+          className="-mx-6 -mt-6 mb-6 border-b border-[#082269] lg:-mx-8 lg:-mt-8"
+          actions={<button type="button" onClick={() => setIsModalOpen(false)} aria-label="Close program form" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>}
+        />
+        <form data-coachmax-form noValidate onSubmit={handleSubmit}>
           <div className="space-y-5">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Parent Category</label>
+            <FormField id="program-parent-category" label="Parent Category" required error={formErrors.category}>
               <select
+                id="program-parent-category"
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                onChange={(e) => {
+                  const category = e.target.value;
+                  setFormData((previous) => ({ ...previous, category }));
+                  if (category) setFormErrors((previous) => ({ ...previous, category: "" }));
+                }}
+                aria-required="true"
+                aria-invalid={Boolean(formErrors.category)}
+                aria-describedby={formErrors.category ? "program-parent-category-error" : undefined}
                 className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer"
                 required
               >
@@ -188,25 +217,32 @@ const ProgramManagement: React.FC = () => {
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Program Label</label>
+            </FormField>
+            <FormField id="program-name" label="Program Label" required error={formErrors.name}>
               <input
+                id="program-name"
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setFormData((previous) => ({ ...previous, name }));
+                  if (name.trim()) setFormErrors((previous) => ({ ...previous, name: "" }));
+                }}
+                aria-required="true"
+                aria-invalid={Boolean(formErrors.name)}
+                aria-describedby={formErrors.name ? "program-name-error" : undefined}
                 className="w-full rounded-none border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all"
                 placeholder="Elite Performance"
                 required
               />
-            </div>
+            </FormField>
           </div>
-          <div className="flex justify-end gap-3 mt-10 pt-6 border-t">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
+          <FormActions className="-mx-6 -mb-6 mt-6 rounded-b-lg lg:-mx-8 lg:-mb-8">
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
               {createMutation.isPending || updateMutation.isPending ? "Saving..." : (isEditing ? "Update Program" : "Add Program")}
             </Button>
-          </div>
+          </FormActions>
         </form>
       </Modal>
       <ConfirmDeleteModal

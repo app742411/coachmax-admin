@@ -27,13 +27,17 @@ export function findCurrentTerm(terms: Term[], options?: FindTermOptions): Term 
   if (filteredTerms.length === 0) return null;
 
   // 1. Date Range Match (Today is between startDate and endDate)
-  const dateMatch = filteredTerms.find((t) => {
-    if (!t.startDate || !t.endDate) return false;
-    const start = dateKey(t.startDate);
-    const end = dateKey(t.endDate);
-    return Boolean(start && end) && today >= start && today <= end;
-  });
-  if (dateMatch) return dateMatch;
+  const dateMatches = filteredTerms
+    .filter((t) => {
+      if (!t.startDate || !t.endDate) return false;
+      const start = dateKey(t.startDate);
+      const end = dateKey(t.endDate);
+      return Boolean(start && end) && today >= start && today <= end;
+    })
+    // Overlapping terms can exist during transitions. Prefer the term that
+    // started most recently instead of whichever one the API returned first.
+    .sort((a, b) => dateKey(b.startDate).localeCompare(dateKey(a.startDate)));
+  if (dateMatches.length > 0) return dateMatches[0];
 
   // 2. Upcoming Term Match (find closest term where startDate > today)
   const upcomingTerms = filteredTerms

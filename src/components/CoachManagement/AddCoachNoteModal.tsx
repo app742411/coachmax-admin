@@ -85,7 +85,7 @@ export default function AddCoachNoteModal({
   const isPending = addNoteMutation.isPending || updateNoteMutation.isPending;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-md p-6 bg-white dark:bg-slate-900 rounded-none">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-md p-6 bg-white dark:bg-slate-900 rounded-xl">
       <div className="space-y-4">
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">

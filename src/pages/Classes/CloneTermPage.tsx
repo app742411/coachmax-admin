@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
 
 import apiClient from "../../api/apiClient";
+import { getCloneTermInfo, streamCloneTerm, type CloneProgress, type CloneTermInfo } from "../../api/cloneTermApi";
 import { useTerms } from "../../hooks/useTerms";
 import Select from "../../components/form/Select";
 import { Modal } from "../../components/ui/modal";
 import Button from "../../components/ui/button/Button";
 import { successToast, errorToast } from "../../utils/toast";
 import { getMediaUrl } from "../../utils/media";
+import { formatDateOnly } from "../../utils/dateTime";
+import FormHeader from "../../components/form/FormHeader";
 import {
   Calendar,
   User,
@@ -74,6 +78,65 @@ interface Term {
   _id: string;
   name: string;
   year: number;
+  status?: string;
+}
+
+const cloneStageLabel: Record<CloneProgress["stage"], string> = {
+  preparing: "Preparing",
+  classes: "Classes",
+  teams: "Teams",
+  leagues: "Leagues",
+  saving: "Saving",
+  complete: "Complete",
+};
+
+function TermInventory({ termId, info, loading, error, onRetry, accent }: {
+  termId: string;
+  info?: CloneTermInfo;
+  loading: boolean;
+  error?: string;
+  onRetry: () => void;
+  accent: "blue" | "green";
+}) {
+  const counts = info?.counts;
+  const groups = info ? [
+    { title: "Classes", items: info.classes.map((item) => ({ id: item._id, name: item.name, detail: [item.dayOfWeek, item.startTime].filter(Boolean).join(" · "), count: `${item.playerCount} players` })) },
+    { title: "Leagues", items: info.leagues.map((item) => ({ id: item._id, name: item.name, detail: item.season || "", count: `${item.teamCount} teams` })) },
+    { title: "Teams", items: info.teams.map((item) => ({ id: item._id, name: item.name, detail: item.leagueNames.join(", "), count: `${item.playerCount} players` })) },
+  ] : [];
+
+  return <>
+    <div className="grid grid-cols-4 gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+      {(["classes", "leagues", "teams", "players"] as const).map((key) => <div key={key}>
+        <div className={`text-sm font-black ${key === "leagues" ? accent === "blue" ? "text-[#0047FF]" : "text-emerald-600" : "text-slate-800 dark:text-white"}`}>
+          {termId ? loading ? "…" : counts?.[key] ?? "—" : "—"}
+        </div>
+        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{key}</div>
+      </div>)}
+    </div>
+    {termId && <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800" aria-live="polite">
+      {loading && <p className="text-xs text-slate-500">Loading term information…</p>}
+      {error && <div className="text-xs text-rose-600">{error} <button type="button" onClick={onRetry} className="font-bold underline">Retry</button></div>}
+      {info && !loading && <div className="space-y-3">
+        {groups.map((group) => <section key={group.title}>
+          <h5 className="mb-1 text-[10px] font-black uppercase tracking-wide text-slate-500">{group.title} ({group.items.length})</h5>
+          {group.items.length === 0 ? <p className="text-[11px] text-slate-400">None in this term</p> : <>
+            {group.items.slice(0, 3).map((item) => <div key={item.id} className="flex items-start justify-between gap-2 border-b border-slate-100 py-1.5 text-[11px] last:border-0 dark:border-slate-800">
+              <span className="min-w-0"><strong className="block truncate text-slate-800 dark:text-white">{item.name}</strong>{item.detail && <span className="block truncate text-slate-500">{item.detail}</span>}</span>
+              <span className="shrink-0 text-slate-500">{item.count}</span>
+            </div>)}
+            {group.items.length > 3 && <details className="text-[11px]">
+              <summary className="cursor-pointer font-bold text-[#0047FF]">Show {group.items.length - 3} more</summary>
+              {group.items.slice(3).map((item) => <div key={item.id} className="flex items-start justify-between gap-2 border-b border-slate-100 py-1.5 dark:border-slate-800">
+                <span className="min-w-0"><strong className="block truncate text-slate-800 dark:text-white">{item.name}</strong>{item.detail && <span className="block truncate text-slate-500">{item.detail}</span>}</span>
+                <span className="shrink-0 text-slate-500">{item.count}</span>
+              </div>)}
+            </details>}
+          </>}
+        </section>)}
+      </div>}
+    </div>}
+  </>;
 }
 
 export default function CloneTermPage() {
@@ -81,6 +144,7 @@ export default function CloneTermPage() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [sourceTermId, setSourceTermId] = useState("");
   const [targetTermId, setTargetTermId] = useState("");
+  const [termSelectionErrors, setTermSelectionErrors] = useState<Record<string, string>>({});
   const [sourceYear, setSourceYear] = useState<string>("");
   const [targetYear, setTargetYear] = useState<string>("");
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -97,6 +161,7 @@ export default function CloneTermPage() {
   const [responseTargetTerm, setResponseTargetTerm] = useState<{ _id: string; name: string } | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showLoaderModal, setShowLoaderModal] = useState(false);
+  const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
 
   // Class Selection states
   const [selectedClasses, setSelectedClasses] = useState<Record<string, boolean>>({});
@@ -114,6 +179,16 @@ export default function CloneTermPage() {
 
   const isEventParam = activeTab === "terms" ? "false" : "true";
   const { terms: fetchedTerms } = useTerms({ isEvent: isEventParam });
+  const sourceInfoQuery = useQuery({
+    queryKey: ["cloneTermInfo", sourceTermId],
+    queryFn: () => getCloneTermInfo(sourceTermId),
+    enabled: Boolean(sourceTermId),
+  });
+  const targetInfoQuery = useQuery({
+    queryKey: ["cloneTermInfo", targetTermId],
+    queryFn: () => getCloneTermInfo(targetTermId),
+    enabled: Boolean(targetTermId),
+  });
 
   useEffect(() => {
     if (fetchedTerms) {
@@ -125,96 +200,23 @@ export default function CloneTermPage() {
     }
   }, [activeTab, fetchedTerms]);
 
-  const [allClasses, setAllClasses] = useState<any[]>([]);
-  const [allLeagues, setAllLeagues] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchSummaryData = async () => {
-      try {
-        const [classesRes, leaguesRes] = await Promise.allSettled([
-          apiClient.get("/api/admin/getAllClasses"),
-          apiClient.get("/api/admin/leagues"),
-        ]);
-
-        if (classesRes.status === "fulfilled" && classesRes.value.data?.data && Array.isArray(classesRes.value.data.data)) {
-          setAllClasses(classesRes.value.data.data);
-        }
-        if (leaguesRes.status === "fulfilled") {
-          const lData = leaguesRes.value.data?.data || leaguesRes.value.data?.leagues || leaguesRes.value.data || [];
-          if (Array.isArray(lData)) {
-            setAllLeagues(lData);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch initial stats:", error);
-      }
-    };
-    fetchSummaryData();
-  }, []);
-
   const getImageUrl = (path: string | undefined | null) => {
     return getMediaUrl(path) || null;
   };
 
-  // Calculate term stats from allClasses and allLeagues lists
-  const getTermStats = (termId: string) => {
-    const termClasses = allClasses.filter((c) => {
-      const classTermId = c.term?._id || c.term;
-      return classTermId === termId;
-    });
-
-    const termLeagues = allLeagues.filter((l) => {
-      const leagueTermId = typeof l.term === "object" ? (l.term?._id || l.term?.id) : (l.term || l.termId);
-      return leagueTermId === termId;
-    });
-
-    const playersSet = new Set<string>();
-    termClasses.forEach((c) => {
-      if (Array.isArray(c.players)) {
-        c.players.forEach((p: any) => {
-          const pid = p._id || p;
-          if (pid) playersSet.add(pid);
-        });
-      }
-    });
-
-    const coachesSet = new Set<string>();
-    termClasses.forEach((c) => {
-      const coachId = c.coach?._id || c.coach;
-      if (coachId) coachesSet.add(coachId);
-    });
-
-    let totalTeams = 0;
-    termLeagues.forEach((l) => {
-      if (Array.isArray(l.teams)) {
-        totalTeams += l.teams.length;
-      } else if (typeof l.teamsCount === "number") {
-        totalTeams += l.teamsCount;
-      }
-    });
-
-    return {
-      classes: termClasses.length,
-      leagues: termLeagues.length,
-      teams: totalTeams,
-      players: playersSet.size,
-      coaches: coachesSet.size,
-    };
-  };
-
   const handlePreview = async () => {
+    const errors: Record<string, string> = {};
     if (!sourceTermId) {
-      errorToast("Please select a source term.");
-      return;
+      errors.sourceTerm = "Select a source term.";
     }
     if (!targetTermId) {
-      errorToast("Please select a target term.");
-      return;
+      errors.targetTerm = "Select a target term.";
     }
-    if (sourceTermId === targetTermId) {
-      errorToast("Source and target terms must be different.");
-      return;
+    if (sourceTermId && targetTermId && sourceTermId === targetTermId) {
+      errors.targetTerm = "Choose a different target term from the source.";
     }
+    setTermSelectionErrors(errors);
+    if (Object.keys(errors).length) return;
 
     setLoadingPreview(true);
     try {
@@ -507,6 +509,7 @@ export default function CloneTermPage() {
 
   const executeClone = async () => {
     setShowConfirmModal(false);
+    setCloneProgress(null);
     setShowLoaderModal(true);
     setSubmittingClone(true);
 
@@ -544,24 +547,28 @@ export default function CloneTermPage() {
       });
 
     try {
-      const response = await apiClient.post("/api/admin/cloneTerm", {
+      const response = await streamCloneTerm({
         sourceTermId,
         targetTermId,
         classes: payloadClasses,
         leagues: payloadLeagues,
-      });
+      }, setCloneProgress);
 
-      if (response.data && response.data.success) {
+      if (response.success) {
         successToast("Term data (classes, leagues & teams) cloned successfully!");
+        await new Promise((resolve) => setTimeout(resolve, 600));
         setShowLoaderModal(false);
-        navigate("/classes");
+        navigate("/classes", {
+          replace: true,
+          state: { termId: targetTermId, year: targetTermObj?.year, viewAll: true },
+        });
       } else {
-        errorToast(response.data?.message || "Failed to clone term.");
+        errorToast(response.message || "Failed to clone term.");
         setShowLoaderModal(false);
       }
     } catch (error: any) {
       console.error("Clone error:", error);
-      errorToast(error.response?.data?.message || "Error during clone operation.");
+      errorToast(error.message || "Error during clone operation.");
       setShowLoaderModal(false);
     } finally {
       setSubmittingClone(false);
@@ -604,24 +611,21 @@ export default function CloneTermPage() {
   return (
     <>
       <PageMeta title="CoachMax | Clone Term" description="Clone classes, leagues, teams, and players to a new term" />
-      <div className="space-y-6">
-        {/* Custom Header Section */}
-        <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Clone Term</h1>
-            <p className="text-sm text-slate-400 font-medium mt-1">
-              Copy classes, leagues, teams, and player rosters to a new term in seconds.
-            </p>
-          </div>
-          <div>
+      <div className="space-y-6" data-coachmax-form>
+        <FormHeader
+          icon={Layers}
+          title="Clone Term"
+          description="Copy classes, leagues, teams, and player rosters to a new term."
+          actions={(
             <button
+              type="button"
               onClick={() => navigate("/coaching-management")}
-              className="inline-flex items-center justify-center rounded-none bg-[#0047FF] hover:bg-blue-700 px-5 py-2.5 text-center text-xs font-black uppercase tracking-wider text-white transition-colors shadow-theme-xs shrink-0 cursor-pointer"
+              className="inline-flex items-center justify-center rounded-md bg-[#0047FF] hover:bg-blue-700 px-4 py-2.5 text-center text-xs font-bold text-white transition-colors shadow-theme-xs shrink-0"
             >
               + Create Term
             </button>
-          </div>
-        </div>
+          )}
+        />
 
         {/* Step Indicator Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 mb-6 shadow-theme-xs max-w-5xl mx-auto flex items-center justify-between">
@@ -690,7 +694,7 @@ export default function CloneTermPage() {
             <div className="lg:col-span-8 space-y-6">
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-8 shadow-theme-sm rounded-none">
                 {/* Side-by-Side Term Metadata Cards */}
-                <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
+                <div className="flex flex-col md:flex-row items-stretch gap-6 mb-8">
                   {/* Source Card */}
                   <div className="flex-1 w-full bg-blue-50/20 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 p-6 rounded-none relative transition-all hover:shadow-xs">
                     <div className="text-[10px] font-black text-[#0047FF] uppercase tracking-widest mb-3.5">Source Term</div>
@@ -705,46 +709,21 @@ export default function CloneTermPage() {
                           </h4>
                           {sourceTermObj && (
                             <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-[#0047FF] text-white rounded-none shrink-0">
-                              Active
+                              {sourceInfoQuery.data?.term.status || sourceTermObj.status || "Selected"}
                             </span>
                           )}
                         </div>
                         <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
                           {sourceTermObj ? `Year: ${sourceTermObj.year}` : "—"}
                         </p>
+                        {sourceInfoQuery.data && <p className="mt-1 text-[10px] text-slate-500">{formatDateOnly(sourceInfoQuery.data.term.startDate)} – {formatDateOnly(sourceInfoQuery.data.term.endDate)}</p>}
                       </div>
                     </div>
-                    {/* Stats */}
-                    <div className="grid grid-cols-4 gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {sourceTermId ? getTermStats(sourceTermId).classes : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Classes</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-[#0047FF]">
-                          {sourceTermId ? getTermStats(sourceTermId).leagues : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Leagues</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {sourceTermId ? getTermStats(sourceTermId).teams : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Teams</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {sourceTermId ? getTermStats(sourceTermId).players : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Players</div>
-                      </div>
-                    </div>
+                    <TermInventory termId={sourceTermId} info={sourceInfoQuery.data} loading={sourceInfoQuery.isLoading} error={sourceInfoQuery.error?.message} onRetry={() => void sourceInfoQuery.refetch()} accent="blue" />
                   </div>
 
                   {/* Arrow Indicator */}
-                  <div className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-theme-xs">
+                  <div className="w-10 h-10 self-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-theme-xs">
                     <ArrowRight className="w-5 h-5 text-slate-400" />
                   </div>
 
@@ -762,42 +741,17 @@ export default function CloneTermPage() {
                           </h4>
                           {targetTermObj && (
                             <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-emerald-500 text-white rounded-none shrink-0">
-                              Upcoming
+                              {targetInfoQuery.data?.term.status || targetTermObj.status || "Selected"}
                             </span>
                           )}
                         </div>
                         <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
                           {targetTermObj ? `Year: ${targetTermObj.year}` : "—"}
                         </p>
+                        {targetInfoQuery.data && <p className="mt-1 text-[10px] text-slate-500">{formatDateOnly(targetInfoQuery.data.term.startDate)} – {formatDateOnly(targetInfoQuery.data.term.endDate)}</p>}
                       </div>
                     </div>
-                    {/* Stats */}
-                    <div className="grid grid-cols-4 gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {targetTermId ? getTermStats(targetTermId).classes : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Classes</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-emerald-500">
-                          {targetTermId ? getTermStats(targetTermId).leagues : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Leagues</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {targetTermId ? getTermStats(targetTermId).teams : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Teams</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-black text-slate-800 dark:text-white">
-                          {targetTermId ? getTermStats(targetTermId).players : 0}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Players</div>
-                      </div>
-                    </div>
+                    <TermInventory termId={targetTermId} info={targetInfoQuery.data} loading={targetInfoQuery.isLoading} error={targetInfoQuery.error?.message} onRetry={() => void targetInfoQuery.refetch()} accent="green" />
                   </div>
                 </div>
 
@@ -842,15 +796,28 @@ export default function CloneTermPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-0.5">Source Term</label>
+                        <label htmlFor="clone-source-term" className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-0.5">Source Term <span className="text-error-600">*</span></label>
                         <Select
+                          id="clone-source-term"
                           value={sourceTermId}
-                          onChange={(val) => setSourceTermId(val)}
+                          onChange={(val) => {
+                            setSourceTermId(val);
+                            setTermSelectionErrors((previous) => {
+                              const next = { ...previous };
+                              delete next.sourceTerm;
+                              if (val !== targetTermId) delete next.targetTerm;
+                              return next;
+                            });
+                          }}
                           options={sourceTermOptions}
                           placeholder="Select Source Term"
                           className="w-full"
+                          aria-required
+                          aria-invalid={Boolean(termSelectionErrors.sourceTerm)}
+                          aria-describedby={termSelectionErrors.sourceTerm ? "clone-source-term-error" : undefined}
                           triggerClassName="h-[46px] w-full flex items-center justify-between border px-4 py-2 text-xs font-bold bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-slate-800 dark:text-white transition-all cursor-pointer rounded-none"
                         />
+                        {termSelectionErrors.sourceTerm && <p id="clone-source-term-error" role="alert" className="mt-1 text-sm text-error-600">{termSelectionErrors.sourceTerm}</p>}
                       </div>
                     </div>
 
@@ -869,15 +836,27 @@ export default function CloneTermPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-0.5">Target Term</label>
+                        <label htmlFor="clone-target-term" className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-0.5">Target Term <span className="text-error-600">*</span></label>
                         <Select
+                          id="clone-target-term"
                           value={targetTermId}
-                          onChange={(val) => setTargetTermId(val)}
+                          onChange={(val) => {
+                            setTargetTermId(val);
+                            setTermSelectionErrors((previous) => {
+                              const next = { ...previous };
+                              delete next.targetTerm;
+                              return next;
+                            });
+                          }}
                           options={targetTermOptions}
                           placeholder="Select Target Term"
                           className="w-full"
+                          aria-required
+                          aria-invalid={Boolean(termSelectionErrors.targetTerm)}
+                          aria-describedby={termSelectionErrors.targetTerm ? "clone-target-term-error" : undefined}
                           triggerClassName="h-[46px] w-full flex items-center justify-between border px-4 py-2 text-xs font-bold bg-white dark:bg-slate-900 text-slate-800 border-slate-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-slate-800 dark:text-white transition-all cursor-pointer rounded-none"
                         />
+                        {termSelectionErrors.targetTerm && <p id="clone-target-term-error" role="alert" className="mt-1 text-sm text-error-600">{termSelectionErrors.targetTerm}</p>}
                       </div>
                     </div>
                   </div>
@@ -885,7 +864,7 @@ export default function CloneTermPage() {
                   <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
                     <button
                       onClick={handlePreview}
-                      disabled={loadingPreview || !sourceTermId || !targetTermId}
+                      disabled={loadingPreview}
                       className="w-full flex items-center justify-center gap-2.5 rounded-none bg-[#0047FF] hover:bg-blue-700 disabled:bg-[#0047FF] disabled:opacity-50 disabled:cursor-not-allowed py-4 text-xs font-black uppercase tracking-wider text-white transition-colors cursor-pointer shadow-theme-xs"
                     >
                       {loadingPreview ? (
@@ -954,19 +933,20 @@ export default function CloneTermPage() {
             {/* Right Column - Summary Panel */}
             <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-6 shadow-theme-sm rounded-none space-y-6">
               <div>
-                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest border-b pb-3 mb-4">Clone Summary</h3>
+                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest border-b pb-3 mb-4">Term comparison</h3>
                 <div className="flex flex-col items-center text-center py-6 bg-slate-50 dark:bg-slate-800/40 p-4 border border-slate-100 dark:border-slate-800 rounded-none">
                   <div className="w-14 h-14 bg-[#0047FF]/10 text-[#0047FF] flex items-center justify-center mb-3 rounded-none">
                     <Sparkles className="w-6 h-6" />
                   </div>
-                  <h4 className="font-bold text-xs text-slate-800 dark:text-white uppercase tracking-wide">Ready to Duplicate</h4>
+                  <h4 className="font-bold text-xs text-slate-800 dark:text-white uppercase tracking-wide">Review both terms</h4>
                   <p className="text-[10px] text-slate-400 font-medium leading-relaxed max-w-[200px] mt-1">
-                    Select source and target terms to see preview of all items that can be cloned.
+                    See what each term already contains. Continue to choose the items to clone.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-4 text-xs font-bold">
+                <p className="text-right text-[10px] font-semibold text-slate-400">Source / Target</p>
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
                   <span className="text-slate-400 flex items-center gap-2 font-semibold">
                     <Calendar className="w-4 h-4 text-slate-400" /> Source Term
@@ -988,7 +968,7 @@ export default function CloneTermPage() {
                     <BookOpen className="w-4 h-4 text-slate-400" /> Classes
                   </span>
                   <span className="font-black text-slate-800 dark:text-white">
-                    {sourceTermId ? getTermStats(sourceTermId).classes : 0}
+                    {sourceInfoQuery.data?.counts.classes ?? "—"} / {targetInfoQuery.data?.counts.classes ?? "—"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
@@ -996,7 +976,7 @@ export default function CloneTermPage() {
                     <Trophy className="w-4 h-4 text-amber-500" /> Leagues
                   </span>
                   <span className="font-black text-[#0047FF]">
-                    {sourceTermId ? getTermStats(sourceTermId).leagues : 0}
+                    {sourceInfoQuery.data?.counts.leagues ?? "—"} / {targetInfoQuery.data?.counts.leagues ?? "—"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
@@ -1004,7 +984,7 @@ export default function CloneTermPage() {
                     <Shield className="w-4 h-4 text-purple-500" /> Teams
                   </span>
                   <span className="font-black text-slate-800 dark:text-white">
-                    {sourceTermId ? getTermStats(sourceTermId).teams : 0}
+                    {sourceInfoQuery.data?.counts.teams ?? "—"} / {targetInfoQuery.data?.counts.teams ?? "—"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
@@ -1012,7 +992,7 @@ export default function CloneTermPage() {
                     <Users className="w-4 h-4 text-slate-400" /> Players
                   </span>
                   <span className="font-black text-slate-800 dark:text-white">
-                    {sourceTermId ? getTermStats(sourceTermId).players : 0}
+                    {sourceInfoQuery.data?.counts.players ?? "—"} / {targetInfoQuery.data?.counts.players ?? "—"}
                   </span>
                 </div>
               </div>
@@ -1525,13 +1505,36 @@ export default function CloneTermPage() {
       </Modal>
 
       {/* Loader Modal */}
-      <Modal isOpen={showLoaderModal} onClose={() => { }} showCloseButton={false} className="max-w-[400px] p-6 lg:p-8 rounded-none shadow-2xl text-center">
-        <div className="flex flex-col items-center justify-center py-6 gap-4">
-          <div className="w-12 h-12 border-4 border-[#0047FF] border-t-transparent rounded-full animate-spin" />
-          <h4 className="text-base font-bold text-slate-800 dark:text-white uppercase tracking-wider">Cloning Term Data...</h4>
-          <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[280px]">
-            Don't close window, please wait some time. You are cloning term data (classes, leagues, and teams)...
+      <Modal isOpen={showLoaderModal} onClose={() => { }} showCloseButton={false} className="max-w-[440px] p-6 lg:p-8 rounded-none shadow-2xl">
+        <div role="status" className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-base font-bold text-slate-800 dark:text-white">Cloning term data</h4>
+              <p className="mt-1 text-xs text-slate-500">Classes, teams, and leagues</p>
+            </div>
+            <strong className="text-2xl text-[#0047FF]">{cloneProgress ? `${cloneProgress.percent}%` : "…"}</strong>
+          </div>
+          <div
+            role="progressbar"
+            aria-label="Term clone progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={cloneProgress?.percent ?? 0}
+            className="h-3 w-full overflow-hidden bg-slate-100 dark:bg-slate-800"
+          >
+            <div className="h-full bg-[#0047FF] transition-[width] duration-300" style={{ width: `${cloneProgress?.percent ?? 0}%` }} />
+          </div>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200" aria-live="polite">
+            {cloneProgress?.message || "Waiting for the server to prepare the clone…"}
           </p>
+          <span className="inline-flex border border-blue-100 bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#0047FF] dark:border-blue-900 dark:bg-blue-950/30">
+            {cloneProgress ? cloneStageLabel[cloneProgress.stage] : "Preparing"}
+          </span>
+          <div className="flex justify-between border-t border-slate-100 pt-3 text-xs dark:border-slate-800">
+            <span className="text-slate-500">Processed: <strong className="text-slate-800 dark:text-white">{cloneProgress ? `${cloneProgress.completed} / ${cloneProgress.total}` : "—"}</strong></span>
+            <span className="text-slate-500">Items remaining: <strong className="text-slate-800 dark:text-white">{cloneProgress?.remaining ?? "—"}</strong></span>
+          </div>
+          <p className="text-[11px] leading-5 text-slate-500">100% means the clone has been saved. Player rosters are copied with their class or team.</p>
         </div>
       </Modal>
     </>

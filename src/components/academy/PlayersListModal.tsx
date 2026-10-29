@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../ui/modal";
 import { UnallocatedPlayer } from "../../types/academy";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
-import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
 interface PlayersListModalProps {
   isOpen: boolean;
@@ -27,10 +26,9 @@ export default function PlayersListModal({ isOpen, onClose, title, players, onAs
   }, [isOpen, title]);
 
   const filteredPlayers = useMemo(() => {
-    const orderedPlayers = sortPlayersByPaymentStatus(players, (player) => player.paymentStatus);
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return orderedPlayers;
-    return orderedPlayers.filter((player) => {
+    if (!query) return players;
+    return players.filter((player) => {
       const searchable = [
         player.name,
         player.details,

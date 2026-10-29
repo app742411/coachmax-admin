@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Edit3, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
-import { Link } from "react-router";
+import { Edit3, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUpRight } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 import { useDeleteStoreProduct } from "../../hooks/useProducts";
 import { toast } from "react-hot-toast";
 import { getMediaUrl, MEDIA_PLACEHOLDER } from "../../utils/media";
@@ -11,6 +11,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) => {
+  const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -51,7 +52,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
 
   return (
     <>
-      <div className="group bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 relative flex flex-col h-full">
+      <div
+        role="link"
+        tabIndex={0}
+        aria-label={`View details and sales for ${product.name}`}
+        onClick={() => navigate(`/products/${product._id}`)}
+        onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); navigate(`/products/${product._id}`); } }}
+        className="group bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 relative flex flex-col h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+      >
 
         {/* Out of Stock Label */}
         {product.availabilityStatus === "OUT_OF_STOCK" && (
@@ -66,8 +74,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
         )}
 
         {/* Status Toggle / Actions Overlay */}
-        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
-          <Link to={`/edit-product/${product._id}`} className="p-2 bg-white text-gray-800 rounded-none shadow-xl hover:bg-brand-500 hover:text-white transition-all">
+        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+          <Link to={`/edit-product/${product._id}`} onClick={(event) => event.stopPropagation()} className="p-2 bg-white text-gray-800 rounded-none shadow-xl hover:bg-brand-500 hover:text-white transition-all">
             <Edit3 size={16} />
           </Link>
           <button
@@ -86,6 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
         <div className="h-64 bg-gray-50 dark:bg-gray-800 flex items-center justify-center relative overflow-hidden">
           <img
             src={getImageUrl(images[currentImageIndex])}
+            onError={(event) => { if (!event.currentTarget.src.endsWith(MEDIA_PLACEHOLDER)) event.currentTarget.src = MEDIA_PLACEHOLDER; }}
             className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
             alt={product.name}
           />
@@ -134,11 +143,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, getCategoryName }) =
           )}
           <p className="text-gray-400 text-xs font-medium mb-4 line-clamp-2 min-h-[32px]">{product.shortHighlight || product.description}</p>
 
-          <div className="flex items-center pt-4 mt-auto border-t border-gray-50 dark:border-gray-800">
+          <div className="flex items-center justify-between gap-3 pt-4 mt-auto border-t border-gray-50 dark:border-gray-800">
             <div>
               <span className="text-xs font-bold text-gray-400 block mb-0.5">Starting at</span>
               <span className="text-xl font-bold text-brand-600 block tracking-tighter">${product.price} AUD</span>
             </div>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-600">Details & sales <ArrowUpRight size={14} /></span>
           </div>
         </div>
       </div>

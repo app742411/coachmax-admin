@@ -9,6 +9,8 @@ export interface VerificationFilters {
   term?: string;
   category?: string;
   program?: string;
+  group?: string;
+  submittedBy?: string;
 }
 
 export const fetchVerificationRequests = async (page: number, limit: number, filters: VerificationFilters = {}) => {
@@ -18,7 +20,7 @@ export const fetchVerificationRequests = async (page: number, limit: number, fil
   return response.data;
 };
 
-export const rejectVerificationRequest = async (requestId: string, reason: string) => {
+export const rejectAndDeleteVerificationRequest = async (requestId: string, reason: string) => {
   const response = await apiClient.patch(`/api/admin/registration-requests/${requestId}/reject`, { reason });
   return response.data;
 };

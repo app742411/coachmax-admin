@@ -190,58 +190,172 @@ layer(base);
   }
 }
 
-/* Shared visual treatment for CoachMax admin forms. Keep checkboxes, radios,
-   file inputs, and range controls native so their intended affordances remain. */
-[data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+/* Consistent CoachMax navy title bar used by create/edit forms and modal forms. */
+.coachmax-form-header {
+  min-height: 68px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  overflow: hidden;
+}
+
+.coachmax-form-header > div:last-child button[aria-label*="close" i] {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: rgb(255 255 255 / 88%);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.coachmax-form-header > div:last-child button[aria-label*="close" i]:hover {
+  background-color: rgb(255 255 255 / 14%);
+  color: #fff;
+}
+
+/* Shared form controls. Exclude selection, upload, and slider controls so their
+   native and purpose-built interaction states remain intact. */
+form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]), select, textarea),
 .coachmax-select-trigger {
+  display: block;
+  width: 100%;
   min-height: 44px;
   border-radius: 8px;
+  border-style: solid;
+  border-width: 1px;
   border-color: #d0d5dd;
   background-color: #fff;
   color: #101828;
   font-family: Outfit, sans-serif;
   font-size: 14px;
   line-height: 1.4;
+  padding: 10px 14px;
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
-[data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):focus,
+.coachmax-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]), select, textarea):focus,
 .coachmax-select-trigger:focus-visible {
   border-color: #0047ff;
   outline: none;
   box-shadow: 0 0 0 3px rgb(0 71 255 / 14%);
 }
 
-[data-coachmax-form] textarea {
-  min-height: 120px;
+form textarea {
+  min-height: 132px;
   resize: vertical;
 }
 
-[data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea)[aria-invalid="true"],
-.coachmax-select-trigger[aria-invalid="true"] {
-  border-color: #d92d20;
+form input[type="file"] {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font-family: Outfit, sans-serif;
+  font-size: 13px;
+  padding: 6px 8px;
 }
 
-[data-coachmax-form] label:not(:has(input[type="checkbox"], input[type="radio"])) {
+form input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  border: 0;
+  border-radius: 6px;
+  background: #f2f4f7;
+  color: #344054;
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+form input[type="file"]::file-selector-button:hover {
+  background: #e4e7ec;
+}
+
+form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]), select, textarea)[aria-invalid="true"],
+.coachmax-select-trigger[aria-invalid="true"] {
+  border-color: #d92d20;
+  box-shadow: 0 0 0 3px rgb(217 45 32 / 10%);
+}
+
+form label:not(:has(input[type="checkbox"], input[type="radio"])) {
   color: #344054;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
 }
 
-.dark [data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+.dark form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]), select, textarea),
 .dark .coachmax-select-trigger {
   border-color: #475467;
   background-color: #101828;
   color: #f9fafb;
 }
 
-.dark [data-coachmax-form] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea)::placeholder {
+.dark form input[type="file"] {
+  border-color: #475467;
+  background-color: #101828;
+  color: #f9fafb;
+}
+
+.dark form input[type="file"]::file-selector-button {
+  background: #344054;
+  color: #f9fafb;
+}
+
+.dark form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]), select, textarea)::placeholder {
   color: #98a2b3;
 }
 
-.dark [data-coachmax-form] label:not(:has(input[type="checkbox"], input[type="radio"])) {
+.dark form label:not(:has(input[type="checkbox"], input[type="radio"])) {
   color: #d0d5dd;
+}
+
+form :is(input, select, textarea):disabled {
+  background-color: #f2f4f7;
+  color: #667085;
+  cursor: not-allowed;
+}
+
+form button[type="submit"] {
+  min-height: 44px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.coachmax-form-actions button {
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+.coachmax-field-error {
+  color: #b42318;
+}
+
+form p[role="alert"] {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #b42318;
+}
+
+.dark form p[role="alert"] {
+  color: #fda29b;
+}
+
+.dark .coachmax-field-error {
+  color: #fda29b;
 }
 
 @utility menu-item {
@@ -891,4 +1005,53 @@ span.flatpickr-weekday,
 /* Ensure Flatpickr calendar popups float cleanly over modals */
 .flatpickr-calendar {
   z-index: 9999999 !important;
+}
+
+@keyframes dashboard-quick-action-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-quick-action {
+  animation: dashboard-quick-action-enter 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.dashboard-quick-action:hover {
+  border-color: rgb(0 71 255 / 40%);
+  box-shadow: 0 8px 20px rgb(15 23 42 / 9%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-quick-action,
+  .dashboard-quick-action * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Keep the player filter row's search, export, and dropdown controls aligned. */
+.player-filter-select .coachmax-select-trigger {
+  height: 44px;
+  min-height: 44px;
+  border-radius: 0;
+  padding: 0 12px;
+  font-size: 12px;
+  line-height: 1.25;
+  box-shadow: none;
+}
+
+.program-toolbar-select .coachmax-select-trigger {
+  height: 44px;
+  min-height: 44px;
+  border-radius: 0;
+  padding: 0 12px;
+  font-size: 14px;
+  line-height: 1.25;
 }

@@ -16,6 +16,28 @@ import { findCurrentTerm } from "../../hooks/useCurrentTerm";
 import { addDateOnlyDays, formatDateOnly, todayDateOnly, toDateOnly } from "../../utils/dateTime";
 import { chatApi } from "../../services/chatApi";
 import ChatActionButton from "../chat/ChatActionButton";
+import FormHeader from "../form/FormHeader";
+import FormStepIndicator from "../form/FormStepIndicator";
+import FormActions from "../form/FormActions";
+import { requiredText, validateWithSchema, type FormErrors } from "../../utils/formValidation";
+import { z } from "zod";
+
+const leagueIdentitySchema = z.object({
+  name: requiredText("League name"),
+  term: requiredText("Academic term"),
+  type: requiredText("League type"),
+});
+
+const leagueRulesSchema = z.object({
+  fee: z.preprocess(
+    (value) => value === "" || value === null || value === undefined ? Number.NaN : Number(value),
+    z.number().finite("Enter a valid league fee.").min(0, "League fee must be 0 or more."),
+  ),
+  rounds: z.preprocess(
+    (value) => value === "" || value === null || value === undefined ? Number.NaN : Number(value),
+    z.number().finite("Enter a valid round count.").int("Round count must be a whole number.").min(1, "Round count must be at least 1."),
+  ),
+});
 
 const WEEKDAYS = [
   { label: "Mon", full: "Monday", dayIndex: 1 },
@@ -58,7 +80,7 @@ const LeagueManagement: React.FC = () => {
   const endDateRef = useRef<HTMLInputElement>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<FormErrors>({});
   const [isEditing, setIsEditing] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
@@ -126,10 +148,21 @@ const LeagueManagement: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [cropLogoFile, setCropLogoFile] = useState<File | null>(null);
 
+  const clearValidationError = (field: keyof FormErrors, valid: boolean) => {
+    if (!valid) return;
+    setValidationErrors((previous) => {
+      if (!previous[field]) return previous;
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  };
+
   // Sync sessionDates array length whenever numberOfRounds changes
   const handleRoundsChange = (val: number) => {
     const rounds = Math.max(1, Math.min(50, val || 1));
     setFormData((prev) => ({ ...prev, numberOfRounds: rounds }));
+    clearValidationError("rounds", Number.isInteger(rounds) && rounds >= 1);
     setSessionDates((prev) => {
       const next = [...prev];
       if (rounds > next.length) {
@@ -152,6 +185,7 @@ const LeagueManagement: React.FC = () => {
     const updated = [...sessionDates];
     updated[idx] = val;
     setSessionDates(updated);
+    clearValidationError("dates", updated.filter(Boolean).length >= Number(formData.numberOfRounds));
   };
 
   const getDataArray = (res: any) => {
@@ -194,6 +228,7 @@ const LeagueManagement: React.FC = () => {
   };
 
   const handleTermChange = (termId: string) => {
+    clearValidationError("term", Boolean(termId));
     const selectedTermObj = terms.find((t: any) => String(t._id || t.id) === String(termId));
     const termStart = selectedTermObj?.startDate ? formatDateForInput(selectedTermObj.startDate) : "";
     const termEnd = selectedTermObj?.endDate ? formatDateForInput(selectedTermObj.endDate) : "";
@@ -301,7 +336,7 @@ const LeagueManagement: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
-    setValidationErrors([]);
+    setValidationErrors({});
     const currentYear = new Date().getFullYear().toString();
     setFormData({
       name: "",
@@ -341,7 +376,7 @@ const LeagueManagement: React.FC = () => {
   };
 
   const handleOpenEdit = (league: any) => {
-    setValidationErrors([]);
+    setValidationErrors({});
     const rounds = league.numberOfRounds ?? 1;
     const termId = typeof league.term === "object" ? league.term?._id : (league.term || league.termId || "");
     const yearVal = league.year || league.term?.year || (league.term?.startDate ? toDateOnly(league.term.startDate).slice(0, 4) : new Date().getFullYear().toString());
@@ -451,40 +486,30 @@ const LeagueManagement: React.FC = () => {
   };
 
   const validateStep1 = () => {
-    const errors: string[] = [];
-    if (!formData.name.trim()) errors.push("League name is required.");
-    if (!formData.term) errors.push("Select an academic term.");
-    if (!formData.type) errors.push("Select a league type.");
-    setValidationErrors(errors);
-    return errors.length === 0;
+    const result = validateWithSchema(leagueIdentitySchema, formData);
+    setValidationErrors((previous) => {
+      const next = { ...previous };
+      ["name", "term", "type"].forEach((field) => delete next[field]);
+      return { ...next, ...result.errors };
+    });
+    return result.success;
   };
 
-  const getValidationError = (field: "name" | "term" | "type" | "fee" | "rounds" | "dates") => {
-    const patterns: Record<typeof field, RegExp> = {
-      name: /league name/i,
-      term: /academic term/i,
-      type: /league type/i,
-      fee: /league fee/i,
-      rounds: /round count/i,
-      dates: /session date/i,
-    };
-    return validationErrors.find((message) => patterns[field].test(message));
-  };
+  const getValidationError = (field: "name" | "term" | "type" | "fee" | "rounds" | "dates") => validationErrors[field];
 
   const validateStep2 = () => {
-    const errors: string[] = [];
+    const result = validateWithSchema(leagueRulesSchema, { fee: formData.fee, rounds: formData.numberOfRounds });
     const validDates = sessionDates.filter(Boolean);
-    if (validDates.length < formData.numberOfRounds) {
-      errors.push(`Select a session date for all ${formData.numberOfRounds} round(s).`);
+    const errors = { ...result.errors };
+    if (validDates.length < Number(formData.numberOfRounds)) {
+      errors.dates = `Select a session date for all ${formData.numberOfRounds} round(s).`;
     }
-    if (formData.fee === "" || !Number.isFinite(Number(formData.fee)) || Number(formData.fee) < 0) {
-      errors.push("Enter a valid league fee of 0 or more.");
-    }
-    if (formData.numberOfRounds < 1 || !Number.isInteger(Number(formData.numberOfRounds))) {
-      errors.push("Round count must be a whole number of at least 1.");
-    }
-    setValidationErrors(errors);
-    return errors.length === 0;
+    setValidationErrors((previous) => {
+      const next = { ...previous };
+      ["fee", "rounds", "dates"].forEach((field) => delete next[field]);
+      return { ...next, ...errors };
+    });
+    return result.success && !errors.dates;
   };
 
   const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
@@ -511,7 +536,7 @@ const LeagueManagement: React.FC = () => {
     // Validate sessionDates — must match numberOfRounds
     const validDates = sessionDates.filter(Boolean);
     if (validDates.length < formData.numberOfRounds) {
-      setValidationErrors([`Select a session date for all ${formData.numberOfRounds} round(s).`]);
+      setValidationErrors((previous) => ({ ...previous, dates: `Select a session date for all ${formData.numberOfRounds} round(s).` }));
       setCurrentStep(2);
       return;
     }
@@ -527,7 +552,7 @@ const LeagueManagement: React.FC = () => {
       if (!effectiveEnd) effectiveEnd = sorted[sorted.length - 1];
     }
 
-    setValidationErrors([]);
+    setValidationErrors({});
     const payload = new FormData();
     payload.append("name", formData.name.trim());
     if (formData.term) {
@@ -857,69 +882,38 @@ const LeagueManagement: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         className="max-w-[920px] max-h-[92vh] overflow-y-auto p-6 lg:p-8 rounded-xl shadow-2xl"
         noBackgroundBlur={true}
+        showCloseButton={false}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-xl text-brand-600">
-              <Trophy size={24} />
-            </div>
-            <div>
-              <h4 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
-                {isEditing ? "Modify League" : "Create New League"}
-              </h4>
-              <p className="text-xs text-slate-500 font-medium">
-                Step {currentStep} of 3: {
-                  currentStep === 1
-                    ? "Basic Information & Logo"
-                    : currentStep === 2
-                    ? "Fixtures & Scoring Rules"
-                    : "Participating Teams"
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Stepper Tabs */}
-          <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-100/70 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700/80">
-            {[
-              { step: 1 as const, label: "1. Basic Info & Logo" },
-              { step: 2 as const, label: "2. Fixtures & Rules" },
-              { step: 3 as const, label: "3. Participating Teams" },
-            ].map((s) => {
-              const isCurrent = currentStep === s.step;
-              const isDone = currentStep > s.step;
-
-              return (
-                <button
-                  key={s.step}
-                  type="button"
-                  onClick={() => {
-                    if (s.step === 1) setCurrentStep(1);
-                    else if (s.step === 2) {
-                      if (validateStep1()) setCurrentStep(2);
-                    } else if (s.step === 3) {
-                      if (validateStep1() && validateStep2()) setCurrentStep(3);
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    isCurrent
-                      ? "bg-brand-600 text-white shadow-xs"
-                      : isDone
-                      ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/40"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                  }`}
-                >
-                  <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-extrabold ${
-                    isCurrent ? "bg-white text-brand-600" : isDone ? "bg-brand-600 text-white" : "bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                  }`}>
-                    {isDone ? "✓" : s.step}
-                  </span>
-                  <span>{s.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <FormHeader
+          icon={Trophy}
+          title={isEditing ? "Modify League" : "Create New League"}
+          description={`Step ${currentStep} of 3: ${currentStep === 1 ? "Basic Information & Logo" : currentStep === 2 ? "Fixtures & Scoring Rules" : "Participating Teams"}`}
+          className="-mx-6 -mt-6 mb-4 rounded-t-xl border-b border-[#082269] lg:-mx-8 lg:-mt-8"
+          actions={(
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              aria-label="Close league form"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        />
+        <FormStepIndicator
+          className="mb-5 border-b border-gray-100 pb-4 dark:border-gray-800"
+          currentStep={currentStep}
+          steps={[
+            { label: "Basic information", description: "League identity & logo" },
+            { label: "Fixtures & rules", description: "Schedule and scoring" },
+            { label: "Participating teams", description: "Choose teams" },
+          ]}
+          onStepSelect={(step) => {
+            if (step === 1) setCurrentStep(1);
+            else if (step === 2 && validateStep1()) setCurrentStep(2);
+            else if (step === 3 && validateStep1() && validateStep2()) setCurrentStep(3);
+          }}
+        />
 
         <div data-coachmax-form
           onKeyDown={(e) => {
@@ -929,10 +923,9 @@ const LeagueManagement: React.FC = () => {
           }}
           className="space-y-6"
         >
-          {validationErrors.length > 0 && (
-            <div role="alert" aria-live="polite" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-              <p className="font-bold">Please fix these required fields:</p>
-              <ul className="mt-1 list-disc pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
+          {Object.keys(validationErrors).length > 0 && (
+            <div role="status" aria-live="polite" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+              Please correct the {Object.keys(validationErrors).length} highlighted field{Object.keys(validationErrors).length === 1 ? "" : "s"} to continue.
             </div>
           )}
           {/* STEP 1: Basic Information & Logo */}
@@ -956,7 +949,7 @@ const LeagueManagement: React.FC = () => {
                   id="league-name"
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => { const name = e.target.value; setFormData({ ...formData, name }); clearValidationError("name", Boolean(name.trim())); }}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   placeholder="e.g. Premier Youth League"
                   aria-required="true"
@@ -1018,7 +1011,7 @@ const LeagueManagement: React.FC = () => {
                 <select
                   id="league-type"
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  onChange={(e) => { const type = e.target.value; setFormData({ ...formData, type }); clearValidationError("type", Boolean(type)); }}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white cursor-pointer"
                   aria-required="true"
                   aria-invalid={Boolean(getValidationError("type"))}
@@ -1348,7 +1341,11 @@ const LeagueManagement: React.FC = () => {
                   min={0}
                   step="any"
                   value={formData.fee}
-                  onChange={(e) => setFormData({ ...formData, fee: e.target.value === "" ? "" : Number(e.target.value) })}
+                  onChange={(e) => {
+                    const fee = e.target.value === "" ? "" : Number(e.target.value);
+                    setFormData({ ...formData, fee });
+                    clearValidationError("fee", validateWithSchema(leagueRulesSchema.pick({ fee: true }), { fee }).success);
+                  }}
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold focus:border-brand-500 outline-none text-slate-900 dark:text-white"
                   placeholder="e.g. 150 (0 = free)"
                   aria-required="true"
@@ -1721,7 +1718,7 @@ const LeagueManagement: React.FC = () => {
           )}
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <FormActions className="-mx-6 -mb-6 mt-5 rounded-b-xl justify-between lg:-mx-8 lg:-mb-8">
             <div>
               {currentStep > 1 ? (
                 <button
@@ -1773,7 +1770,7 @@ const LeagueManagement: React.FC = () => {
                 </Button>
               )}
             </div>
-          </div>
+          </FormActions>
         </div>
       </Modal>
 

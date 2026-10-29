@@ -1,12 +1,12 @@
 import { UnallocatedPlayer } from "../../types/academy";
-import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
+import SidebarPlayerPagination from "./SidebarPlayerPagination";
 
 interface AllocatedPlayersCardProps {
   players: UnallocatedPlayer[];
   totalCount: number;
-  hasMore: boolean;
-  onLoadMore: () => void;
-  isLoadingMore?: boolean;
+  page: number;
+  onPageChange: (page: number) => void;
+  isLoading?: boolean;
   onAssignPlayer?: (player: any) => void;
   onViewAll?: () => void;
 }
@@ -14,13 +14,12 @@ interface AllocatedPlayersCardProps {
 export default function AllocatedPlayersCard({
   players,
   totalCount,
-  hasMore,
-  onLoadMore,
-  isLoadingMore,
+  page,
+  onPageChange,
+  isLoading,
   onAssignPlayer,
   onViewAll
 }: AllocatedPlayersCardProps) {
-  const orderedPlayers = sortPlayersByPaymentStatus(players, (player) => player.paymentStatus);
   const renderStars = (count: number) => {
     return (
       <div className="flex gap-0.5 text-amber-500">
@@ -58,12 +57,14 @@ export default function AllocatedPlayersCard({
       </div>
 
       <div className="space-y-3.5 mb-4">
-        {players.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-6 text-slate-400 text-xs font-semibold">Loading players…</div>
+        ) : players.length === 0 ? (
           <div className="text-center py-6 text-slate-400 text-xs font-semibold">
             No allocated players
           </div>
         ) : (
-          orderedPlayers.map((p) => (
+          players.map((p) => (
             <div
               key={p.id}
               className="flex gap-3 items-start justify-between cursor-move hover:border-blue-200 dark:hover:border-blue-900/50 hover:shadow-md transition-all p-2.5 rounded-md border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/50"
@@ -146,19 +147,7 @@ export default function AllocatedPlayersCard({
         )}
       </div>
 
-      {/* Load More Button */}
-      {hasMore && (
-        <div className="flex justify-center pt-2 border-t border-slate-100 dark:border-slate-800">
-          <button
-            type="button"
-            disabled={isLoadingMore}
-            onClick={onLoadMore}
-            className="w-full py-2 text-[9px] font-bold border border-slate-200 dark:border-slate-850 text-[#0047FF] hover:bg-[#0047FF]/5 disabled:opacity-50 rounded transition-all cursor-pointer select-none"
-          >
-            {isLoadingMore ? "Loading..." : "Load More"}
-          </button>
-        </div>
-      )}
+      <SidebarPlayerPagination label="Allocated players" page={page} totalItems={totalCount} onPageChange={onPageChange} isLoading={isLoading} />
     </div>
   );
 }

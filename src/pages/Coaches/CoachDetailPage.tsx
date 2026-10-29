@@ -14,7 +14,7 @@ const dateLabel = (value?: string | null, timestamp = false) => (timestamp ? for
 
 const formatTime = (value?: string) => value || "Time not set";
 const classLink = (navigate: ReturnType<typeof useNavigate>, classId?: string | null) => {
-  if (classId) navigate("/programs-2", { state: { classId } });
+  if (classId) navigate("/classes", { state: { classId } });
 };
 
 export default function CoachDetailPage() {

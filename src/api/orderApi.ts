@@ -53,6 +53,53 @@ export const getStoreProductDetails = async (id: string) => {
   return response.data;
 };
 
+export interface ProductInsights {
+  product: {
+    _id: string;
+    name: string;
+    shortHighlight?: string;
+    description?: string;
+    images: string[];
+    category?: { name: string };
+    price: number;
+    stock: number;
+    sizes: string[];
+    colors: string[];
+    availabilityStatus: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  summary: {
+    orderCount: number;
+    unitsOrdered: number;
+    unitsSold: number;
+    paidRevenueMinor: number;
+    pendingRevenueMinor: number;
+    cancelledOrders: number;
+    refundedOrders: number;
+    buyerCount: number;
+  };
+  orders: Array<{
+    _id: string;
+    parent?: { _id: string; fullName?: string; email?: string; phone?: string };
+    quantity: number;
+    lineTotalMinor: number;
+    variants: Array<{ size?: string; color?: string; quantity: number }>;
+    paymentStatus: string;
+    orderStatus: string;
+    invoice?: { invoiceNumber?: string; paymentStatus?: string };
+    createdAt: string;
+    currency: string;
+  }>;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export const getProductInsights = async (id: string, page = 1): Promise<ProductInsights> => {
+  const response = await apiClient.get(`/api/admin/store/products/${id}/insights`, { params: { page, limit: 10 } });
+  return response.data.data;
+};
+
 export const createStoreProduct = async (payload: FormData) => {
   const response = await apiClient.post("/api/admin/store/products", payload, {
     headers: { "Content-Type": "multipart/form-data" }

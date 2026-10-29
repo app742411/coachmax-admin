@@ -145,7 +145,7 @@ const EditNewsModal: React.FC<EditNewsModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-y-auto no-scrollbar my-8 rounded-none">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-y-auto no-scrollbar my-8 rounded-xl">
       <div className="bg-white dark:bg-gray-900 p-6 space-y-6">
         <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
           <div className="p-2 bg-white/10 rounded-none text-white">

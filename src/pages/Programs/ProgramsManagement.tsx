@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import PageMeta from "../../components/common/PageMeta";
 import { usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram } from "../../hooks/usePrograms";
 import { Program, CreateProgramRequest } from "../../types/program";
+import { Layers, X } from "lucide-react";
+import FormHeader from "../../components/form/FormHeader";
 
 const CATEGORY_OPTIONS = ["Academy", "School", "Holiday Camp", "1on1 Session", "Other"];
 
@@ -302,29 +304,17 @@ export default function ProgramsManagement() {
       {/* Add / Edit Modal */}
       {modalMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-none shadow-2xl overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-800">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                  {modalMode === "add" ? "Add New Program" : "Edit Program"}
-                </h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {modalMode === "add" ? "Fill in the details to create a program." : "Update the program details below."}
-                </p>
-              </div>
-              <button
-                onClick={closeModal}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-none transition-colors"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
+          <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+            <FormHeader
+              icon={Layers}
+              title={modalMode === "add" ? "Add New Program" : "Edit Program"}
+              description={modalMode === "add" ? "Fill in the details to create a program." : "Update the program details below."}
+              className="border-b border-[#082269]"
+              actions={<button type="button" onClick={closeModal} aria-label="Close program form" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>}
+            />
 
             {/* Modal Body */}
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form data-coachmax-form noValidate onSubmit={handleSubmit(onSubmit)}>
               <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
                 {mutationError && (
                   <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-none text-sm">

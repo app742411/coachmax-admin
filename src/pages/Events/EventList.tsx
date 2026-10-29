@@ -17,7 +17,8 @@ import {
     Image as ImageIcon,
     Trash2,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Plus
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Dropdown } from "../../components/ui/dropdown/Dropdown";
@@ -25,7 +26,10 @@ import { DropdownItem } from "../../components/ui/dropdown/DropdownItem";
 import ConfirmDeleteModal from "../../components/ui/modal/ConfirmDeleteModal";
 import { formatDateOnly, todayDateOnly, toDateOnly } from "../../utils/dateTime";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 4;
+const EVENT_STATUSES = ["ONGOING", "UPCOMING", "COMPLETED"] as const;
+type EventStatus = typeof EVENT_STATUSES[number];
+const initialSectionPages: Record<EventStatus, number> = { ONGOING: 1, UPCOMING: 1, COMPLETED: 1 };
 
 interface Event {
     _id: string;
@@ -78,47 +82,78 @@ export default function EventList() {
     const [openStatusMenuId, setOpenStatusMenuId] = useState<string | null>(null);
     const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [page, setPage] = useState(1);
+    const [sectionPages, setSectionPages] = useState<Record<EventStatus, number>>(initialSectionPages);
+    const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()));
 
     const today = todayDateOnly();
+    const currentYear = String(new Date().getFullYear());
+    const availableYears = useMemo(() => Array.from(new Set(events
+        .map((event) => (toDateOnly(event.startDate) || toDateOnly(event.endDate)).slice(0, 4))
+        .filter((year) => /^\d{4}$/.test(year)).concat(currentYear)))
+        .sort((a, b) => b.localeCompare(a)), [events, currentYear]);
+
     const orderedEvents = useMemo(() => events
         .map((event) => {
-            const startDate = toDateOnly(event.startDate);
             const endDate = toDateOnly(event.endDate);
-            const status = endDate && endDate < today
-                ? "COMPLETED"
-                : event.status === "UPCOMING" && startDate && startDate <= today
-                    ? "ONGOING"
-                    : event.status;
+            // Keep admin-selected status for active/future events. Ended events
+            // always move to Completed once their end date has passed.
+            const status = endDate && endDate < today ? "COMPLETED" : event.status;
             return { ...event, status };
         })
+        .filter((event) => selectedYear === "all" || (toDateOnly(event.startDate) || toDateOnly(event.endDate)).startsWith(selectedYear))
         .sort((a, b) => {
-            const aCompleted = a.status === "COMPLETED";
-            const bCompleted = b.status === "COMPLETED";
-            if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+            const statusOrder = { ONGOING: 0, UPCOMING: 1, COMPLETED: 2 };
+            const statusCompare = statusOrder[a.status] - statusOrder[b.status];
+            if (statusCompare) return statusCompare;
 
-            if (!aCompleted) {
-                const dateCompare = toDateOnly(a.startDate).localeCompare(toDateOnly(b.startDate));
+            if (a.status === "COMPLETED") {
+                const dateCompare = toDateOnly(b.endDate).localeCompare(toDateOnly(a.endDate));
                 if (dateCompare) return dateCompare;
             } else {
-                const dateCompare = toDateOnly(b.endDate).localeCompare(toDateOnly(a.endDate));
+                const dateCompare = toDateOnly(a.startDate).localeCompare(toDateOnly(b.startDate));
                 if (dateCompare) return dateCompare;
             }
             return a.title.localeCompare(b.title);
-        }), [events, today]);
-    const totalPages = Math.max(1, Math.ceil(orderedEvents.length / PAGE_SIZE));
-    const visibleEvents = orderedEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+        }), [events, today, selectedYear]);
+    const visibleSections = [
+        { status: "ONGOING" as const, title: "Live & Ongoing", description: "Events in progress" },
+        { status: "UPCOMING" as const, title: "Upcoming", description: "Events scheduled to start" },
+        { status: "COMPLETED" as const, title: "Completed", description: "Events past their end date" },
+    ].map((section) => {
+        const sectionEvents = orderedEvents.filter((event) => event.status === section.status);
+        const totalPages = Math.max(1, Math.ceil(sectionEvents.length / PAGE_SIZE));
+        const currentPage = Math.min(sectionPages[section.status], totalPages);
+        return {
+            ...section,
+            count: sectionEvents.length,
+            page: currentPage,
+            totalPages,
+            events: sectionEvents.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+        };
+    }).filter((section) => section.count > 0);
 
     useEffect(() => {
-        if (page > totalPages) setPage(totalPages);
-    }, [page, totalPages]);
+        setSectionPages((current) => {
+            const next = { ...current };
+            let changed = false;
+            EVENT_STATUSES.forEach((status) => {
+                const count = orderedEvents.filter((event) => event.status === status).length;
+                const lastPage = Math.max(1, Math.ceil(count / PAGE_SIZE));
+                if (next[status] > lastPage) {
+                    next[status] = lastPage;
+                    changed = true;
+                }
+            });
+            return changed ? next : current;
+        });
+    }, [orderedEvents]);
 
     const fetchEvents = async () => {
         try {
             const data = await getAllEvents();
             if (data.success) {
                 setEvents(data.data);
-                setPage(1);
+                setSectionPages(initialSectionPages);
             }
         } catch (err) {
             console.error("Error fetching events:", err);
@@ -134,7 +169,10 @@ export default function EventList() {
 
     const handleStatusChange = async (id: string, newStatus: string) => {
         try {
-            await updateEvent(id, { status: newStatus });
+            const result = await updateEvent(id, { status: newStatus });
+            if (result?.success === false) {
+                throw new Error(result.message || "The event status could not be updated.");
+            }
             toast.success(`Event marked as ${newStatus.toLowerCase()}`);
             setEvents(prev => prev.map(ev => ev._id === id ? { ...ev, status: newStatus as any } : ev));
             setOpenStatusMenuId(null);
@@ -179,7 +217,15 @@ export default function EventList() {
                 title="CoachMax | Event Explorer"
                 description="Comprehensive management of all tournaments and coaching programs."
             />
-            <PageBreadcrumb pageTitle="Event Inventory" />
+            <PageBreadcrumb pageTitle="Event Inventory">
+                <Link
+                    to="/add-event"
+                    className="inline-flex items-center justify-center gap-2 bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-theme-xs transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+                >
+                    <Plus size={16} aria-hidden="true" />
+                    Add Event
+                </Link>
+            </PageBreadcrumb>
 
             {loading ? (
                 <div className="flex justify-center items-center py-40">
@@ -187,8 +233,36 @@ export default function EventList() {
                 </div>
             ) : orderedEvents.length > 0 ? (
                 <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {visibleEvents.map((event) => {
+                <div className="mb-6 flex flex-col gap-4 border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="text-sm font-bold text-gray-800 dark:text-white">Event schedule</h2>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Live events first, then upcoming events, with completed events listed last.</p>
+                    </div>
+                    <label className="flex items-center gap-3 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                        <span>Year</span>
+                        <select
+                            aria-label="Filter events by year"
+                            value={selectedYear}
+                            onChange={(e) => { setSelectedYear(e.target.value); setSectionPages(initialSectionPages); }}
+                            className="min-h-11 min-w-40 border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                        >
+                            <option value="all">All years</option>
+                            {availableYears.map((year) => <option key={year} value={year}>{year}</option>)}
+                        </select>
+                    </label>
+                </div>
+                <div className="space-y-8">
+                  {visibleSections.map((section) => (
+                    <section key={section.status} aria-labelledby={`event-section-${section.status}`}>
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                          <h2 id={`event-section-${section.status}`} className="text-lg font-bold text-gray-900 dark:text-white">{section.title}</h2>
+                          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{section.description}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{section.count}</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {section.events.map((event) => {
                         const StatusIcon = statusIcons[event.status];
                         return (
                             <div
@@ -370,34 +444,44 @@ export default function EventList() {
                             </div>
                         );
                     })}
-                </div>
-                {totalPages > 1 && (
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, orderedEvents.length)} of {orderedEvents.length} events
-                        </span>
-                        <div className="flex items-center gap-2">
+                      </div>
+                      {section.totalPages > 1 && (
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                            Showing {(section.page - 1) * PAGE_SIZE + 1}–{Math.min(section.page * PAGE_SIZE, section.count)} of {section.count} {section.status.toLowerCase()} events
+                          </span>
+                          <div className="flex items-center gap-2">
                             <button
-                                type="button"
-                                disabled={page === 1}
-                                onClick={() => setPage((current) => Math.max(1, current - 1))}
-                                className="inline-flex items-center gap-1 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-brand-500 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
+                              type="button"
+                              disabled={section.page === 1}
+                              onClick={() => setSectionPages((current) => ({ ...current, [section.status]: Math.max(1, current[section.status] - 1) }))}
+                              className="inline-flex items-center gap-1 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-brand-500 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
                             >
-                                <ChevronLeft size={14} /> Previous
+                              <ChevronLeft size={14} /> Previous
                             </button>
-                            <span className="px-2 text-xs font-bold text-gray-700 dark:text-gray-200">Page {page} of {totalPages}</span>
+                            <span className="px-2 text-xs font-bold text-gray-700 dark:text-gray-200">Page {section.page} of {section.totalPages}</span>
                             <button
-                                type="button"
-                                disabled={page === totalPages}
-                                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                                className="inline-flex items-center gap-1 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-brand-500 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
+                              type="button"
+                              disabled={section.page === section.totalPages}
+                              onClick={() => setSectionPages((current) => ({ ...current, [section.status]: Math.min(section.totalPages, current[section.status] + 1) }))}
+                              className="inline-flex items-center gap-1 border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-brand-500 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200"
                             >
-                                Next <ChevronRight size={14} />
+                              Next <ChevronRight size={14} />
                             </button>
+                          </div>
                         </div>
-                    </div>
-                )}
+                      )}
+                    </section>
+                  ))}
+                </div>
                 </>
+            ) : events.length > 0 ? (
+                <div className="flex flex-col items-center justify-center border border-dashed border-gray-200 bg-white px-6 py-20 text-center dark:border-gray-800 dark:bg-gray-900">
+                    <Calendar size={40} className="mb-3 text-gray-300 dark:text-gray-600" />
+                    <h2 className="text-base font-bold text-gray-800 dark:text-white">No events for {selectedYear}</h2>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Choose another year to view its events.</p>
+                    <button type="button" onClick={() => { setSelectedYear("all"); setSectionPages(initialSectionPages); }} className="mt-4 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">Show all years</button>
+                </div>
             ) : (
                 <div className="flex flex-col items-center justify-center py-40 bg-white dark:bg-gray-900 rounded-[3rem] border border-dashed border-gray-200 dark:border-gray-800">
                     <AlertCircle size={48} className="text-gray-100 mb-4" />

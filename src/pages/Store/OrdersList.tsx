@@ -1,5 +1,5 @@
 import { formatTimestampDate } from "../../utils/dateTime";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
@@ -11,7 +11,7 @@ export default function OrdersList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
-  const limit = 5;
+  const [limit, setLimit] = useState(5);
   const navigate = useNavigate();
   const { markItemAsRead, isItemRead } = useSidebarBadges();
 
@@ -19,6 +19,11 @@ export default function OrdersList() {
 
   const orders = data?.data || [];
   const pagination = data?.pagination;
+  const totalPages = Math.max(1, pagination?.totalPages || 1);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <>
@@ -32,7 +37,7 @@ export default function OrdersList() {
               type="text" 
               placeholder="Search Orders (e.g. ORD-123)" 
               value={search} 
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full rounded-none border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900"
             />
           </div>
@@ -141,13 +146,15 @@ export default function OrdersList() {
             </table>
           </div>
           
-          {pagination && pagination.totalPages > 1 && (
+          {pagination && pagination.total > 0 && (
             <Pagination
               page={page}
-              totalPages={pagination.totalPages}
+              totalPages={totalPages}
               totalItems={pagination.total}
               limit={limit}
               onPageChange={setPage}
+              onLimitChange={(nextLimit) => { setLimit(nextLimit); setPage(1); }}
+              limitOptions={[5, 10, 20, 50]}
             />
           )}
         </div>

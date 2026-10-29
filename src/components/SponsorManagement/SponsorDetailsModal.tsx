@@ -47,7 +47,7 @@ const SponsorDetailsModal: React.FC<SponsorDetailsModalProps> = ({ isOpen, onClo
   const imageSrc = getMediaUrl(sponsor?.image);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl p-0 overflow-hidden rounded-none border border-slate-200 dark:border-slate-700 shadow-2xl">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl">
       {/* Header with gradient */}
       <div className="bg-[#031549] text-white px-6 py-5">
         <div className="flex items-center justify-between">

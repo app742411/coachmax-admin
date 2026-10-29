@@ -191,7 +191,11 @@ test.describe("CoachMax form design and submission acceptance", () => {
   });
 
   test("store category and product submit required fields and a square cropped image", async ({ page }) => {
-    await page.goto("/add-product");
+    await page.goto("/products");
+    await expect(page.getByRole("link", { name: "Add Product", exact: true })).toBeVisible();
+    await expect(page.locator("aside").getByRole("link", { name: "Add Product", exact: true })).toHaveCount(0);
+    await page.getByRole("link", { name: "Add Product", exact: true }).click();
+    await expect(page).toHaveURL(/\/add-product$/);
     await page.getByRole("button", { name: "Publish to Store", exact: true }).click();
     await expect(page.locator("#product-name-error")).toHaveText("Product name is required.");
     await page.getByRole("button", { name: "Manage Categories", exact: true }).click();
@@ -221,8 +225,71 @@ test.describe("CoachMax form design and submission acceptance", () => {
     expect(uploadedPngDimensions(productRequest, "images")).toEqual({ width: 1200, height: 1200 });
   });
 
+  test("coach and sponsor forms show field-level errors and submit valid data", async ({ page }) => {
+    await page.goto("/coaches");
+    await page.getByRole("button", { name: "Add Coach", exact: true }).click();
+    const coachForm = page.locator('form[data-coachmax-form]');
+    const coachDialogShell = page.locator(".coachmax-form-header").locator("xpath=../..");
+    await expect(coachDialogShell).toHaveCSS("border-top-left-radius", "8px");
+    await expect(coachDialogShell).toHaveCSS("border-bottom-left-radius", "8px");
+    await expect(coachDialogShell).toHaveCSS("overflow-x", "hidden");
+    await coachForm.getByRole("button", { name: "Add Coach", exact: true }).click();
+    await expect(page.locator("#coach-full-name-error")).toHaveText("Full name is required.");
+    await expect(page.locator("#coach-email-error")).toHaveText("Enter a valid email address.");
+    await expect(page.locator("#coach-phone-error")).toHaveText("Enter a valid phone number.");
+    await page.getByLabel("Full Name *").fill("Jordan Coach");
+    await page.getByLabel("Email Identity *").fill("jordan@example.test");
+    await page.getByLabel("Mobile Access *").fill("0400123456");
+    await page.getByLabel("Secure Password *").fill("CoachMax!2026");
+    await page.getByLabel("Confirm Password *").fill("CoachMax!2026");
+    await coachForm.getByRole("button", { name: "Add Coach", exact: true }).click();
+    await expect.poll(() => state.submissions.filter((item) => item.path === "/api/admin/createCoach" && item.method === "POST").length).toBe(1);
+
+    await page.goto("/sponsors");
+    const sponsorForm = page.locator('form[data-coachmax-form]');
+    await sponsorForm.getByRole("button", { name: "Create Sponsor", exact: true }).click();
+    await expect(page.locator("#sponsor-title-error")).toHaveText("Banner title is required.");
+    await expect(page.locator("#sponsor-subtitle-error")).toHaveText("Subtitle or offer is required.");
+    await expect(page.locator("#sponsor-link-error")).toHaveText("Action link is required.");
+    await expect(page.locator("#sponsor-image-error")).toHaveText("Upload a banner image to create this sponsor.");
+    await page.getByLabel("Banner Title *").fill("Season Partner");
+    await page.getByLabel("Subtitle / Offer *").fill("Official training partner");
+    await page.getByLabel("Action Link / URL *").fill("https://example.test/partner");
+    await page.locator('input[type="file"]').setInputFiles(await pngFile(page, "sponsor.png", 1200, 400));
+    await expect(page.getByText("Final file: 1200 × 400 px", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Use this crop", exact: true }).click();
+    await sponsorForm.getByRole("button", { name: "Create Sponsor", exact: true }).click();
+    await expect.poll(() => state.submissions.filter((item) => item.path === "/api/admin/createBanner" && item.method === "POST").length).toBe(1);
+    const sponsorRequest = state.submissions.find((item) => item.path === "/api/admin/createBanner" && item.method === "POST")!;
+    expect(uploadedPngDimensions(sponsorRequest, "bannerImg")).toEqual({ width: 1200, height: 400 });
+  });
+
+  test("clone term requires different source and target terms with inline messages", async ({ page }) => {
+    await page.goto("/clone-term");
+    await page.getByRole("button", { name: "Preview Clone Data", exact: true }).click();
+    await expect(page.locator("#clone-source-term-error")).toHaveText("Select a source term.");
+    await expect(page.locator("#clone-target-term-error")).toHaveText("Select a target term.");
+    await page.getByRole("combobox", { name: "Source Term *" }).click();
+    await page.getByRole("option", { name: "Term 4 (2026)", exact: true }).click();
+    await page.getByRole("combobox", { name: "Target Term *" }).click();
+    await page.getByRole("option", { name: "Term 4 (2026)", exact: true }).click();
+    await page.getByRole("button", { name: "Preview Clone Data", exact: true }).click();
+    await expect(page.locator("#clone-target-term-error")).toHaveText("Choose a different target term from the source.");
+  });
+
   test("news article submits its cropped banner after required description validation", async ({ page }) => {
-    await page.goto("/add-content");
+    await page.goto("/news");
+    await expect(page.locator("aside").getByRole("link", { name: "All News", exact: true })).toHaveCount(0);
+    await expect(page.locator("aside").getByRole("link", { name: "Add News", exact: true })).toHaveCount(0);
+    await page.locator("aside").getByRole("link", { name: "News", exact: true }).click();
+    await expect(page).toHaveURL(/\/news$/);
+    await expect(page.getByRole("link", { name: "Add News", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Add News", exact: true }).click();
+    await expect(page).toHaveURL(/\/add-content$/);
+    const newsFormCard = page.locator(".coachmax-form-header").locator("xpath=..");
+    await expect(newsFormCard).toHaveCSS("border-top-left-radius", "8px");
+    await expect(newsFormCard).toHaveCSS("border-bottom-left-radius", "8px");
+    await expect(newsFormCard).toHaveCSS("overflow-x", "hidden");
     await page.getByRole("button", { name: "Publish Article", exact: true }).click();
     await expect(page.getByText("Headline title is required.", { exact: true })).toBeVisible();
     await page.getByLabel("Headline Title").fill("Club announces the new season");
@@ -261,6 +328,69 @@ test.describe("CoachMax form design and submission acceptance", () => {
     expect(eventBody).toContain('name="startDate"\r\n\r\n2026-10-30');
     expect(eventBody).toContain('name="sessions"');
     expect(uploadedPngDimensions(eventRequest, "eventImg")).toEqual({ width: 1920, height: 1080 });
+  });
+
+  test("term and program dialogs use the shared header and submit valid dates and fields", async ({ page }) => {
+    await page.goto("/programs-2");
+    await page.getByRole("button", { name: "Term Settings", exact: true }).click();
+    await page.getByRole("button", { name: "Add Term", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Schedule New Term" })).toBeVisible();
+    const termDialogShell = page.locator(".coachmax-form-header").locator("xpath=../..");
+    await expect(termDialogShell).toHaveCSS("border-top-left-radius", "8px");
+    await expect(termDialogShell).toHaveCSS("border-bottom-left-radius", "8px");
+    await expect(termDialogShell).toHaveCSS("overflow-x", "hidden");
+    await page.getByRole("button", { name: "Commit Term", exact: true }).click();
+    await expect(page.locator("#term-name-error")).toHaveText("Term name is required.");
+    await expect(page.locator("#term-start-error")).toHaveText("Start date is required.");
+    await page.locator("#term-name").fill("Term 1 2026");
+    await chooseDate(page, page.locator("#term-start-display"), "2026-11-01");
+    await chooseDate(page, page.locator("#term-end-display"), "2026-12-15");
+    await page.getByRole("button", { name: "Commit Term", exact: true }).click();
+    await expect.poll(() => state.submissions.filter((item) => item.path === "/api/admin/createTerm" && item.method === "POST").length).toBe(1);
+    const termRequest = state.submissions.find((item) => item.path === "/api/admin/createTerm" && item.method === "POST")!;
+    expect(termRequest.body.toString("utf8")).toContain('"year":2026');
+    expect(termRequest.body.toString("utf8")).toContain('"startDate":"01/11/2026"');
+    expect(termRequest.body.toString("utf8")).toContain('"endDate":"15/12/2026"');
+
+    await page.goto("/programs");
+    await page.getByRole("button", { name: "Add Program", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Add New Program" })).toBeVisible();
+    const programForm = page.locator("form[data-coachmax-form]");
+    await programForm.getByRole("button", { name: "Create Program", exact: true }).click();
+    await expect(programForm.getByText("Program name is required", { exact: true })).toBeVisible();
+    await programForm.locator('input[type="text"]').first().fill("U11 Development");
+    await programForm.locator("select").selectOption("Academy");
+    await programForm.locator('input[type="number"]').nth(0).fill("18");
+    await programForm.locator('input[type="number"]').nth(1).fill("75");
+    await programForm.locator('input[type="time"]').nth(0).fill("09:00");
+    await programForm.locator('input[type="time"]').nth(1).fill("10:00");
+    await programForm.getByRole("button", { name: "Create Program", exact: true }).click();
+    await expect.poll(() => state.submissions.filter((item) => item.path === "/api/admin/createProgram" && item.method === "POST").length).toBe(1);
+    expect(state.submissions.find((item) => item.path === "/api/admin/createProgram")!.body.toString("utf8")).toContain('"name":"U11 Development"');
+  });
+
+  test("category and curriculum dialogs match the term dialog header", async ({ page }) => {
+    await page.goto("/coaching-management");
+
+    await page.getByTitle("Add Category").click();
+    await expect(page.getByRole("heading", { name: "New Category" })).toBeVisible();
+    await expect(page.locator(".coachmax-form-header")).toHaveCSS("background-color", "rgb(3, 21, 73)");
+    const categoryDialogShell = page.locator(".coachmax-form-header").locator("xpath=../..");
+    await expect(categoryDialogShell).toHaveCSS("border-top-left-radius", "8px");
+    await expect(categoryDialogShell).toHaveCSS("border-bottom-left-radius", "8px");
+    await expect(categoryDialogShell).toHaveCSS("overflow-x", "hidden");
+    await expect(page.getByRole("button", { name: "Close category form" })).toBeVisible();
+    await page.getByRole("button", { name: "Close category form" }).click();
+
+    await expect(page.getByRole("button", { name: "Add Program", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Add Program", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "New Curriculum Module" })).toBeVisible();
+    await expect(page.locator(".coachmax-form-header")).toHaveCSS("background-color", "rgb(3, 21, 73)");
+    const programDialogShell = page.locator(".coachmax-form-header").locator("xpath=../..");
+    await expect(programDialogShell).toHaveCSS("border-top-left-radius", "8px");
+    await expect(programDialogShell).toHaveCSS("border-bottom-left-radius", "8px");
+    await expect(programDialogShell).toHaveCSS("overflow-x", "hidden");
+    await expect(page.getByRole("button", { name: "Close program form" })).toBeVisible();
   });
 
   test("class creation validates and submits the selected term and year context", async ({ page }) => {

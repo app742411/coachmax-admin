@@ -3,7 +3,6 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getAllocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
 import { getMediaUrl, getMediaFallback } from "../utils/media";
-import { sortPlayersByPaymentStatus } from "../utils/paymentStatus";
 
 const mapAllocatedToCard = (data: any): UnallocatedPlayer => {
   const avatar = getMediaUrl(data.profileImage, getMediaFallback(data.fullName || "Player"));
@@ -20,7 +19,7 @@ const mapAllocatedToCard = (data: any): UnallocatedPlayer => {
     }))
     : [];
 
-  const requestedDate = new Date(data.joinedDate || data.createdAt);
+  const requestedDate = new Date(data.listActivityAt || data.joinedDate || data.createdAt);
   const formattedRequested = formatDateTime(requestedDate);
 
   return {
@@ -62,10 +61,7 @@ export const useAllocatedPlayers = (
     queryFn: async () => {
       const response = await getAllocatedPlayers(category, program, search, page, limit);
       if (response) {
-        const players = sortPlayersByPaymentStatus<UnallocatedPlayer>(
-          (response.data || []).map(mapAllocatedToCard),
-          (player) => player.paymentStatus
-        );
+        const players: UnallocatedPlayer[] = (response.data || []).map(mapAllocatedToCard);
         const total = response.pagination?.total ?? response.total ?? players.length;
         const totalPages = response.pagination?.totalPages ?? Math.ceil(total / limit);
         const hasMore = response.pagination?.hasMore ?? (page < totalPages);
@@ -86,6 +82,7 @@ export const useAllocatedPlayers = (
       };
     },
     enabled: enabled && !isCoach,
+    refetchOnWindowFocus: true,
     placeholderData: keepPreviousData,
     initialData: {
       players: [],

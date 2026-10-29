@@ -37,6 +37,7 @@ import { sortPlayersByPaymentStatus } from "../../../../utils/paymentStatus";
 import TeamFullTable from "../../../../components/teams/TeamFullTable";
 import TeamBroadcastButton from "../../../../components/teams/TeamBroadcastButton";
 import AssignPlayerToTeamModal from "../../../../components/management/AssignPlayerToTeamModal";
+import FormHeader from "../../../../components/form/FormHeader";
 import { useNavigate } from "react-router";
 
 interface TeamManagementTableProps {
@@ -904,25 +905,20 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
 
         {addModalTab === "CREATE" && (
           <>
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-brand-500">
-                  <Shield size={22} />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Create New Team Profile</h4>
-                  <p className="text-xs text-slate-500 font-medium">Configure team details, coaches, schedule, and venue information.</p>
-                </div>
-              </div>
-              <button
+            <FormHeader
+              icon={Shield}
+              title="Create New Team Profile"
+              description="Configure team details, coaches, schedule, and venue information."
+              className="mb-6 -mx-6 -mt-6 rounded-t-lg border-b border-[#082269]"
+              actions={<button
                 type="button"
                 onClick={() => setAddModalTab("EXISTING")}
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 rounded-md border border-white/20 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <ArrowLeft size={14} />
                 <span>Back to Existing Teams</span>
-              </button>
-            </div>
+              </button>}
+            />
 
             <form data-coachmax-form noValidate onSubmit={handleCreateAndAssignTeam} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -993,16 +989,20 @@ export const TeamManagementTable: React.FC<TeamManagementTableProps> = ({ league
                       />
                     </div>
                     <div>
-                      <label htmlFor="league-team-term" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Academic Term</label>
+                      <label htmlFor="league-team-term" className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">Academic Term <span className="text-error-600">*</span></label>
                       <select
                         id="league-team-term"
                         value={leagueTermId}
                         disabled={!leagueTermId}
                         aria-label="League academic term"
+                        aria-required="true"
+                        aria-invalid={Boolean(createFormErrors.term)}
+                        aria-describedby={createFormErrors.term ? "league-team-term-error" : undefined}
                         className="w-full rounded-none border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-slate-800 px-3 py-2.5 text-sm font-bold text-gray-600 dark:text-slate-300 cursor-not-allowed"
                       >
                         {leagueTermId ? <option value={leagueTermId}>{leagueTermLabel}</option> : <option value="">No term selected for this league</option>}
                       </select>
+                      {createFormErrors.term && <p id="league-team-term-error" role="alert" className="mt-1 text-sm text-error-600">{createFormErrors.term}</p>}
                     </div>
                   </div>
 

@@ -38,6 +38,7 @@ const mapRegistrationToPlayer = (reg: any): Player => {
     // Add raw registration request id for status updates if needed
     requestId: reg._id,
     assignedClasses: reg.player?.assignedClasses || [],
+    hasPendingRequest: reg.player?.hasPendingRequest === true,
     classPaymentStatuses: reg.player?.classPaymentStatuses || [],
     playerStatus: reg.player?.playerStatus,
     createdAt: reg.createdAt,
@@ -45,6 +46,7 @@ const mapRegistrationToPlayer = (reg: any): Player => {
     preferredClasses: reg.preferredClasses,
     requestType: reg.requestType,
     addedBy: reg.addedBy || "Unknown",
+    requestedBySource: reg.requestedBySource,
     createdBy: reg.createdBy,
     assignedBy: reg.assignedBy,
     rating: reg.player?.rating || 0,
@@ -56,11 +58,11 @@ const mapRegistrationToPlayer = (reg: any): Player => {
 };
 
 export const useRegistrationRequests = (page = 1, limit = 20, filters: VerificationFilters = {}) => {
-  return useQuery<PlayersResponse, Error>({
+  return useQuery<PlayersResponse & { metrics: Record<string, number>; sourceMetrics: Record<string, number> }, Error>({
     queryKey: ["registrationRequests", page, limit, filters],
     queryFn: async () => {
       const response = await fetchVerificationRequests(page, limit, filters);
-      return { success: true, limit: response.limit, totalPages: response.totalPages, users: response.data.map(mapRegistrationToPlayer), total: response.total, page: response.page };
+      return { success: true, limit: response.limit, totalPages: response.totalPages, users: response.data.map(mapRegistrationToPlayer), total: response.total, page: response.page, metrics: response.metrics || {}, sourceMetrics: response.sourceMetrics || {} };
     },
   });
 };

@@ -34,7 +34,7 @@ export default function SidebarPlayersFilter({
             onCategoryChange(e.target.value);
             onProgramChange("");
           }}
-          className="w-full p-2 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none focus:outline-none focus:border-brand-500 dark:text-white"
+          className="h-11 min-h-11 w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none px-2 py-0 text-xs focus:outline-none focus:border-brand-500 dark:text-white"
         >
           <option value="">Select Category</option>
           {categories.map((c) => (
@@ -46,7 +46,7 @@ export default function SidebarPlayersFilter({
           value={program}
           onChange={(e) => onProgramChange(e.target.value)}
           disabled={!category}
-          className="w-full p-2 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none focus:outline-none focus:border-brand-500 dark:text-white"
+          className="h-11 min-h-11 w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none px-2 py-0 text-xs focus:outline-none focus:border-brand-500 dark:text-white"
         >
           <option value="">Select Program</option>
           {programs.map((p) => (
@@ -71,7 +71,7 @@ export default function SidebarPlayersFilter({
           placeholder="Search by name..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none focus:outline-none focus:border-brand-500 dark:text-white"
+          className="h-11 min-h-11 w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-none pl-8 pr-3 py-0 text-xs focus:outline-none focus:border-brand-500 dark:text-white"
         />
       </div>
     </div>

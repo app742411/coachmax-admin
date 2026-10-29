@@ -11,7 +11,7 @@ import {
   Users,
   Trash2,
 } from "lucide-react";
-import { StatusDot, getStatusConfig, StatusIcon, getPlayerStatusTextClass } from "../common/StatusColorCode";
+import { getStatusConfig, StatusIcon, getPlayerStatusTextClass } from "../common/StatusColorCode";
 import { useUpdatePlayerPaymentStatus } from "../../hooks/usePlayers";
 import PlayerPaymentHistoryModal from "./PlayerPaymentHistoryModal";
 import { useSidebarBadges } from "../../hooks/useSidebarBadges";
@@ -20,6 +20,17 @@ import ChatActionButton from "../chat/ChatActionButton";
 import { chatApi } from "../../services/chatApi";
 import { sortPlayersByPaymentStatus } from "../../utils/paymentStatus";
 
+const REQUEST_STATUS_CONFIG: Record<string, { label: string; dotColor: string; textClass: string }> = {
+  PENDING: { label: "PENDING", dotColor: "bg-amber-500", textClass: "text-amber-700 dark:text-amber-400" },
+  APPROVED: { label: "APPROVED", dotColor: "bg-emerald-600", textClass: "text-emerald-700 dark:text-emerald-400" },
+  REJECTED: { label: "REJECTED", dotColor: "bg-rose-600", textClass: "text-rose-700 dark:text-rose-400" },
+  CANCELLED: { label: "CANCELLED", dotColor: "bg-slate-500", textClass: "text-slate-600 dark:text-slate-400" },
+  COMPLETED: { label: "COMPLETED", dotColor: "bg-blue-600", textClass: "text-blue-700 dark:text-blue-400" },
+};
+
+const getRequestStatusConfig = (status?: string) =>
+  REQUEST_STATUS_CONFIG[String(status || "PENDING").toUpperCase()] || REQUEST_STATUS_CONFIG.PENDING;
+
 interface PlayerTableProps {
   players: Player[];
   selectedPlayerId: string;
@@ -27,7 +38,7 @@ interface PlayerTableProps {
   onEditPlayer?: (player: Player) => void;
   onDeletePlayer?: (player: Player) => void;
   onApprovePlayer?: (player: Player) => void;
-  onRejectPlayer?: (player: Player) => void;
+  onRejectAndDeleteRequest?: (player: Player) => void;
   onAssignClass?: (player: Player) => void;
   onAssignTeam?: (player: Player) => void;
   onGenerateInvoice?: (player: Player) => void;
@@ -35,6 +46,7 @@ interface PlayerTableProps {
   showStatusColumn?: boolean;
   showRequestDetails?: boolean;
   showAddedBy?: boolean;
+  onRequestSourceClick?: (source: "APP" | "SUPER_ADMIN" | "COACH") => void;
   onOpenRequestedClass?: (player: Player) => void;
   showPaymentStatus?: boolean;
   selectedTerm?: string;
@@ -150,7 +162,7 @@ export default function PlayerTable({
   onEditPlayer,
   onDeletePlayer,
   onApprovePlayer,
-  onRejectPlayer,
+  onRejectAndDeleteRequest,
   onAssignClass,
   onAssignTeam,
   onGenerateInvoice,
@@ -158,6 +170,7 @@ export default function PlayerTable({
   showStatusColumn = false,
   showRequestDetails = false,
   showAddedBy = false,
+  onRequestSourceClick,
   onOpenRequestedClass,
   showPaymentStatus = true,
   selectedTerm = "All",
@@ -249,7 +262,7 @@ export default function PlayerTable({
               <th className="py-2.5 px-2 min-w-[80px] text-center">Category</th>
               <th className="py-2.5 px-2 min-w-[80px] text-center">Program</th>
               {showRequestDetails && <th className="py-2.5 px-2 min-w-[190px]">Requested Class / Term</th>}
-              {showAddedBy && <th className="py-2.5 px-2 min-w-[130px]">Added By</th>}
+              {showAddedBy && <th className="py-2.5 px-2 min-w-[130px]">Requested By</th>}
               <th className="py-2.5 px-2 min-w-[40px] text-center">Foot</th>
               <th className="py-2.5 px-2 min-w-[90px]">Contact</th>
               <th className="py-2.5 px-2 min-w-[110px]">Email</th>
@@ -396,10 +409,10 @@ export default function PlayerTable({
                   {showStatusColumn && (
                     <td className="py-3 px-2 text-center">
                       {(() => {
-                        const config = getStatusConfig(playerStatus);
+                        const config = isRequest ? getRequestStatusConfig(playerStatus) : getStatusConfig(playerStatus);
                         return (
                           <span className={`inline-flex items-center gap-1.5 font-bold ${config.textClass}`}>
-                            <StatusDot status={playerStatus} className="w-1.5 h-1.5" />
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${config.dotColor}`} />
                             {config.label}
                           </span>
                         );
@@ -419,12 +432,19 @@ export default function PlayerTable({
                         alt={player.fullName}
                         className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-100"
                       />
-                      <span
-                        className={`font-bold truncate max-w-[110px] block transition-colors ${getPlayerStatusTextClass(paymentStatus)}`}
-                        title={player.fullName}
-                      >
-                        {player.fullName}
-                      </span>
+                      <div className="min-w-0">
+                        <span
+                          className={`font-bold truncate max-w-[110px] block transition-colors ${getPlayerStatusTextClass(paymentStatus)}`}
+                          title={player.fullName}
+                        >
+                          {player.fullName}
+                        </span>
+                        {!isRequest && player.hasPendingRequest && (
+                          <span className="mt-0.5 block text-[10px] font-semibold text-amber-700 dark:text-amber-400" title="This active player also has a new request awaiting review">
+                            New request pending
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="py-3 px-2 font-semibold text-slate-500">
@@ -510,9 +530,21 @@ export default function PlayerTable({
                   {showRequestDetails && <td className="py-3 px-2 text-xs text-slate-600 dark:text-slate-300">
                     <div className="font-semibold">{player.preferredTerm?.name || "Term not specified"}</div>
                     {player.preferredClasses?.length ? <button type="button" onClick={(event) => { event.stopPropagation(); onOpenRequestedClass?.(player); }} className="text-blue-600 underline text-left">{player.preferredClasses.map((cls) => cls?.name || "Unavailable class").join(", ")}</button> : <span>No class requested</span>}
+                    {player.assignedClasses?.length > 0 && <div className="mt-1 font-semibold text-emerald-700 dark:text-emerald-400">
+                      {player.assignedClasses.length} existing class{player.assignedClasses.length === 1 ? "" : "es"} · player remains in Players
+                      <div className="max-w-[220px] truncate font-normal text-slate-500 dark:text-slate-400" title={player.assignedClasses.map((cls) => cls?.name).filter(Boolean).join(", ")}>
+                        {player.assignedClasses.map((cls) => cls?.name).filter(Boolean).slice(0, 2).join(", ")}{player.assignedClasses.filter((cls) => cls?.name).length > 2 ? ` +${player.assignedClasses.filter((cls) => cls?.name).length - 2} more` : ""}
+                      </div>
+                    </div>}
                     <div className="text-slate-400 mt-1">{player.requestType === "TEMPORARY_PLAYER" || player.requestType === "TEMPORARY" ? "Admin/coach temporary player" : (player.requestType || "").replace(/_/g, " ")}</div>
                   </td>}
-                  {showAddedBy && <td className="py-3 px-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{player.addedBy || "Unknown"}</td>}
+                  {showAddedBy && <td className="py-3 px-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    {player.requestedBySource && onRequestSourceClick ? (
+                      <button type="button" onClick={(event) => { event.stopPropagation(); onRequestSourceClick(player.requestedBySource!); }} className="text-left text-[#0047FF] underline hover:text-blue-700" title={`Show requests from ${player.addedBy || player.requestedBySource}`}>
+                        {player.addedBy || player.requestedBySource}
+                      </button>
+                    ) : player.addedBy || "Unknown"}
+                  </td>}
                   <td className="py-3 px-2 font-bold text-slate-600 dark:text-slate-400 text-center">
                     {(player.preferredFoot || player.prefferedFoot) === "LEFT" ? "L" : (player.preferredFoot || player.prefferedFoot) === "RIGHT" ? "R" : "-"}
                   </td>
@@ -805,7 +837,7 @@ export default function PlayerTable({
 
                   </>}
 
-                  {onRejectPlayer && player.requestId && player.status === "PENDING" && <button type="button" onClick={() => { setOpenDropdownId(null); setMenuPosition(null); onRejectPlayer(player); }} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50">Reject request</button>}
+                  {onRejectAndDeleteRequest && player.requestId && player.status === "PENDING" && <button type="button" onClick={(event) => { event.stopPropagation(); setOpenDropdownId(null); setMenuPosition(null); onRejectAndDeleteRequest(player); }} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"><span className="inline-flex items-center gap-3"><Trash2 size={16} />Reject and Delete</span></button>}
                   {onDeletePlayer && <>
                   {/* Delete Player */}
                   <div>

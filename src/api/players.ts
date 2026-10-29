@@ -10,7 +10,10 @@ export const getPlayers = async (
   term?: string,
   medical?: string,
   ageGroup?: string,
-  subProgram?: string
+  subProgram?: string,
+  playerStatus?: "ALL" | "APPROVED" | "REJECTED",
+  assignment?: "ELITE" | "SCHOOL" | "BOTH" | "UNASSIGNED",
+  year?: string
 ): Promise<PlayersResponse> => {
   const params: any = { page, limit };
   if (search && search.trim()) params.search = search.trim();
@@ -20,9 +23,12 @@ export const getPlayers = async (
     params.paymentStatus = status.toUpperCase();
   }
   if (term && term !== "All") params.term = term;
+  if (year && year !== "All") params.year = year;
   if (medical && medical !== "All") params.medical = medical;
   if (ageGroup && ageGroup !== "All") params.ageGroup = ageGroup;
   if (subProgram && subProgram !== "All") params.subProgram = subProgram;
+  if (playerStatus) params.playerStatus = playerStatus;
+  if (assignment) params.assignment = assignment;
 
   const response = await apiClient.get<PlayersResponse>("/api/admin/getUsers", { params });
   return response.data;
@@ -75,9 +81,10 @@ export const updatePlayerRating = async (id: string, rating: number): Promise<vo
   await apiClient.put(`/api/admin/updateRating/${id}`, { rating });
 };
 
-export const getPlayerStats = async (term?: string): Promise<{ success: boolean; stats: any }> => {
+export const getPlayerStats = async (term?: string, year?: string): Promise<{ success: boolean; stats: any }> => {
   const params: any = {};
   if (term && term !== "All") params.term = term;
+  if (year && year !== "All") params.year = year;
   const response = await apiClient.get("/api/admin/playerStats", { params });
   return response.data;
 };

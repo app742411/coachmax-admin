@@ -29,7 +29,7 @@ export default function ViewClassPlayersModal({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-none" showCloseButton={false}>
+      <Modal isOpen={isOpen} onClose={onClose} className="max-w-5xl p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-xl" showCloseButton={false}>
         {/* Header Section matching Create Class UI */}
         <div className="relative overflow-hidden bg-[#0A1930] px-4 py-4 sm:px-8 sm:py-5 text-white border-l-[6px] border-[#0047FF]">
           {/* Faint Pitch Schematic Background */}

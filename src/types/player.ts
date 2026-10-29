@@ -72,10 +72,12 @@ export interface Player {
   rating?: number;
   prefferedFoot?: string;
   assignedClasses: any[];
+  hasPendingRequest?: boolean;
   preferredTerm?: any;
   preferredClasses?: any[];
   requestType?: string;
   addedBy?: string;
+  requestedBySource?: "APP" | "SUPER_ADMIN" | "COACH";
   createdBy?: string;
   assignedBy?: any;
   joinedDate: string;
@@ -91,6 +93,8 @@ export interface PlayerStats {
   rejectedCount: number;
   eliteCount: number;
   schoolCount: number;
+  bothCount: number;
+  unassignedCount: number;
 }
 
 export interface PlayersResponse {

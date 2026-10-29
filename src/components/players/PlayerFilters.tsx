@@ -3,11 +3,16 @@ import { useExportUsersCSV } from "../../hooks/usePlayers";
 import { useTerms } from "../../hooks/useTerms";
 import { useCategories } from "../../hooks/useCategories";
 import { useProgramsByCategory } from "../../hooks/usePrograms";
+import { findCurrentTerm, getCurrentYearString } from "../../hooks/useCurrentTerm";
 import Select from "../form/Select";
+import PlayerExportMenu from "./PlayerExportMenu";
+import type { PlayerExportColumn } from "./playerExport";
 
 interface PlayerFiltersProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  yearFilter?: string;
+  setYearFilter?: (year: string) => void;
   termFilter?: string;
   setTermFilter?: (term: string) => void;
   programFilter: string;
@@ -21,11 +26,15 @@ interface PlayerFiltersProps {
   setStatusFilter: (status: string) => void;
   medicalFilter?: string;
   setMedicalFilter?: (val: string) => void;
+  isExporting?: boolean;
+  onExport?: (columns: PlayerExportColumn[]) => Promise<boolean>;
 }
 
 export default function PlayerFilters({
   searchQuery,
   setSearchQuery,
+  yearFilter = "All",
+  setYearFilter,
   termFilter = "All",
   setTermFilter = () => { },
   programFilter,
@@ -39,8 +48,10 @@ export default function PlayerFilters({
   setStatusFilter,
   medicalFilter = "All",
   setMedicalFilter = () => { },
+  isExporting = false,
+  onExport,
 }: PlayerFiltersProps) {
-  const exportCSVMutation = useExportUsersCSV();
+  const legacyExport = useExportUsersCSV();
   const { terms = [] } = useTerms({ isEvent: "all" });
   const { categories = [] } = useCategories({ isEvent: "all" });
   const filterPlayers = filterPlayersProp || [];
@@ -65,8 +76,7 @@ export default function PlayerFilters({
     new Set(
       filterPlayers
         .map((player) => {
-          const selectedTerm = terms.find((term) => term._id === termFilter);
-          return ageGroupForYear(player.dob, selectedTerm?.year);
+          return ageGroupForYear(player.dob, yearFilter === "All" ? undefined : yearFilter);
         })
         .filter((age): age is number => age !== null)
     )
@@ -82,13 +92,18 @@ export default function PlayerFilters({
       { label: "U15+", value: "U15+" },
     ];
 
+  const yearOptions = Array.from(new Set([yearFilter, ...terms.map((term) => String(term.year || ""))].filter(Boolean)))
+    .sort((first, second) => Number(second) - Number(first));
+  const termsInYear = yearFilter === "All" ? terms : terms.filter((term) => String(term.year) === yearFilter);
   const termOptions = [
-    { label: "Term: All", value: "All" },
-    ...(terms || []).map((t) => ({
-      label: t.name ? (t.year ? `${t.name} (${t.year})` : t.name) : "Unnamed Term",
+    { label: "Term: All terms", value: "All" },
+    ...termsInYear.map((t) => ({
+      label: t.name || "Unnamed Term",
       value: t._id,
     })),
   ];
+  const selectedTermName = terms.find((term) => term._id === termFilter)?.name;
+  const scopeLabel = `${yearFilter === "All" ? "All years" : yearFilter} / ${selectedTermName || "All terms"}`;
 
   return (
     <div className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800 p-5 rounded-none shadow-theme-xs mb-6">
@@ -104,27 +119,32 @@ export default function PlayerFilters({
             placeholder="Search player by name, contact, email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-xs border border-slate-200 rounded-none outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+            className="h-11 min-h-11 w-full border border-slate-200 rounded-none bg-white pl-9 pr-4 py-0 text-xs outline-none focus:border-[#0047FF] focus:ring-1 focus:ring-[#0047FF] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs w-full lg:w-auto">
-          <button
-            onClick={() => exportCSVMutation.mutate(statusFilter === "All" ? "APPROVED" : statusFilter)}
-            disabled={exportCSVMutation.isPending}
-            className="px-3.5 py-1.5 border border-slate-200 text-xs font-semibold rounded-none bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span>{exportCSVMutation.isPending ? "Exporting..." : "Export"}</span>
-          </button>
+          {onExport ? <PlayerExportMenu scopeLabel={scopeLabel} isExporting={isExporting} onExport={onExport} /> : (
+            <button type="button" disabled={legacyExport.isPending} onClick={() => legacyExport.mutate(statusFilter === "All" ? "APPROVED" : statusFilter)} className="inline-flex h-11 min-h-11 min-w-[108px] items-center justify-center border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white">Export</button>
+          )}
+          {setYearFilter && <div className="w-full sm:w-32 flex-1 sm:flex-initial min-w-[100px]">
+            <Select
+              value={yearFilter}
+              onChange={(val) => {
+                setYearFilter(val);
+                const currentYearTerms = terms.filter((term) => String(term.year) === val && !term.isEvent);
+                setTermFilter(val === getCurrentYearString() ? findCurrentTerm(currentYearTerms)?._id || "All" : "All");
+              }}
+              options={[{ label: "Year: All", value: "All" }, ...yearOptions.map((year) => ({ label: `Year: ${year}`, value: year }))]}
+              className="w-full player-filter-select"
+            />
+          </div>}
           <div className="w-full sm:w-44 flex-1 sm:flex-initial min-w-[140px]">
             <Select
               value={termFilter}
               onChange={(val) => setTermFilter(val)}
               options={termOptions}
-              className="w-full"
+              className="w-full player-filter-select"
             />
           </div>
           <div className="w-full sm:w-40 flex-1 sm:flex-initial min-w-[130px]">
@@ -135,7 +155,7 @@ export default function PlayerFilters({
                 setSubProgramFilter("All");
               }}
               options={programTypeOptions}
-              className="w-full"
+              className="w-full player-filter-select"
             />
           </div>
           {filterPlayersProp && programFilter !== "All" && (
@@ -147,7 +167,7 @@ export default function PlayerFilters({
                   { label: "Sub Program: All", value: "All" },
                   ...subProgramOptions.map(([value, label]) => ({ label: String(label), value: String(value) })),
                 ]}
-                className="w-full"
+                className="w-full player-filter-select"
               />
             </div>
           )}
@@ -159,7 +179,7 @@ export default function PlayerFilters({
                 { label: "Age Group: All", value: "All" },
                 ...ageSelectOptions,
               ]}
-              className="w-full"
+              className="w-full player-filter-select"
             />
           </div>
           <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[120px]">
@@ -167,7 +187,7 @@ export default function PlayerFilters({
               value={statusFilter}
               onChange={(val) => setStatusFilter(val)}
               options={[
-                { label: "Status: All", value: "All" },
+                { label: "Payment: All", value: "All" },
                 { label: "PAID", value: "PAID" },
                 { label: "HANDSHAKE", value: "HANDSHAKE" },
                 { label: "APPROVED (UNPAID)", value: "UNPAID" },
@@ -175,7 +195,7 @@ export default function PlayerFilters({
                 { label: "TBC", value: "TBC" },
                 { label: "EXTRA", value: "EXTRA" },
               ]}
-              className="w-full"
+              className="w-full player-filter-select"
             />
           </div>
           <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[120px]">
@@ -187,7 +207,7 @@ export default function PlayerFilters({
                 { label: "Yes", value: "true" },
                 { label: "No", value: "false" }
               ]}
-              className="w-full"
+              className="w-full player-filter-select"
             />
           </div>
         </div>

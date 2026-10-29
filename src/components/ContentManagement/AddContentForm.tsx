@@ -16,6 +16,18 @@ import ImageCropModal from "../common/ImageCropModal";
 import { createNews } from "../../api/adminApi";
 import SuccessPopup from "../SuccessPopup";
 import HtmlEditor from "../form/HtmlEditor";
+import FormHeader from "../form/FormHeader";
+import FormField from "../form/FormField";
+import FormActions from "../form/FormActions";
+import { z } from "zod";
+import { validateWithSchema } from "../../utils/formValidation";
+
+const plainTextFromHtml = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ").trim();
+const newsValidationSchema = z.object({
+  title: z.string().trim().min(1, "Headline title is required."),
+  category: z.string().trim().min(1, "Category is required."),
+  description: z.string().refine((value) => plainTextFromHtml(value).length > 0, "News description is required."),
+});
 
 interface SectionHeaderProps {
   icon: LucideIcon;
@@ -23,12 +35,7 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
-  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
-    <div className="p-2 bg-white/10 rounded-none text-white">
-      <Icon size={18} />
-    </div>
-    <h5 className="text-lg font-bold text-white">{title}</h5>
-  </div>
+  <FormHeader icon={Icon} title={title} className="mb-6 -mx-6 -mt-6 rounded-t-lg border-b border-[#082269]" />
 );
 
 interface AddContentFormProps {
@@ -54,7 +61,18 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      setFormErrors((previousErrors) => {
+        if (!(name in previousErrors)) return previousErrors;
+        const fieldError = validateWithSchema(newsValidationSchema, updated).errors[name];
+        if (fieldError) return { ...previousErrors, [name]: fieldError };
+        const nextErrors = { ...previousErrors };
+        delete nextErrors[name];
+        return nextErrors;
+      });
+      return updated;
+    });
   };
 
   const handleFeaturedChange = (val: string) => {
@@ -107,11 +125,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const errors: Record<string, string> = {};
-    if (!formData.title.trim()) errors.title = "Headline title is required.";
-    if (!formData.category.trim()) errors.category = "Category is required.";
-    const descriptionText = formData.description.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ").trim();
-    if (!descriptionText) errors.description = "News description is required.";
+    const errors = validateWithSchema(newsValidationSchema, formData).errors;
     setFormErrors(errors);
     if (Object.keys(errors).length) return;
 
@@ -162,7 +176,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
         <form data-coachmax-form noValidate onSubmit={handleSubmit} className="space-y-6">
 
           {/* Card Wrapper */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xl shadow-gray-100/50 dark:shadow-none p-6 space-y-6 rounded-none">
+          <div className="overflow-hidden space-y-6 rounded-xl border border-gray-100 bg-white p-6 shadow-xl shadow-gray-100/50 dark:border-gray-800/80 dark:bg-gray-900 dark:shadow-none">
             <SectionHeader icon={Newspaper} title="Create News Article" />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -170,10 +184,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
               {/* Top Left: Headline Title, Category & Pin as Featured */}
               <div className="lg:col-span-7 space-y-4 flex flex-col justify-between">
                 {/* Headline Title */}
-                <div className="space-y-2">
-                  <label htmlFor="title" className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Headline Title
-                  </label>
+                <FormField id="title" label="Headline Title" required error={formErrors.title}>
                   <input
                     type="text"
                     id="title"
@@ -185,19 +196,15 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
                     required
                     aria-required="true"
                     aria-invalid={Boolean(formErrors.title)}
-                    aria-describedby={formErrors.title ? "news-title-error" : undefined}
+                    aria-describedby={formErrors.title ? "title-error" : undefined}
+                    autoComplete="off"
                   />
-                  {formErrors.title && <p id="news-title-error" role="alert" className="text-sm text-error-600">{formErrors.title}</p>}
-                </div>
+                </FormField>
 
                 {/* Category & Featured Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Category */}
-                  <div className="space-y-2">
-                    <label htmlFor="category" className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      <Tag size={12} />
-                      Category
-                    </label>
+                  <FormField id="category" label={<><Tag size={12} aria-hidden="true" />Category</>} required error={formErrors.category}>
                     <input
                       type="text"
                       id="category"
@@ -209,10 +216,9 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
                       required
                       aria-required="true"
                       aria-invalid={Boolean(formErrors.category)}
-                      aria-describedby={formErrors.category ? "news-category-error" : undefined}
+                      aria-describedby={formErrors.category ? "category-error" : undefined}
                     />
-                    {formErrors.category && <p id="news-category-error" role="alert" className="text-sm text-error-600">{formErrors.category}</p>}
-                  </div>
+                  </FormField>
 
                   {/* Featured */}
                   <div className="space-y-2">
@@ -301,26 +307,34 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
               </div>
 
               {/* Bottom: News Description HTML Editor (Full Width) */}
-              <div className="lg:col-span-12 space-y-2">
-                <label htmlFor="description" className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  <FileText size={12} />
-                  News Description
-                </label>
+              <FormField id="description-editor" label={<><FileText size={14} aria-hidden="true" />News Description</>} required error={formErrors.description} className="lg:col-span-12">
                 <HtmlEditor
+                  id="description-editor"
                   value={formData.description}
-                  onChange={(val) => setFormData((prev) => ({ ...prev, description: val }))}
+                  onChange={(val) => {
+                    setFormData((prev) => ({ ...prev, description: val }));
+                    setFormErrors((previousErrors) => {
+                      if (!previousErrors.description) return previousErrors;
+                      const error = validateWithSchema(newsValidationSchema, { ...formData, description: val }).errors.description;
+                      if (error) return { ...previousErrors, description: error };
+                      const nextErrors = { ...previousErrors };
+                      delete nextErrors.description;
+                      return nextErrors;
+                    });
+                  }}
                   placeholder="Write your news article description here..."
+                  aria-invalid={Boolean(formErrors.description)}
+                  aria-describedby={formErrors.description ? "description-editor-error" : undefined}
                   className="min-h-[160px]"
                 />
-              {formErrors.description && <p role="alert" className="text-sm text-error-600">{formErrors.description}</p>}
-              </div>
+              </FormField>
 
             </div>
 
           </div>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-4 pt-4">
+          <FormActions className="-mx-6 -mb-6 mt-6 rounded-b-lg border-t border-gray-100 px-0 dark:border-gray-800 dark:bg-white/[0.03]">
             <button
               type="button"
               onClick={() => {
@@ -349,7 +363,7 @@ const AddContentForm: React.FC<AddContentFormProps> = () => {
                 </>
               )}
             </button>
-          </div>
+          </FormActions>
         </form>
       </div>
 
