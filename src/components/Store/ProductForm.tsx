@@ -12,9 +12,22 @@ import Label from "../form/Label";
 import toast from "react-hot-toast";
 import Select from "../form/Select";
 import MultiImageDropzone from "../form/form-elements/MultiImageDropzone";
+import FormHeader from "../form/FormHeader";
+import FormField from "../form/FormField";
 import SuccessPopup from "../SuccessPopup";
 import { getStoreCategories, createStoreProduct, updateStoreProduct } from "../../api/orderApi";
 import CategoryModal from "./CategoryModal";
+import { z } from "zod";
+import { validateWithSchema } from "../../utils/formValidation";
+
+const productValidationSchema = z.object({
+  name: z.string().trim().min(1, "Product name is required."),
+  category: z.string().min(1, "Please select a category."),
+  price: z.string().trim().refine((value) => value !== "" && Number.isFinite(Number(value)) && Number(value) > 0, "A valid price is required."),
+  stock: z.string().refine((value) => Number.isInteger(Number(value)) && Number(value) >= 0, "Stock must be a whole number of 0 or more."),
+  sizes: z.array(z.string()).min(1, "At least one size is required."),
+  colors: z.string().trim().min(1, "At least one color is required."),
+});
 
 interface ProductFormData {
   name: string;
@@ -36,11 +49,9 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
-  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
-    <div className="p-2 bg-white/10 rounded-none text-white">
-      <Icon size={18} />
-    </div>
-    <h5 className="text-lg font-bold text-white">{title}</h5>
+  <div className="mb-5 flex items-center gap-2 border-b border-slate-200 pb-3 dark:border-slate-700">
+    <Icon className="h-4 w-4 text-[#0047FF]" aria-hidden="true" />
+    <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
   </div>
 );
 
@@ -50,9 +61,9 @@ interface FormCardProps {
 }
 
 const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
-  <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-5 shadow-sm ${className}`}>
+  <section className={`min-w-0 ${className}`}>
     {children}
-  </div>
+  </section>
 );
 
 const sizeOptions = [
@@ -259,15 +270,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const validate = (data: ProductFormData) => {
-    const errors: Record<string, string> = {};
-    if (!data.name.trim()) errors.name = "Product name is required.";
-    if (!data.category) errors.category = "Please select a category.";
-    if (!data.price.trim() || isNaN(Number(data.price)) || Number(data.price) <= 0)
-      errors.price = "A valid price is required.";
-    if (!Number.isInteger(Number(data.stock)) || Number(data.stock) < 0) errors.stock = "Stock must be a whole number of 0 or more.";
-    if (!data.sizes || data.sizes.length === 0) errors.sizes = "At least one size is required.";
-    if (!data.colors.trim()) errors.colors = "At least one color is required.";
-    return errors;
+    return validateWithSchema(productValidationSchema, data).errors;
   };
 
   const isFormValid = Object.keys(validate(formData)).length === 0;
@@ -332,7 +335,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
     // Touch all validated fields
     setTouched({ name: true, category: true, price: true, sizes: true, colors: true });
     if (Object.keys(errors).length > 0) {
-      toast.error(Object.values(errors)[0]);
+      const firstInvalidField = Object.keys(errors)[0];
+      document.getElementById(`product-${firstInvalidField}`)?.focus();
       return;
     }
 
@@ -394,16 +398,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6">
-      <form data-coachmax-form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6">
+      <form data-coachmax-form noValidate onSubmit={handleSubmit} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-gray-900">
+        <FormHeader
+          icon={Package}
+          title={isEdit ? "Edit Merchandise Product" : "Add New Product"}
+          description={isEdit ? "Update product details, images, and stock." : "Create and manage store merchandise and training kits."}
+          className="border-b border-[#082269]"
+        />
+        <div className="grid grid-cols-1 gap-7 p-5 sm:p-6 lg:grid-cols-12">
 
         {/* Left Column: Basic Details & Pricing */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="space-y-7 lg:col-span-7">
           <FormCard>
             <SectionHeader icon={Tag} title="Core Product Identity" />
             <div className="space-y-5">
-              <div>
-                <Label htmlFor="product-name">Product Name <span className="text-error-600">*</span></Label>
+              <FormField id="product-name" label="Product Name" required error={touched.name ? formErrors.name : undefined}>
                 <Input
                   id="product-name"
                   placeholder="e.g., CM Training Kit - Personalized"
@@ -415,10 +425,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                   aria-invalid={Boolean(touched.name && formErrors.name)}
                   aria-describedby={touched.name && formErrors.name ? "product-name-error" : undefined}
                 />
-                {touched.name && formErrors.name && (
-                  <p id="product-name-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.name}</p>
-                )}
-              </div>
+              </FormField>
               <div>
                   <Label htmlFor="product-highlight">Short Highlight (Subtitle) <span className="text-xs font-normal text-gray-500">(optional)</span></Label>
                 <Input
@@ -430,8 +437,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                 />
               </div>
               <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="product-price">Price (AUD) <span className="text-error-600">*</span></Label>
+                <FormField id="product-price" label="Price (AUD)" required error={touched.price ? formErrors.price : undefined}>
                   <div className="relative">
                     <Input
                       id="product-price"
@@ -449,10 +455,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                     />
                     <span className="absolute right-3 top-3.5 text-[10px] font-bold text-gray-400">AUD</span>
                   </div>
-                  {touched.price && formErrors.price && (
-                    <p id="product-price-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.price}</p>
-                  )}
-                </div>
+                </FormField>
                 <div>
                   <div className="flex justify-between items-end mb-1">
                     <Label htmlFor="product-category">Category <span className="text-error-600">*</span></Label>
@@ -491,8 +494,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
 
           <FormCard>
             <SectionHeader icon={Info} title="Extended Description" />
-            <div>
-            <Label htmlFor="product-description">Description <span className="text-xs font-normal text-gray-500">(optional)</span></Label>
+            <FormField id="product-description" label="Description" hint="Optional">
             <textarea
               id="product-description"
               className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-none p-5 text-sm font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-gray-400"
@@ -502,12 +504,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
               value={formData.description}
               onChange={handleInputChange}
             ></textarea>
-            </div>
+            </FormField>
           </FormCard>
         </div>
 
         {/* Right Column: Inventory & Media */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="space-y-7 lg:col-span-5">
           <FormCard>
             <SectionHeader icon={Package} title="Inventory & Stock" />
             <div className="space-y-6">
@@ -524,8 +526,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                     <p id="product-sizes-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.sizes}</p>
                   )}
                 </div>
-                <div>
-                  <Label htmlFor="product-colors">Colors <span className="text-error-600">*</span></Label>
+                <FormField id="product-colors" label="Colors" required error={touched.colors ? formErrors.colors : undefined}>
                   <Input
                     id="product-colors"
                     placeholder="e.g., Red, Blue"
@@ -537,14 +538,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                     aria-invalid={Boolean(touched.colors && formErrors.colors)}
                     aria-describedby={touched.colors && formErrors.colors ? "product-colors-error" : undefined}
                   />
-                  {touched.colors && formErrors.colors && (
-                    <p id="product-colors-error" role="alert" className="text-xs text-error-600 font-semibold mt-1">{formErrors.colors}</p>
-                  )}
-                </div>
+                </FormField>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="product-stock">Starting Stock</Label>
+                <FormField id="product-stock" label="Starting Stock" error={touched.stock ? formErrors.stock : undefined}>
                   <Input
                     id="product-stock"
                     type="number"
@@ -558,8 +555,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
                     aria-invalid={Boolean(touched.stock && formErrors.stock)}
                     aria-describedby={touched.stock && formErrors.stock ? "product-stock-error" : undefined}
                   />
-                  {touched.stock && formErrors.stock && <p id="product-stock-error" role="alert" className="mt-1 text-xs text-error-600">{formErrors.stock}</p>}
-                </div>
+                </FormField>
                 <div>
                   <Label htmlFor="product-availability">Availability Status</Label>
                   <Select
@@ -611,6 +607,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = null, isEdit = 
               </p>
             )}
           </div>
+        </div>
         </div>
       </form>
 

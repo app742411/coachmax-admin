@@ -283,7 +283,7 @@ export default function AssignPlayerToTeamModal({ isOpen, onClose, teamId, leagu
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-3xl lg:max-w-4xl p-0 overflow-hidden rounded-none shadow-2xl">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-3xl lg:max-w-4xl p-0 overflow-hidden rounded-xl shadow-2xl">
       <div className="flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="bg-[#0A1930] px-6 py-4 text-white flex items-center justify-between border-l-4 border-[#0047FF]">

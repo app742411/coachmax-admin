@@ -549,14 +549,12 @@ export default function TeamFullTable({
                         {/* Condition */}
                         <td className="sticky left-[345px] z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 py-2 px-1 text-center min-w-[50px] w-[50px] max-w-[50px] border-b border-slate-50 dark:border-slate-800/40 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
                           <span
-                            className={`font-semibold ${row.medicalCondition || row.isMedicalCondition || row.condition
+                            className={`font-semibold ${row.isMedicalCondition === true
                               ? "text-rose-600 font-bold"
                               : "text-slate-400"
                               }`}
                           >
-                            {row.medicalCondition || row.isMedicalCondition || row.condition
-                              ? "Yes"
-                              : "No"}
+                            {row.isMedicalCondition === true ? "Yes" : "No"}
                           </span>
                         </td>
 

@@ -71,8 +71,8 @@ export const deleteProgram = async (id: string): Promise<any> => {
 
 // ================= COACHES =================
 
-export const getAllCoaches = async (): Promise<any> => {
-  const res = await apiClient.get(ENDPOINTS.GET_ALL_COACHES);
+export const getAllCoaches = async (options?: { page?: number; limit?: number }): Promise<any> => {
+  const res = await apiClient.get(ENDPOINTS.GET_ALL_COACHES, options ? { params: options } : undefined);
   return res.data;
 };
 

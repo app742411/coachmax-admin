@@ -37,6 +37,7 @@ export default function Programs2() {
 
   // Active day selection
   const [activeDay, setActiveDay] = useState<string>(() => {
+    if (state?.viewAll) return "View All";
     if (state?.day) return state.day.charAt(0).toUpperCase() + state.day.slice(1).toLowerCase();
     if (state?.classId) return "View All";
     return currentScheduleDay();
@@ -47,7 +48,7 @@ export default function Programs2() {
   const [selectedProgram, setSelectedProgram] = useState<string>(state?.programId || "");
 
   // Year & Term selectors
-  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>(state?.year ? String(state.year) : "");
   const [selectedTerm, setSelectedTerm] = useState<string>(state?.termId || "");
   const [availableYears, setAvailableYears] = useState<string[]>([]);
 
@@ -341,23 +342,23 @@ export default function Programs2() {
     return "BOTH";
   })();
 
-  const [unallocatedLimit, setUnallocatedLimit] = useState(5);
-  const [allocatedLimit, setAllocatedLimit] = useState(5);
+  const [unallocatedPage, setUnallocatedPage] = useState(1);
+  const [allocatedPage, setAllocatedPage] = useState(1);
 
   const [isUnallocatedModalOpen, setIsUnallocatedModalOpen] = useState(false);
   const [isAllocatedModalOpen, setIsAllocatedModalOpen] = useState(false);
 
   useEffect(() => {
-    setUnallocatedLimit(5);
-    setAllocatedLimit(5);
+    setUnallocatedPage(1);
+    setAllocatedPage(1);
   }, [sidebarCategory, sidebarProgram, sidebarSearch, effectivePlayerType]);
 
   const { data: unallocatedData, isFetching: isUnallocatedFetching } = useUnallocatedPlayers(
     sidebarCategory,
     sidebarProgram,
     sidebarSearch,
-    1,
-    unallocatedLimit,
+    unallocatedPage,
+    5,
     effectivePlayerType === "BOTH" || effectivePlayerType === "UNALLOCATED"
   );
 
@@ -365,8 +366,8 @@ export default function Programs2() {
     sidebarCategory,
     sidebarProgram,
     sidebarSearch,
-    1,
-    allocatedLimit,
+    allocatedPage,
+    5,
     effectivePlayerType === "BOTH" || effectivePlayerType === "ALLOCATED"
   );
 
@@ -387,6 +388,18 @@ export default function Programs2() {
     1000,
     isAllocatedModalOpen
   );
+
+  useEffect(() => {
+    if (!isUnallocatedFetching && unallocatedPage > Math.max(1, unallocatedData?.pagination?.totalPages ?? 1)) {
+      setUnallocatedPage(Math.max(1, unallocatedData?.pagination?.totalPages ?? 1));
+    }
+  }, [isUnallocatedFetching, unallocatedData?.pagination?.totalPages, unallocatedPage]);
+
+  useEffect(() => {
+    if (!isAllocatedFetching && allocatedPage > Math.max(1, allocatedData?.pagination?.totalPages ?? 1)) {
+      setAllocatedPage(Math.max(1, allocatedData?.pagination?.totalPages ?? 1));
+    }
+  }, [isAllocatedFetching, allocatedData?.pagination?.totalPages, allocatedPage]);
 
   // Assign player modal state
   const [pendingAssignPlayer, setPendingAssignPlayer] = useState<any | null>(null);
@@ -429,7 +442,7 @@ export default function Programs2() {
       {/* Header with Classes Management styling */}
       <PageBreadcrumb
         pageTitle="Programs"
-        items={[{ name: "Operations", path: "/programs-2" }]}
+        items={[{ name: "Operations", path: "/classes" }]}
       >
         {/* Year Selector */}
         <div className="w-full sm:w-36 flex-1 sm:flex-initial min-w-[130px]">
@@ -685,13 +698,9 @@ export default function Programs2() {
                 <UnallocatedPlayersCard
                   players={unallocatedData?.players || []}
                   totalCount={unallocatedData?.pagination?.total || 0}
-                  hasMore={
-                    unallocatedData
-                      ? unallocatedData.players.length < (unallocatedData.pagination?.total ?? 0)
-                      : false
-                  }
-                  onLoadMore={() => setUnallocatedLimit((prev) => prev + 5)}
-                  isLoadingMore={isUnallocatedFetching && (unallocatedData?.players?.length ?? 0) > 0}
+                  page={unallocatedPage}
+                  onPageChange={setUnallocatedPage}
+                  isLoading={isUnallocatedFetching}
                   onAssignPlayer={(player) => setPendingAssignPlayer(player)}
                   onNavigateToTarget={handleNavigateToRequestedTarget}
                   onViewAll={() => setIsUnallocatedModalOpen(true)}
@@ -702,13 +711,9 @@ export default function Programs2() {
                 <AllocatedPlayersCard
                   players={allocatedData?.players || []}
                   totalCount={allocatedData?.pagination?.total || 0}
-                  hasMore={
-                    allocatedData
-                      ? allocatedData.players.length < (allocatedData.pagination?.total ?? 0)
-                      : false
-                  }
-                  onLoadMore={() => setAllocatedLimit((prev) => prev + 5)}
-                  isLoadingMore={isAllocatedFetching && (allocatedData?.players?.length ?? 0) > 0}
+                  page={allocatedPage}
+                  onPageChange={setAllocatedPage}
+                  isLoading={isAllocatedFetching}
                   onAssignPlayer={(player) => setPendingAssignPlayer(player)}
                   onViewAll={() => setIsAllocatedModalOpen(true)}
                 />

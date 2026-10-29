@@ -1,0 +1,1 @@
+import{j as s}from"./index-DR_8arlU.js";function a({children:r,className:e="",sticky:o=!1}){return s.jsx("footer",{className:`coachmax-form-actions flex flex-col-reverse gap-3 border-t border-gray-200 bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-end sm:px-6 ${o?"sticky bottom-0 z-10":""} ${e}`,children:r})}export{a as F};

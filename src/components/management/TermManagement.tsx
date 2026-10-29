@@ -5,13 +5,28 @@ import { Modal } from "../ui/modal";
 import { useTerms, useCreateTerm, useUpdateTerm, useDeleteTerm } from "../../hooks/useTerms";
 import { toast } from "react-hot-toast";
 import { Calendar } from "../../icons/lucide-icons";
-import { Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Pencil, Trash2, ChevronDown, ChevronUp, CalendarDays, X } from "lucide-react";
 import DatePicker from "../form/date-picker";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import TermCalendar from "./TermCalendar";
 import { formatDateOnly, toDateOnly, ageGroupContextYear } from "../../utils/dateTime";
 
 import { smartErrorToast } from "../../utils/toast";
+import FormHeader from "../form/FormHeader";
+import FormActions from "../form/FormActions";
+import { requiredText, validateWithSchema } from "../../utils/formValidation";
+import { z } from "zod";
+
+const termSchema = z.object({
+    name: requiredText("Term name"),
+    year: z.preprocess((value) => Number(value), z.number().int().min(2000, "Enter a valid year between 2000 and 2100.").max(2100, "Enter a valid year between 2000 and 2100.")),
+    startDate: z.string().min(1, "Start date is required."),
+    endDate: z.string().min(1, "End date is required."),
+}).superRefine((value, context) => {
+    if (value.startDate && value.endDate && toDateOnly(value.startDate) > toDateOnly(value.endDate)) {
+        context.addIssue({ code: "custom", path: ["endDate"], message: "End date must be on or after the start date." });
+    }
+});
 
 const TermManagement: React.FC = () => {
     const [showCalendar, setShowCalendar] = useState(true);
@@ -51,11 +66,12 @@ const TermManagement: React.FC = () => {
             ...prev,
             [name]: name === "year" ? parseInt(value) || 0 : value,
         }));
+        setFormErrors((previous) => { const next = { ...previous }; delete next[name]; return next; });
     };
 
     const handleDateChange = (name: string, dateStr: string) => {
         setFormData(prev => ({ ...prev, [name]: dateStr }));
-        setFormErrors((previous) => ({ ...previous, [name]: "", startDate: "", endDate: "" }));
+        setFormErrors((previous) => { const next = { ...previous }; [name, "startDate", "endDate"].forEach((field) => delete next[field]); return next; });
     };
 
     const getDaysBetween = (start: string, end: string) => {
@@ -116,14 +132,9 @@ const TermManagement: React.FC = () => {
         const formattedStart = toDateOnly(formData.startDate);
         const formattedEnd = toDateOnly(formData.endDate);
 
-        const errors: Record<string, string> = {};
-        if (!formData.name.trim()) errors.name = "Term name is required.";
-        if (!Number.isInteger(Number(formData.year)) || Number(formData.year) < 2000 || Number(formData.year) > 2100) errors.year = "Enter a valid year between 2000 and 2100.";
-        if (!formattedStart) errors.startDate = "Start date is required.";
-        if (!formattedEnd) errors.endDate = "End date is required.";
-        if (formattedStart && formattedEnd && formattedStart > formattedEnd) errors.endDate = "End date must be on or after the start date.";
-        setFormErrors(errors);
-        if (Object.keys(errors).length > 0) return;
+        const validation = validateWithSchema(termSchema, formData);
+        setFormErrors(validation.errors);
+        if (!validation.success) return;
 
         const payload = {
             name: formData.name.trim(),
@@ -265,9 +276,14 @@ const TermManagement: React.FC = () => {
                 </div>
             )}
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 overflow-visible">
-                <h4 className="text-xl font-bold mb-2">{isEditing ? "Modify Term" : "Schedule New Term"}</h4>
-                <p className="text-xs text-gray-500 mb-6 font-medium">Coordinate the seasonal training timeline.</p>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[520px] overflow-x-hidden rounded-xl p-6 lg:p-8" showCloseButton={false}>
+                <FormHeader
+                    icon={CalendarDays}
+                    title={isEditing ? "Modify Term" : "Schedule New Term"}
+                    description="Coordinate the seasonal training timeline."
+                    className="-mx-6 -mt-6 mb-6 rounded-t-lg border-b border-[#082269] lg:-mx-8 lg:-mt-8"
+                    actions={<button type="button" onClick={() => setIsModalOpen(false)} aria-label="Close term form" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>}
+                />
                     <form data-coachmax-form noValidate onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="col-span-2">
@@ -329,12 +345,12 @@ const TermManagement: React.FC = () => {
                             {formErrors.endDate && <p id="term-end-error" role="alert" className="mt-1 text-xs text-error-600">{formErrors.endDate}</p>}
                         </div>
                     </div>
-                    <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
+                    <FormActions className="-mx-6 -mb-6 mt-6 rounded-b-xl lg:-mx-8 lg:-mb-8">
                         <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
                         <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
                             {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Commit Term"}
                         </Button>
-                    </div>
+                    </FormActions>
                 </form>
             </Modal>
             <ConfirmDeleteModal

@@ -11,12 +11,25 @@ import { toast } from "react-hot-toast";
 import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 import { getMediaUrl } from "../../utils/media";
 import { User, Shield, Image as ImageIcon, Search } from "lucide-react";
+import FormHeader from "../form/FormHeader";
+import FormActions from "../form/FormActions";
 import ImageCropModal from "../common/ImageCropModal";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import AssignPlayerToTeamModal from "./AssignPlayerToTeamModal";
 import AddTemporaryPlayersModal from "./AddTemporaryPlayersModal";
 import TeamBroadcastButton from "../teams/TeamBroadcastButton";
+import Pagination from "../common/Pagination";
 import { todayDateOnly, toDateOnly } from "../../utils/dateTime";
+import { z } from "zod";
+import { requiredText, validateWithSchema } from "../../utils/formValidation";
+
+const teamFormSchema = z.object({
+  teamName: requiredText("Team name"),
+  teamType: requiredText("Team category"),
+  ageGroup: requiredText("Age group"),
+  term: requiredText("Academic term"),
+  coach: requiredText("Head coach"),
+});
 
 const TeamManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +46,7 @@ const TeamManagement: React.FC = () => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
 
   const [selectedFilterYear, setSelectedFilterYear] = useState<string>(
     new Date().getFullYear().toString()
@@ -121,13 +135,14 @@ const TeamManagement: React.FC = () => {
   };
 
   const { data: teamsData, isLoading: loading } = useQuery({
-    queryKey: ["teams", selectedFilterTerm, page, searchQuery],
-    queryFn: () => getAllTeams(selectedFilterTerm, { page, limit: 20, search: searchQuery }),
+    queryKey: ["teams", selectedFilterTerm, page, limit, searchQuery],
+    queryFn: () => getAllTeams(selectedFilterTerm, { page, limit, search: searchQuery }),
     enabled: !!selectedFilterTerm,
   });
   const teams = getDataArray(teamsData);
   const totalPages = teamsData?.pagination?.totalPages || 1;
-  useEffect(() => setPage(1), [selectedFilterTerm, searchQuery]);
+  const totalTeams = teamsData?.pagination?.total ?? 0;
+  useEffect(() => setPage(1), [selectedFilterTerm, searchQuery, limit]);
   useEffect(() => { if (page > totalPages) setPage(Math.max(1, totalPages)); }, [page, totalPages]);
 
   const { data: coachesData } = useQuery({
@@ -293,12 +308,8 @@ const TeamManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const errors: Record<string, string> = {};
-    if (!formData.teamName.trim()) errors.teamName = "Team name is required.";
-    if (!formData.teamType) errors.teamType = "Select a team category.";
-    if (!formData.ageGroup.trim()) errors.ageGroup = "Age group is required.";
-    if (!formData.term) errors.term = "Select an academic term.";
-    if (!formData.coach) errors.coach = "Select an assigned head coach.";
+    const result = validateWithSchema(teamFormSchema, formData);
+    const errors: Record<string, string> = { ...result.errors };
     if (scheduleMode === "ROUNDS") {
       const validDates = sessionDates.filter(Boolean);
       const rounds = Number(roundCount);
@@ -309,7 +320,11 @@ const TeamManagement: React.FC = () => {
       }
     }
     setValidationErrors(errors);
-    if (Object.keys(errors).length) return;
+    if (Object.keys(errors).length) {
+      const firstInvalid = document.querySelector<HTMLElement>("[aria-invalid='true']");
+      firstInvalid?.focus();
+      return;
+    }
 
     const payload = new FormData();
     payload.append("teamName", formData.teamName);
@@ -389,13 +404,6 @@ const TeamManagement: React.FC = () => {
     return coach ? (coach.fullName || coach.name) : "Unassigned";
   };
 
-  const filteredTeams = teams.filter((team: any) =>
-    team.teamName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    team.ageGroup?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (team.teamType || (team.isExternal ? "external" : "our team"))?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    getCoachName(team.coach).toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
     <div className="flex flex-col gap-4 w-full">
       <div className="flex items-center justify-between">
@@ -408,7 +416,7 @@ const TeamManagement: React.FC = () => {
             placeholder="Search teams..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-none outline-none focus:border-brand-500 bg-white dark:bg-slate-800 dark:text-white transition-colors shadow-sm"
+            className="h-11 min-h-11 w-full rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-4 py-0 text-sm outline-none focus:border-brand-500 dark:text-white transition-colors shadow-sm"
           />
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -419,7 +427,7 @@ const TeamManagement: React.FC = () => {
               setSelectedFilterYear(e.target.value);
               setSelectedFilterTerm("");
             }}
-            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-none focus:outline-none focus:border-[#0047FF] shadow-xs cursor-pointer"
+            className="h-11 min-h-11 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-0 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-none focus:outline-none focus:border-[#0047FF] shadow-xs cursor-pointer"
           >
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((yr) => (
               <option key={yr} value={yr}>
@@ -432,7 +440,7 @@ const TeamManagement: React.FC = () => {
           <select
             value={selectedFilterTerm}
             onChange={(e) => setSelectedFilterTerm(e.target.value)}
-            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-none focus:outline-none focus:border-[#0047FF] shadow-xs cursor-pointer max-w-[240px]"
+            className="h-11 min-h-11 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-0 text-xs font-bold text-slate-800 dark:text-slate-200 rounded-none focus:outline-none focus:border-[#0047FF] shadow-xs cursor-pointer max-w-[240px]"
           >
             {filterTerms.map((t: any) => (
               <option key={t._id || t.id} value={t._id || t.id}>
@@ -441,7 +449,7 @@ const TeamManagement: React.FC = () => {
             ))}
           </select>
 
-          <Button onClick={handleOpenAdd} size="sm">Add Team</Button>
+          <Button onClick={handleOpenAdd} size="sm" className="!h-11 !min-h-11 !py-0 text-xs font-bold uppercase tracking-wider">Add Team</Button>
         </div>
       </div>
 
@@ -468,10 +476,10 @@ const TeamManagement: React.FC = () => {
                     <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Teams...</span>
                   </div>
                 </td></tr>
-              ) : filteredTeams.length === 0 ? (
+              ) : teams.length === 0 ? (
                 <tr><td colSpan={8} className="text-center py-20 text-gray-500 font-medium italic">No teams found.</td></tr>
               ) : (
-                filteredTeams.map((team: any) => (
+                teams.map((team: any) => (
                   <tr
                     key={team._id}
                     onClick={() => navigate(`/teams/${team._id}`)}
@@ -642,24 +650,23 @@ const TeamManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-sm">
-        <span>{teamsData?.pagination?.total || 0} teams in the selected term · Page {page} of {totalPages}</span>
-        <div className="flex gap-2">
-          <Button size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Previous</Button>
-          <Button size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>Next</Button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={totalTeams}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={(nextLimit) => { setLimit(nextLimit); setPage(1); }}
+        limitOptions={[10, 20, 50, 100]}
+      />
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[920px] max-h-[90vh] overflow-y-auto p-6 lg:p-8 rounded-lg shadow-2xl" noBackgroundBlur={true}>
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="p-2.5 bg-brand-50 dark:bg-brand-500/10 rounded-none text-brand-500">
-            <Shield size={22} />
-          </div>
-          <div>
-            <h4 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{isEditing ? "Modify Team Profile" : "Create New Team Profile"}</h4>
-            <p className="text-xs text-slate-500 font-medium">Configure team details, coaches, schedule, and venue information.</p>
-          </div>
-        </div>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[920px] max-h-[90vh] overflow-y-auto p-6 lg:p-8 rounded-xl shadow-2xl" noBackgroundBlur={true}>
+        <FormHeader
+          icon={Shield}
+          title={isEditing ? "Modify Team Profile" : "Create New Team Profile"}
+          description="Configure team details, coaches, schedule, and venue information."
+          className="mb-6 -mx-6 -mt-6 rounded-t-lg border-b border-[#082269] lg:-mx-8 lg:-mt-8"
+        />
         <form data-coachmax-form noValidate onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-8 space-y-4">
@@ -1005,12 +1012,12 @@ const TeamManagement: React.FC = () => {
             )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+          <FormActions className="-mx-6 -mb-6 mt-6 rounded-b-xl lg:-mx-8 lg:-mb-8">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Discard</Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
               {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save Team"}
             </Button>
-          </div>
+          </FormActions>
         </form>
       </Modal>
 

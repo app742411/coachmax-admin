@@ -4,6 +4,7 @@ export interface AttendanceRecord {
   avatar: string;
   dob: string;
   medicalConditions: string;
+  isMedicalCondition?: boolean;
   attendance: ("present" | "absent" | "late" | "none")[]; // 10 days of record
 }
 

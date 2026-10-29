@@ -2,13 +2,16 @@ import { useRef, useState, useEffect } from "react";
 import { Bold, Italic, Underline, List, ListOrdered, Code, Eye } from "lucide-react";
 
 interface HtmlEditorProps {
+  id?: string;
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
   className?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }
 
-export default function HtmlEditor({ value, onChange, placeholder = "", className = "" }: HtmlEditorProps) {
+export default function HtmlEditor({ id, value, onChange, placeholder = "", className = "", "aria-invalid": ariaInvalid, "aria-describedby": ariaDescribedBy }: HtmlEditorProps) {
   const [isCodeView, setIsCodeView] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -114,15 +117,23 @@ export default function HtmlEditor({ value, onChange, placeholder = "", classNam
       <div className="relative flex-1 flex flex-col min-h-[140px]">
         {isCodeView ? (
           <textarea
+            id={id}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            aria-invalid={ariaInvalid}
+            aria-describedby={ariaDescribedBy}
             className="w-full flex-1 p-4 bg-gray-950 text-emerald-400 font-mono text-xs outline-none resize-none min-h-[140px]"
             placeholder="<p>Write your raw HTML here...</p>"
           />
         ) : (
           <div
             ref={editorRef}
+            id={id}
             contentEditable
+            role="textbox"
+            aria-multiline="true"
+            aria-invalid={ariaInvalid}
+            aria-describedby={ariaDescribedBy}
             onInput={handleInput}
             className="w-full flex-1 p-4 outline-none text-sm font-medium text-gray-900 dark:text-white overflow-y-auto prose dark:prose-invert max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none"
             data-placeholder={placeholder}

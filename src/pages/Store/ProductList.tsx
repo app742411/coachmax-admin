@@ -4,10 +4,8 @@ import { useStoreProducts } from "../../hooks/useProducts";
 
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadcrumb";
-import {
-  Search,
-  ShoppingBag,
-} from "lucide-react";
+import { Link } from "react-router";
+import { Plus, Search, ShoppingBag } from "lucide-react";
 import ProductCard from "../../components/Store/ProductCard";
 
 const ProductList = () => {
@@ -83,7 +81,15 @@ const ProductList = () => {
       <PageBreadcrumb
         pageTitle="Merchandise Catalog"
         items={[{ name: "Store", path: "/products" }]}
-      />
+      >
+        <Link
+          to="/add-product"
+          className="inline-flex items-center justify-center gap-2 bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-theme-xs transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        >
+          <Plus size={16} aria-hidden="true" />
+          Add Product
+        </Link>
+      </PageBreadcrumb>
       <div className="space-y-6">
 
         {/* Header Section */}

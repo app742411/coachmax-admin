@@ -12,7 +12,7 @@ import {
   ProductsResponse,
   ProductResponse,
 } from "../types/product";
-import { getStoreProducts, getStoreProductDetails, deleteStoreProduct } from "../api/orderApi";
+import { getStoreProducts, getStoreProductDetails, getProductInsights, deleteStoreProduct } from "../api/orderApi";
 
 
 export const useStoreProducts = (params?: {
@@ -37,6 +37,12 @@ export const useStoreProductDetails = (id: string) => {
     enabled: !!id,
   });
 };
+
+export const useProductInsights = (id: string, page: number) => useQuery({
+  queryKey: ["storeProductInsights", id, page],
+  queryFn: () => getProductInsights(id, page),
+  enabled: !!id,
+});
 
 export const useProducts = (page = 1, limit = 10) => {
   return useQuery<ProductsResponse, Error>({

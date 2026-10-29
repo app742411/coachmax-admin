@@ -5,10 +5,10 @@ import { getAllClassesForAssign, assignClass, transferClass, getClassFiltersWith
 import { markCoachSingleAttendance, markCoachBulkAttendance, getCoachClassPlayers, getCoachPlayerProfile, getCoachUniquePlayers, addCoachNote, getCoachNotes, updateCoachNote, getCoachAllNotes } from "../api/coaches";
 import { PlayersResponse } from "../types/player";
 
-export const usePlayerStats = (term?: string) => {
+export const usePlayerStats = (term?: string, year?: string) => {
   return useQuery({
-    queryKey: ["playerStats", term],
-    queryFn: () => getPlayerStats(term),
+    queryKey: ["playerStats", term, year],
+    queryFn: () => getPlayerStats(term, year),
   });
 };
 
@@ -21,10 +21,13 @@ export const usePlayers = (
   term?: string,
   medical?: string,
   ageGroup?: string,
-  subProgram?: string
+  subProgram?: string,
+  playerStatus?: "ALL" | "APPROVED" | "REJECTED",
+  assignment?: "ELITE" | "SCHOOL" | "BOTH" | "UNASSIGNED",
+  year?: string
 ) => {
   return useQuery<PlayersResponse, Error>({
-    queryKey: ["players", page, limit, search, program, status, term, medical, ageGroup, subProgram],
+    queryKey: ["players", page, limit, search, program, status, term, medical, ageGroup, subProgram, playerStatus, assignment, year],
     queryFn: () => {
       const userStr = localStorage.getItem("user");
       let isCoach = false;
@@ -42,7 +45,7 @@ export const usePlayers = (
       if (isCoach) {
         return getCoachUniquePlayers(page, limit, search, program, status);
       }
-      return getPlayers(page, limit, search, program, status, term, medical, ageGroup, subProgram);
+      return getPlayers(page, limit, search, program, status, term, medical, ageGroup, subProgram, playerStatus, assignment, year);
     },
   });
 };
@@ -341,10 +344,20 @@ export const useAssignClassesToPlayer = () => {
       paymentStatus: string;
       registrationRequestId?: string;
     }) => assignClassesToPlayer(playerId, classIds, paymentStatus, registrationRequestId),
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["unallocatedPlayers"] });
-      queryClient.invalidateQueries({ queryKey: ["allocatedPlayers"] });
-      queryClient.invalidateQueries({ queryKey: ["classFullTable"] });
+    onSuccess: async (data: any) => {
+      await Promise.all([
+        "unallocatedPlayers",
+        "allocatedPlayers",
+        "classFullTable",
+        "classFullTables",
+        "classPlayers",
+        "registrationRequests",
+        "coachTemporaryPlayers",
+        "players",
+        "playerStats",
+        "sidebarBadges",
+        "invoices",
+      ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
       toast.success(data?.message || "Player allocated to classes and enrolled successfully");
     },
     onError: (error: any) => {

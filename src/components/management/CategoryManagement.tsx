@@ -10,7 +10,15 @@ import {
 } from "../../hooks/useCategories";
 import { toast } from "react-hot-toast";
 import { Edit, Trash, Tag } from "../../icons/lucide-icons";
+import { Tag as FormTag, X } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
+import FormHeader from "../form/FormHeader";
+import { requiredText, validateWithSchema } from "../../utils/formValidation";
+import { z } from "zod";
+import FormField from "../form/FormField";
+import FormActions from "../form/FormActions";
+
+const categorySchema = z.object({ name: requiredText("Category name") });
 
 const CategoryManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,16 +68,18 @@ const CategoryManagement: React.FC = () => {
 
   const handleNameChange = (val: string) => {
     setFormData({ name: val });
+    if (val.trim()) setFormError("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = formData.name.trim();
-    if (!name) {
-      setFormError("Category name is required.");
+    const validation = validateWithSchema(categorySchema, formData);
+    if (!validation.success) {
+      setFormError(validation.errors.name);
       return;
     }
     setFormError("");
+    const name = formData.name.trim();
     const payload = { name };
     if (isEditing && selectedId) {
       updateMutation.mutate(
@@ -147,12 +157,16 @@ const CategoryManagement: React.FC = () => {
         </Table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[400px] p-6 lg:p-8">
-        <h4 className="text-xl font-bold mb-2">{isEditing ? "Edit Category" : "New Category"}</h4>
-        <p className="text-xs text-gray-500 mb-6">Manage high-level academy groupings.</p>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[460px] overflow-visible p-6 lg:p-8" showCloseButton={false}>
+        <FormHeader
+          icon={FormTag}
+          title={isEditing ? "Edit Category" : "New Category"}
+          description="Manage high-level academy groupings."
+          className="-mx-6 -mt-6 mb-6 rounded-t-lg border-b border-[#082269] lg:-mx-8 lg:-mt-8"
+          actions={<button type="button" onClick={() => setIsModalOpen(false)} aria-label="Close category form" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>}
+        />
         <form data-coachmax-form noValidate onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="academy-category-name" className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Category Name <span className="text-error-600">*</span></label>
+          <FormField id="academy-category-name" label="Category Name" required error={formError} className="mb-4">
             <input
               id="academy-category-name"
               type="text"
@@ -163,16 +177,15 @@ const CategoryManagement: React.FC = () => {
               placeholder="e.g. Academy"
               aria-required="true"
               aria-invalid={Boolean(formError)}
-              aria-describedby={formError ? "academy-category-error" : undefined}
+              aria-describedby={formError ? "academy-category-name-error" : undefined}
             />
-            {formError && <p id="academy-category-error" role="alert" className="mt-1.5 text-sm text-error-600">{formError}</p>}
-          </div>
-          <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
+          </FormField>
+          <FormActions className="-mx-6 -mb-6 mt-6 rounded-b-lg lg:-mx-8 lg:-mb-8">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
               {createMutation.isPending || updateMutation.isPending ? "Saving..." : (isEditing ? "Update Category" : "Add Category")}
             </Button>
-          </div>
+          </FormActions>
         </form>
       </Modal>
       <ConfirmDeleteModal

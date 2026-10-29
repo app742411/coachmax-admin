@@ -1,10 +1,8 @@
 // src/components/EventComponents/AddEventForm.tsx
 import React, { useState, useEffect } from "react";
 import {
-  Calendar,
   MapPin,
   Globe,
-  Layout,
   Clock,
   Users,
   ChevronRight,
@@ -19,6 +17,11 @@ import toast from "react-hot-toast";
 import Select from "../form/Select";
 import DatePicker from "../form/date-picker";
 import TimePicker from "../form/time-picker";
+import FormHeader from "../form/FormHeader";
+import FormStepIndicator from "../form/FormStepIndicator";
+import FormActions from "../form/FormActions";
+import { requiredText, validateWithSchema, type FormErrors } from "../../utils/formValidation";
+import { z } from "zod";
 import DropzoneComponent from "../form/form-elements/DropZone";
 import SuccessPopup from "../SuccessPopup";
 import { LucideIcon } from "lucide-react";
@@ -32,12 +35,7 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title }) => (
-  <div className="flex items-center gap-3 mb-6 p-4 bg-[#031549] text-white rounded-none shadow-sm -mx-6 -mt-6 border-b border-[#082269]">
-    <div className="p-2 bg-white/10 rounded-none text-white">
-      <Icon size={18} />
-    </div>
-    <h5 className="text-lg font-bold text-white">{title}</h5>
-  </div>
+  <FormHeader icon={Icon} title={title} className="mb-6 -mx-8 -mt-8 rounded-t-lg border-b border-[#082269]" />
 );
 
 interface FormCardProps {
@@ -46,7 +44,7 @@ interface FormCardProps {
 }
 
 const FormCard: React.FC<FormCardProps> = ({ children, className = "" }) => (
-  <div className={`bg-white dark:bg-gray-900 rounded-none border border-gray-100 dark:border-gray-800 p-8 shadow-sm ${className}`}>
+  <div className={`bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-8 shadow-sm ${className}`}>
     {children}
   </div>
 );
@@ -65,11 +63,35 @@ import {
   toDateOnly,
 } from "../../utils/dateTime";
 
+const eventIdentitySchema = z.object({
+  title: requiredText("Event title"),
+  category: requiredText("Event category"),
+  description: requiredText("Event description"),
+  eventType: requiredText("Event type"),
+});
+
+const eventTimelineSchema = z.object({
+  startDate: z.date().nullable(),
+  endDate: z.date().nullable(),
+  registrationDeadline: z.date().nullable(),
+  maxParticipants: z.string().refine((value) => !value || (Number.isInteger(Number(value)) && Number(value) > 0), "Participant limit must be a whole number greater than 0."),
+  registrationFee: z.string().refine((value) => !value || (Number.isFinite(Number(value)) && Number(value) >= 0), "Registration fee must be 0 or more."),
+}).superRefine((value, context) => {
+  if (!value.startDate) context.addIssue({ code: "custom", path: ["startDate"], message: "Start date is required." });
+  if (!value.endDate) context.addIssue({ code: "custom", path: ["endDate"], message: "End date is required." });
+  if (value.startDate && value.endDate && dateOnlyFormValue(value.startDate) > dateOnlyFormValue(value.endDate)) {
+    context.addIssue({ code: "custom", path: ["endDate"], message: "End date must be on or after the start date." });
+  }
+  if (value.registrationDeadline && value.startDate && dateOnlyFormValue(value.registrationDeadline) > dateOnlyFormValue(value.startDate)) {
+    context.addIssue({ code: "custom", path: ["registrationDeadline"], message: "Registration deadline must be on or before the start date." });
+  }
+});
+
 const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<FormErrors>({});
   const [eventBannerPreview, setEventBannerPreview] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -254,45 +276,40 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setValidationErrors((previous) => ({ ...previous, [name]: "" }));
+    setValidationErrors((previous) => { const next = { ...previous }; delete next[name]; return next; });
   };
 
   const handleDateChange = (date: Date | null, field: string) => {
     setFormData(prev => ({ ...prev, [field]: date }));
-    setValidationErrors((previous) => ({ ...previous, [field]: "", endDate: "", registrationDeadline: "" }));
+    setValidationErrors((previous) => {
+      const next = { ...previous };
+      [field, "endDate", "registrationDeadline"].forEach((key) => delete next[key]);
+      return next;
+    });
   };
 
   const validateIdentity = () => {
-    const errors: Record<string, string> = {};
-    if (!formData.title.trim()) errors.title = "Event title is required.";
-    if (!formData.category.trim()) errors.category = "Select an event category.";
-    if (!formData.description.trim()) errors.description = "Event description is required.";
-    if (!formData.eventType) errors.eventType = "Select an event type.";
-    setValidationErrors((previous) => ({ ...previous, ...errors }));
-    return Object.keys(errors).length === 0;
+    const result = validateWithSchema(eventIdentitySchema, formData);
+    setValidationErrors((previous) => {
+      const next = { ...previous };
+      ["title", "category", "description", "eventType"].forEach((field) => delete next[field]);
+      return { ...next, ...result.errors };
+    });
+    return result.success;
   };
 
   const validateTimeline = () => {
-    const errors: Record<string, string> = {};
-    if (!formData.startDate) errors.startDate = "Start date is required.";
-    if (!formData.endDate) errors.endDate = "End date is required.";
-    if (formData.startDate && formData.endDate && dateOnlyFormValue(formData.startDate) > dateOnlyFormValue(formData.endDate)) {
-      errors.endDate = "End date must be on or after the start date.";
-    }
-    if (formData.registrationDeadline && formData.startDate && dateOnlyFormValue(formData.registrationDeadline) > dateOnlyFormValue(formData.startDate)) {
-      errors.registrationDeadline = "Registration deadline must be on or before the start date.";
-    }
-    if (formData.maxParticipants && (!Number.isInteger(Number(formData.maxParticipants)) || Number(formData.maxParticipants) < 1)) {
-      errors.maxParticipants = "Participant limit must be a whole number greater than 0.";
-    }
-    if (formData.registrationFee && (!Number.isFinite(Number(formData.registrationFee)) || Number(formData.registrationFee) < 0)) {
-      errors.registrationFee = "Registration fee must be 0 or more.";
-    }
+    const result = validateWithSchema(eventTimelineSchema, formData);
+    const errors = { ...result.errors };
     if (isHolidayCamp && !campSessions.some((session) => session.isEnabled && (session.hasFullDay || session.hasHalfDay))) {
       errors.sessions = "Enable at least one camp day and session.";
     }
-    setValidationErrors((previous) => ({ ...previous, ...errors }));
-    return Object.keys(errors).length === 0;
+    setValidationErrors((previous) => {
+      const next = { ...previous };
+      ["startDate", "endDate", "registrationDeadline", "maxParticipants", "registrationFee", "sessions"].forEach((field) => delete next[field]);
+      return { ...next, ...errors };
+    });
+    return result.success && Object.keys(errors).length === 0;
   };
 
   const handleFileChange = (files: File[]) => {
@@ -439,32 +456,23 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const steps = [
-    { id: 1, label: "Identity", icon: Layout },
-    { id: 2, label: "Timeline", icon: Calendar },
-    { id: 3, label: "Venue & Assets", icon: MapPin }
+    { label: "Identity", description: "Event details" },
+    { label: "Timeline", description: "Dates and registration" },
+    { label: "Venue & assets", description: "Location and media" },
   ];
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Step Indicators */}
-      <div className="mb-12 flex items-center justify-between px-4 overflow-x-auto no-scrollbar gap-8">
-        {steps.map((step) => (
-          <div key={step.id} className="flex items-center gap-3 shrink-0">
-            <div className={`p-3 rounded-none transition-all ${currentStep === step.id
-              ? "bg-brand-500 text-white shadow-xl shadow-brand-500/30 scale-110"
-              : currentStep > step.id
-                ? "bg-success-500/10 text-success-500 border border-success-500/20"
-                : "bg-gray-100 dark:bg-white/5 text-gray-400"
-              }`}>
-              <step.icon size={20} strokeWidth={2.5} />
-            </div>
-            <div className="hidden sm:block">
-              <p className={`text-[10px] font-bold  ${currentStep === step.id ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>Step 0{step.id}</p>
-              <h6 className={`text-xs font-bold  tracking-tighter ${currentStep === step.id ? "text-brand-500" : "text-gray-400"}`}>{step.label}</h6>
-            </div>
-          </div>
-        ))}
-      </div>
+      <FormStepIndicator
+        className="mb-8 border-b border-gray-200 pb-4 dark:border-gray-800"
+        steps={steps}
+        currentStep={currentStep}
+        onStepSelect={(step) => {
+          if (step === 1) setCurrentStep(1);
+          else if (step === 2 && validateIdentity()) setCurrentStep(2);
+          else if (step === 3 && validateIdentity() && validateTimeline()) setCurrentStep(3);
+        }}
+      />
 
       <form data-coachmax-form noValidate
         onSubmit={(e) => {
@@ -510,7 +518,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                     options={categories}
                     placeholder="Select Event Category"
                     value={formData.category}
-                    onChange={(val: string) => { setFormData(prev => ({ ...prev, category: val })); setValidationErrors((previous) => ({ ...previous, category: "" })); }}
+                    onChange={(val: string) => { setFormData(prev => ({ ...prev, category: val })); setValidationErrors((previous) => { const next = { ...previous }; delete next.category; return next; }); }}
                   />
                   {validationErrors.category && <p id="event-category-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.category}</p>}
                 </div>
@@ -540,6 +548,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                     aria-label="Event type"
                     aria-required
                     aria-invalid={Boolean(validationErrors.eventType)}
+                    aria-describedby={validationErrors.eventType ? "event-type-error" : undefined}
                     options={[
                       { value: "TOURNAMENT", label: "Tournament" },
                       { value: "LEAGUE", label: "League" },
@@ -553,9 +562,15 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                         eventType: val,
                         category: val === "CAMP" ? "Camp" : prev.category
                       }));
-                      setValidationErrors((previous) => ({ ...previous, eventType: "", category: val === "CAMP" ? "" : previous.category }));
+                      setValidationErrors((previous) => {
+                        const next = { ...previous };
+                        delete next.eventType;
+                        if (val === "CAMP") delete next.category;
+                        return next;
+                      });
                     }}
                   />
+                  {validationErrors.eventType && <p id="event-type-error" role="alert" className="mt-1 text-sm text-error-600">{validationErrors.eventType}</p>}
                 </div>
                 <div>
                   <Label>Registration Fee</Label>
@@ -772,7 +787,7 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
         )}
 
         {/* Navigation Actions */}
-        <div className="flex items-center justify-between pt-8 px-2">
+        <FormActions className="mt-6 rounded-xl">
           {currentStep > 1 && (
             <Button
               type="button"
@@ -799,13 +814,13 @@ const AddEventForm: React.FC<AddEventFormProps> = ({ eventId }) => {
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={loading}
-                className="rounded-none px-16 font-bold  shadow-xl shadow-brand-500/30 bg-success-600 hover:bg-success-700 active:scale-95 transition-all text-white"
+              className="rounded-none px-16 font-bold shadow-xl shadow-brand-500/30 bg-brand-600 hover:bg-brand-700 active:scale-95 transition-all text-white"
               >
                 {loading ? "Optimizing Assets..." : eventId ? "Update Event Profile" : "Create Event Profile"}
               </Button>
             )}
           </div>
-        </div>
+        </FormActions>
       </form>
 
       {showSuccessPopup && (

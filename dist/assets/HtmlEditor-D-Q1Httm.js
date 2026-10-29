@@ -1,0 +1,26 @@
+import{s as o,r as s,j as e}from"./index-DR_8arlU.js";import{L as p}from"./list-DuMNPGq7.js";import{L as k}from"./upload-BAVouAd-.js";import{E as v}from"./eye-DcyRfLr_.js";/**
+ * @license lucide-react v1.22.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const f=[["path",{d:"M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8",key:"mg9rjx"}]],w=o("bold",f);/**
+ * @license lucide-react v1.22.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const j=[["path",{d:"M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z",key:"oz39mx"}]],I=o("bookmark",j);/**
+ * @license lucide-react v1.22.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const N=[["path",{d:"m16 18 6-6-6-6",key:"eg8j8"}],["path",{d:"m8 6-6 6 6 6",key:"ppft3o"}]],L=o("code",N);/**
+ * @license lucide-react v1.22.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const C=[["line",{x1:"19",x2:"10",y1:"4",y2:"4",key:"15jd3p"}],["line",{x1:"14",x2:"5",y1:"20",y2:"20",key:"bu0au3"}],["line",{x1:"15",x2:"9",y1:"4",y2:"20",key:"uljnxc"}]],z=o("italic",C);/**
+ * @license lucide-react v1.22.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const V=[["path",{d:"M6 4v6a6 6 0 0 0 12 0V4",key:"9kb039"}],["line",{x1:"4",x2:"20",y1:"20",y2:"20",key:"nun2al"}]],_=o("underline",V);function T({id:d,value:n,onChange:l,placeholder:h="",className:y="","aria-invalid":x,"aria-describedby":c}){const[t,b]=s.useState(!1),r=s.useRef(null);s.useEffect(()=>{r.current&&!t&&r.current.innerHTML!==n&&(r.current.innerHTML=n)},[n,t]);const g=()=>{r.current&&l(r.current.innerHTML)},a=(i,m="")=>{document.execCommand(i,!1,m),g()},u=()=>{b(!t)};return e.jsxs("div",{className:`border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850 focus-within:border-brand-500 transition-all flex flex-col ${y}`,children:[e.jsxs("div",{className:"flex items-center gap-1 p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 select-none",children:[!t&&e.jsxs(e.Fragment,{children:[e.jsx("button",{type:"button",onClick:()=>a("bold"),className:"p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700/50 rounded transition-all cursor-pointer",title:"Bold",children:e.jsx(w,{size:15})}),e.jsx("button",{type:"button",onClick:()=>a("italic"),className:"p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700/50 rounded transition-all cursor-pointer",title:"Italic",children:e.jsx(z,{size:15})}),e.jsx("button",{type:"button",onClick:()=>a("underline"),className:"p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700/50 rounded transition-all cursor-pointer",title:"Underline",children:e.jsx(_,{size:15})}),e.jsx("div",{className:"w-[1px] h-5 bg-gray-300 dark:bg-gray-600 mx-1"}),e.jsx("button",{type:"button",onClick:()=>a("insertUnorderedList"),className:"p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700/50 rounded transition-all cursor-pointer",title:"Bullet List",children:e.jsx(p,{size:15})}),e.jsx("button",{type:"button",onClick:()=>a("insertOrderedList"),className:"p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700/50 rounded transition-all cursor-pointer",title:"Numbered List",children:e.jsx(k,{size:15})}),e.jsx("div",{className:"w-[1px] h-5 bg-gray-300 dark:bg-gray-600 mx-1"})]}),e.jsx("button",{type:"button",onClick:u,className:`p-1.5 rounded transition-all cursor-pointer ml-auto flex items-center gap-1.5 text-xs font-bold ${t?"bg-brand-500 text-white shadow-sm":"text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700/50"}`,title:t?"Switch to Visual View":"Switch to Code View",children:t?e.jsxs(e.Fragment,{children:[e.jsx(v,{size:14}),"Visual"]}):e.jsxs(e.Fragment,{children:[e.jsx(L,{size:14}),"HTML Code"]})})]}),e.jsx("div",{className:"relative flex-1 flex flex-col min-h-[140px]",children:t?e.jsx("textarea",{id:d,value:n,onChange:i=>l(i.target.value),"aria-invalid":x,"aria-describedby":c,className:"w-full flex-1 p-4 bg-gray-950 text-emerald-400 font-mono text-xs outline-none resize-none min-h-[140px]",placeholder:"<p>Write your raw HTML here...</p>"}):e.jsx("div",{ref:r,id:d,contentEditable:!0,role:"textbox","aria-multiline":"true","aria-invalid":x,"aria-describedby":c,onInput:g,className:"w-full flex-1 p-4 outline-none text-sm font-medium text-gray-900 dark:text-white overflow-y-auto prose dark:prose-invert max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none","data-placeholder":h,style:{minHeight:"140px"}})})]})}export{I as B,T as H};

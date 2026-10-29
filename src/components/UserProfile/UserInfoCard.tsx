@@ -8,6 +8,8 @@ import Label from "../form/Label";
 import { useProfile, useUpdateProfile } from "../../hooks/useAuth";
 import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
+import { UserRound } from "lucide-react";
+import FormHeader from "../form/FormHeader";
 
 interface UserInfoFormValues {
   firstName: string;
@@ -197,15 +199,13 @@ export default function UserInfoCard() {
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-none bg-white p-4 dark:bg-gray-900 lg:p-11">
-          <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Personal Information
-            </h4>
-            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Update your details to keep your profile up-to-date.
-            </p>
-          </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <FormHeader
+            icon={UserRound}
+            title="Edit Personal Information"
+            description="Update your details to keep your profile up-to-date."
+            className="mb-6 -mx-4 -mt-4 rounded-t-lg border-b border-[#082269] pr-14 lg:-mx-11 lg:-mt-11"
+          />
+          <form data-coachmax-form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
             <div className="custom-scrollbar h-[420px] overflow-y-auto px-2 pb-3">
               {updateProfileMutation.isError && (
                 <div className="mb-4 p-3 bg-error-500/10 border border-error-500/20 text-error-500 rounded-none text-sm">
@@ -273,8 +273,9 @@ export default function UserInfoCard() {
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>First Name <span className="text-error-500">*</span></Label>
+                    <Label htmlFor="profile-first-name">First Name <span className="text-error-500">*</span></Label>
                     <Input
+                      id="profile-first-name"
                       type="text"
                       error={!!errors.firstName}
                       hint={errors.firstName?.message}
@@ -283,8 +284,9 @@ export default function UserInfoCard() {
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Last Name <span className="text-error-500">*</span></Label>
+                    <Label htmlFor="profile-last-name">Last Name <span className="text-error-500">*</span></Label>
                     <Input
+                      id="profile-last-name"
                       type="text"
                       error={!!errors.lastName}
                       hint={errors.lastName?.message}
@@ -293,7 +295,7 @@ export default function UserInfoCard() {
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>
+                    <Label htmlFor="profile-email">
                       Email Address
                       <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-normal text-gray-400">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline">
@@ -303,6 +305,7 @@ export default function UserInfoCard() {
                       </span>
                     </Label>
                     <Input
+                      id="profile-email"
                       type="email"
                       readOnly
                       className="cursor-not-allowed bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-500"

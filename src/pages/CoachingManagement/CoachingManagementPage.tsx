@@ -14,8 +14,9 @@ import {
 } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { Tag, Layers } from "../../icons/lucide-icons";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag as HeaderTag, Layers as HeaderLayers, X } from "lucide-react";
 import TermManagement from "../../components/management/TermManagement";
+import FormHeader from "../../components/form/FormHeader";
 
 import { useCategories } from "../../hooks/useCategories";
 import { useProgramsByCategory } from "../../hooks/usePrograms";
@@ -389,12 +390,17 @@ const CoachingManagementPage: React.FC = () => {
       </div>{/* end space-y-8 */}
 
 
-      <Modal isOpen={catModalOpen} onClose={() => setCatModalOpen(false)} className="max-w-[400px] p-6 lg:p-8 rounded-none shadow-2xl">
-        <h4 className="text-xl font-bold mb-2">{catEditing ? "Edit Category" : "New Category"}</h4>
-        <p className="text-xs text-gray-500 mb-6">Manage high-level academy groupings.</p>
-        <form onSubmit={handleCatSubmit}>
+      <Modal isOpen={catModalOpen} onClose={() => setCatModalOpen(false)} className="max-w-[520px] overflow-x-hidden rounded-lg p-6 shadow-2xl lg:p-8" showCloseButton={false}>
+        <FormHeader
+          icon={HeaderTag}
+          title={catEditing ? "Edit Category" : "New Category"}
+          description="Manage high-level academy groupings."
+          className="-mx-6 -mt-6 mb-6 rounded-t-lg border-b border-[#082269] lg:-mx-8 lg:-mt-8"
+          actions={<button type="button" onClick={() => setCatModalOpen(false)} aria-label="Close category form" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>}
+        />
+        <form data-coachmax-form onSubmit={handleCatSubmit}>
           <div className="mb-4">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Category Name</label>
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Category Name <span className="text-error-600">*</span></label>
             <input
               type="text"
               value={catForm.name}
@@ -405,7 +411,7 @@ const CoachingManagementPage: React.FC = () => {
             />
           </div>
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t">
-            <Button variant="outline" onClick={() => setCatModalOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setCatModalOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={createCatMutation.isPending || updateCatMutation.isPending}>
               {createCatMutation.isPending || updateCatMutation.isPending ? "Saving..." : (catEditing ? "Update" : "Add Category")}
             </Button>
@@ -423,13 +429,18 @@ const CoachingManagementPage: React.FC = () => {
       />
 
 
-      <Modal isOpen={progModalOpen} onClose={() => setProgModalOpen(false)} className="max-w-[450px] p-6 lg:p-8 rounded-none shadow-2xl">
-        <h4 className="text-xl font-bold mb-2 tracking-tight">{progEditing ? "Modify Program" : "New Curriculum Module"}</h4>
-        <p className="text-xs text-gray-500 mb-8 font-medium">Define the core objectives for this training level.</p>
-        <form onSubmit={handleProgSubmit}>
+      <Modal isOpen={progModalOpen} onClose={() => setProgModalOpen(false)} className="max-w-[520px] overflow-x-hidden rounded-lg p-6 shadow-2xl lg:p-8" showCloseButton={false}>
+        <FormHeader
+          icon={HeaderLayers}
+          title={progEditing ? "Modify Program" : "New Curriculum Module"}
+          description="Define the core objectives for this training level."
+          className="-mx-6 -mt-6 mb-6 rounded-t-lg border-b border-[#082269] lg:-mx-8 lg:-mt-8"
+          actions={<button type="button" onClick={() => setProgModalOpen(false)} aria-label="Close program form" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>}
+        />
+        <form data-coachmax-form onSubmit={handleProgSubmit}>
           <div className="space-y-5">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Parent Category</label>
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Parent Category <span className="text-error-600">*</span></label>
               <select
                 value={progForm.category}
                 onChange={(e) => setProgForm({ ...progForm, category: e.target.value })}
@@ -443,7 +454,7 @@ const CoachingManagementPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Program Label</label>
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Program Label <span className="text-error-600">*</span></label>
               <input
                 type="text"
                 value={progForm.name}
@@ -455,7 +466,7 @@ const CoachingManagementPage: React.FC = () => {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-10 pt-6 border-t">
-            <Button variant="outline" onClick={() => setProgModalOpen(false)}>Discard</Button>
+            <Button type="button" variant="outline" onClick={() => setProgModalOpen(false)}>Discard</Button>
             <Button type="submit" disabled={createProgMutation.isPending || updateProgMutation.isPending} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
               {createProgMutation.isPending || updateProgMutation.isPending ? "Saving..." : (progEditing ? "Update Program" : "Add Program")}
             </Button>

@@ -28,9 +28,9 @@ const PlayerProfilePage = lazy(() => import("./pages/PlayersManagement/PlayerPro
 const Academy = lazy(() => import("./pages/Academy/Academy"));
 const ProgramsManagement = lazy(() => import("./pages/Programs/ProgramsManagement"));
 const Programs2 = lazy(() => import("./pages/Programs/Programs2"));
-const ClassesList = lazy(() => import("./pages/Classes/ClassesList"));
 const CloneTermPage = lazy(() => import("./pages/Classes/CloneTermPage"));
 const ProductList = lazy(() => import("./pages/Store/ProductList"));
+const ProductDetails = lazy(() => import("./pages/Store/ProductDetails"));
 const OrdersList = lazy(() => import("./pages/Store/OrdersList"));
 const OrderDetails = lazy(() => import("./pages/Store/OrderDetails"));
 const CoachingManagementPage = lazy(() => import("./pages/CoachingManagement/CoachingManagementPage"));
@@ -123,12 +123,13 @@ export default function App() {
             <Route path="/player/:playerId" element={<PlayerProfilePage />} />
             <Route path="/programs" element={<ProgramsManagement />} />
             <Route path="/programs-2" element={<Programs2 />} />
-            <Route path="/classes" element={<ClassesList />} />
+            <Route path="/classes" element={<Programs2 />} />
             <Route path="/clone-term" element={<CloneTermPage />} />
             <Route path="/program/:programType" element={<DynamicProgramRoute />} />
 
             {/* Store */}
             <Route path="/products" element={<ProductList />} />
+            <Route path="/products/:id" element={<ProductDetails />} />
             <Route path="/add-product" element={<AddProductPage />} />
             <Route path="/edit-product/:id" element={<EditProductPage />} />
             <Route path="/orders" element={<OrdersList />} />

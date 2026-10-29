@@ -20,6 +20,21 @@ import {
   CalendarDays,
   Sparkles
 } from "lucide-react";
+import FormHeader from "../form/FormHeader";
+import FormActions from "../form/FormActions";
+import { z } from "zod";
+import { validateWithSchema, type FormErrors } from "../../utils/formValidation";
+
+const classValidationSchema = z.object({
+  name: z.string().trim().min(1, "Class name is required."),
+  term: z.string().min(1, "Select an academic term."),
+  category: z.string().min(1, "Select a category."),
+  program: z.string().min(1, "Select a program."),
+  coach: z.string().min(1, "Select a coach."),
+  location: z.string().trim().min(1, "Class location is required."),
+  capacity: z.number().int().min(1, "Capacity must be a whole number of at least 1."),
+  price: z.number().min(0, "Price must be 0 or more."),
+});
 
 const convertTo24Hour = (timeStr: string): string => {
   if (!timeStr) return "";
@@ -75,7 +90,7 @@ export default function AddClassModal({
   prefilledYear,
 }: AddClassModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<FormErrors>({});
   const [copyPlayers, setCopyPlayers] = useState(true);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("SINGLE_DAY");
   const [selectedYear, setSelectedYear] = useState<string>(prefilledYear || "");
@@ -102,19 +117,35 @@ export default function AddClassModal({
   const [bulkStartTime, setBulkStartTime] = useState("");
   const [bulkEndTime, setBulkEndTime] = useState("");
 
-  const getValidationError = (field: "name" | "term" | "category" | "program" | "coach" | "location" | "capacity" | "price" | "time") => {
-    const patterns: Record<typeof field, RegExp> = {
-      name: /class name/i,
-      term: /academic term/i,
-      category: /category/i,
-      program: /program/i,
-      coach: /coach/i,
-      location: /class location/i,
-      capacity: /capacity/i,
-      price: /price/i,
-      time: /(start time|end time)/i,
-    };
-    return validationErrors.find((message) => patterns[field].test(message));
+  const getValidationError = (field: "name" | "term" | "category" | "program" | "coach" | "location" | "capacity" | "price" | "startTime" | "endTime") => {
+    if (field === "endTime") return validationErrors.endTime || validationErrors.timeOrder;
+    return validationErrors[field];
+  };
+
+  const getCustomScheduleError = (index: number) =>
+    validationErrors[`customSchedules.${index}`];
+
+  const clearValidationError = (field: string, isValid: boolean) => {
+    if (!isValid) return;
+    setValidationErrors((previous) => {
+      if (!previous[field]) return previous;
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const handleTimeChange = (field: "startTime" | "endTime", time: string) => {
+    setFormData((previous) => ({ ...previous, [field]: time }));
+    if (!time) return;
+    setValidationErrors((previous) => {
+      const next = { ...previous };
+      delete next[field];
+      const startTime = field === "startTime" ? time : formData.startTime;
+      const endTime = field === "endTime" ? time : formData.endTime;
+      if (startTime && endTime && convertTo24Hour(startTime) < convertTo24Hour(endTime)) delete next.timeOrder;
+      return next;
+    });
   };
 
   const handleApplyTimeToAll = () => {
@@ -173,7 +204,7 @@ export default function AddClassModal({
   const [coaches, setCoaches] = useState<any[]>([]);
 
   useEffect(() => {
-    if (isOpen) setValidationErrors([]);
+    if (isOpen) setValidationErrors({});
   }, [isOpen, classToEdit?._id, duplicateFromClass?._id]);
 
   useEffect(() => {
@@ -321,6 +352,12 @@ export default function AddClassModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    const isValid = name === "capacity"
+      ? Number.isInteger(Number(value)) && Number(value) >= 1
+      : name === "price"
+        ? Number.isFinite(Number(value)) && Number(value) >= 0
+        : ["name", "term", "category", "program", "coach", "location"].includes(name) && Boolean(value.trim());
+    clearValidationError(name, isValid);
     if (type === 'select-multiple') {
       const select = e.target as HTMLSelectElement;
       const values = Array.from(select.selectedOptions, option => option.value);
@@ -341,11 +378,15 @@ export default function AddClassModal({
   };
 
   const handleCustomSlotChange = (index: number, field: keyof CustomScheduleSlot, value: string) => {
+    const updatedSlot = { ...customSchedules[index], [field]: value };
     setCustomSchedules(prev => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
+      copy[index] = updatedSlot;
       return copy;
     });
+    const slotIsCompleteAndValid = Boolean(updatedSlot.dayOfWeek && updatedSlot.startTime && updatedSlot.endTime)
+      && convertTo24Hour(updatedSlot.startTime) < convertTo24Hour(updatedSlot.endTime);
+    if (slotIsCompleteAndValid) clearValidationError(`customSchedules.${index}`, true);
   };
 
   const addCustomSlot = () => {
@@ -361,46 +402,39 @@ export default function AddClassModal({
       return;
     }
     setCustomSchedules(prev => prev.filter((_, idx) => idx !== index));
+    setValidationErrors((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => !key.startsWith("customSchedules."))));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errors: string[] = [];
-    if (!formData.name.trim()) errors.push("Class name is required.");
-    if (!formData.term) errors.push("Select an academic term.");
-    if (!formData.category) errors.push("Select a category.");
-    if (!formData.program) errors.push("Select a program.");
-    if (!formData.coach) errors.push("Select a coach.");
-    if (!formData.location.trim()) errors.push("Class location is required.");
-    if (!Number.isInteger(Number(formData.capacity)) || Number(formData.capacity) < 1) {
-      errors.push("Capacity must be a whole number of at least 1.");
-    }
-    if (!Number.isFinite(Number(formData.price)) || Number(formData.price) < 0) {
-      errors.push("Price must be 0 or more.");
-    }
+    const errors = validateWithSchema(classValidationSchema, formData).errors;
 
     if (scheduleType === "SINGLE_DAY") {
-      if (!formData.dayOfWeek) errors.push("Select a day of the week.");
-      if (!formData.startTime) errors.push("Select a start time.");
-      if (!formData.endTime) errors.push("Select an end time.");
-      if (formData.startTime && formData.endTime && convertTo24Hour(formData.startTime) >= convertTo24Hour(formData.endTime)) errors.push("End time must be after start time.");
+      if (!formData.dayOfWeek) errors.dayOfWeek = "Select a day of the week.";
+      if (!formData.startTime) errors.startTime = "Select a start time.";
+      if (!formData.endTime) errors.endTime = "Select an end time.";
+      if (formData.startTime && formData.endTime && convertTo24Hour(formData.startTime) >= convertTo24Hour(formData.endTime)) errors.timeOrder = "End time must be after start time.";
     } else if (scheduleType === "WEEKDAYS") {
-      if (!formData.startTime) errors.push("Select a start time for weekdays.");
-      if (!formData.endTime) errors.push("Select an end time for weekdays.");
-      if (formData.startTime && formData.endTime && convertTo24Hour(formData.startTime) >= convertTo24Hour(formData.endTime)) errors.push("End time must be after start time for weekdays.");
+      if (!formData.startTime) errors.startTime = "Select a start time for weekdays.";
+      if (!formData.endTime) errors.endTime = "Select an end time for weekdays.";
+      if (formData.startTime && formData.endTime && convertTo24Hour(formData.startTime) >= convertTo24Hour(formData.endTime)) errors.timeOrder = "End time must be after start time for weekdays.";
     } else if (scheduleType === "CUSTOM") {
-      if (customSchedules.length === 0) errors.push("Add at least one schedule slot.");
+      if (customSchedules.length === 0) errors.customSchedules = "Add at least one schedule slot.";
       for (let i = 0; i < customSchedules.length; i++) {
         const slot = customSchedules[i];
         if (!slot.dayOfWeek || !slot.startTime || !slot.endTime) {
-          errors.push(`Complete the day, start time, and end time for schedule slot ${i + 1}.`);
+          errors[`customSchedules.${i}`] = `Complete the day, start time, and end time for schedule slot ${i + 1}.`;
         } else if (convertTo24Hour(slot.startTime) >= convertTo24Hour(slot.endTime)) {
-          errors.push(`End time must be after start time for schedule slot ${i + 1}.`);
+          errors[`customSchedules.${i}`] = `End time must be after start time for schedule slot ${i + 1}.`;
         }
       }
     }
     setValidationErrors(errors);
-    if (errors.length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      const firstInvalidId = Object.keys(errors)[0];
+      document.getElementById(`class-${firstInvalidId}`)?.focus();
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -478,66 +512,26 @@ export default function AddClassModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 lg:p-6 bg-black/70 backdrop-blur-xs">
-      <div className="bg-white dark:bg-gray-900 rounded-none w-full max-w-5xl xl:max-w-[1240px] max-h-[92vh] overflow-hidden flex flex-col shadow-2xl transition-all duration-300 border border-slate-200 dark:border-slate-800">
-
-        {/* Header Section (Sticky) */}
-        <div className="relative overflow-hidden bg-[#0A1930] px-6 py-4 xl:px-8 xl:py-5 text-white border-l-[6px] border-[#0047FF] shrink-0">
-          {/* Faint Pitch Schematic Background */}
-          <svg className="absolute right-0 top-0 h-full w-auto opacity-10 pointer-events-none text-white/70" viewBox="0 0 120 80" fill="none" stroke="currentColor" strokeWidth="0.8">
-            <rect x="2" y="2" width="116" height="76" rx="2" />
-            <line x1="60" y1="2" x2="60" y2="78" />
-            <circle cx="60" cy="40" r="15" />
-            <circle cx="60" cy="40" r="1" fill="currentColor" />
-            <path d="M 2 20 L 18 20 L 18 60 L 2 60" />
-            <path d="M 118 20 L 102 20 L 102 60 L 118 60" />
-            <path d="M 2 28 L 8 28 L 8 52 L 2 52" />
-            <path d="M 118 28 L 112 28 L 112 52 L 118 52" />
-          </svg>
-
-          {/* Dotted Grid Accent */}
-          <div className="absolute right-6 bottom-4 grid grid-cols-5 gap-1 opacity-60">
-            {[...Array(15)].map((_, i) => (
-              <div key={i} className="w-1 h-1 rounded-full bg-[#0047FF]" />
-            ))}
-          </div>
-
-          <div className="flex items-start justify-between relative z-10">
-            <div className="flex items-center gap-3.5">
-              <div className="flex items-center justify-center w-11 h-11 rounded-full border border-white/20 bg-white/5 text-white">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 9l2.5 1.8.8 2.7-2.3 2-2 0-1.5-1.5.8-2.7z" fill="currentColor" fillOpacity="0.15" />
-                  <path d="M12 9V2M14.5 10.8l5.5-1.8M15.3 13.5l5.2 2.5M13 15.5l2 6.5M11 15.5l-2 6.5M8.7 13.5L3.5 16M9.5 10.8l-5.5-1.8" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg xl:text-xl font-bold tracking-wide text-white">
-                  {duplicateFromClass ? "Duplicate Training Class" : classToEdit ? "Edit Training Class" : "Create Training Class"}
-                </h3>
-                <p className="text-xs text-gray-300 mt-0.5 font-medium">
-                  Schedule and manage academy training sessions
-                </p>
-              </div>
-            </div>
-
+      <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-5xl xl:max-w-[1240px] max-h-[92vh] overflow-hidden flex flex-col shadow-2xl transition-all duration-300 border border-slate-200 dark:border-slate-800">
+        <FormHeader
+          icon={CalendarDays}
+          title={duplicateFromClass ? "Duplicate Training Class" : classToEdit ? "Edit Training Class" : "Create Training Class"}
+          description="Schedule and manage academy training sessions."
+          className="shrink-0 border-b border-[#082269]"
+          actions={(
             <button
+              type="button"
               onClick={onClose}
-              className="text-gray-400 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="Close class form"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
-          </div>
-        </div>
+          )}
+        />
 
         {/* Scrollable Form Body */}
         <form id="create-class-form" data-coachmax-form noValidate onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 sm:p-6 xl:p-8 space-y-6 custom-scrollbar">
-
-          {validationErrors.length > 0 && (
-            <div role="alert" aria-live="polite" className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-              <p className="font-bold">Please fix these required fields:</p>
-              <ul className="mt-1 list-disc pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
-            </div>
-          )}
 
           {duplicateFromClass && (
             <label className="flex items-start gap-3 border border-blue-200 bg-blue-50/70 dark:border-blue-900/50 dark:bg-blue-950/20 p-3 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
@@ -860,11 +854,12 @@ export default function AddClassModal({
                     id="class-start-time"
                     ariaLabel="Start time"
                     required
-                    error={getValidationError("time")}
+                    error={getValidationError("startTime")}
                     value={formData.startTime}
-                    onChange={(time) => setFormData(prev => ({ ...prev, startTime: time }))}
+                    onChange={(time) => handleTimeChange("startTime", time)}
                     placeholder="Select start time"
                   />
+                  {getValidationError("startTime") && <p id="class-start-time-error" role="alert" className="mt-1 text-sm text-error-600">{getValidationError("startTime")}</p>}
                 </div>
 
                 {/* End Time */}
@@ -876,11 +871,12 @@ export default function AddClassModal({
                     id="class-end-time"
                     ariaLabel="End time"
                     required
-                    error={getValidationError("time")}
+                    error={getValidationError("endTime")}
                     value={formData.endTime}
-                    onChange={(time) => setFormData(prev => ({ ...prev, endTime: time }))}
+                    onChange={(time) => handleTimeChange("endTime", time)}
                     placeholder="Select end time"
                   />
+                  {getValidationError("endTime") && <p id="class-end-time-error" role="alert" className="mt-1 text-sm text-error-600">{getValidationError("endTime")}</p>}
                 </div>
               </div>
             )}
@@ -907,11 +903,12 @@ export default function AddClassModal({
                       id="class-weekday-start-time"
                       ariaLabel="Start time Monday to Friday"
                       required
-                      error={getValidationError("time")}
+                      error={getValidationError("startTime")}
                       value={formData.startTime}
-                      onChange={(time) => setFormData(prev => ({ ...prev, startTime: time }))}
+                      onChange={(time) => handleTimeChange("startTime", time)}
                       placeholder="Select start time"
                     />
+                    {getValidationError("startTime") && <p id="class-weekday-start-time-error" role="alert" className="mt-1 text-sm text-error-600">{getValidationError("startTime")}</p>}
                   </div>
 
                   {/* End Time */}
@@ -923,11 +920,12 @@ export default function AddClassModal({
                       id="class-weekday-end-time"
                       ariaLabel="End time Monday to Friday"
                       required
-                      error={getValidationError("time")}
+                      error={getValidationError("endTime")}
                       value={formData.endTime}
-                      onChange={(time) => setFormData(prev => ({ ...prev, endTime: time }))}
+                      onChange={(time) => handleTimeChange("endTime", time)}
                       placeholder="Select end time"
                     />
+                    {getValidationError("endTime") && <p id="class-weekday-end-time-error" role="alert" className="mt-1 text-sm text-error-600">{getValidationError("endTime")}</p>}
                   </div>
                 </div>
               </div>
@@ -1041,7 +1039,8 @@ export default function AddClassModal({
                           id={`class-custom-start-${index}`}
                           ariaLabel={`Start time for schedule ${index + 1}`}
                           required
-                          error={getValidationError("time")}
+                          error={getCustomScheduleError(index)}
+                          errorId={`class-custom-schedule-${index}-error`}
                           value={slot.startTime}
                           onChange={(time) => handleCustomSlotChange(index, "startTime", time)}
                           placeholder="Start time"
@@ -1057,7 +1056,8 @@ export default function AddClassModal({
                           id={`class-custom-end-${index}`}
                           ariaLabel={`End time for schedule ${index + 1}`}
                           required
-                          error={getValidationError("time")}
+                          error={getCustomScheduleError(index)}
+                          errorId={`class-custom-schedule-${index}-error`}
                           value={slot.endTime}
                           onChange={(time) => handleCustomSlotChange(index, "endTime", time)}
                           placeholder="End time"
@@ -1076,6 +1076,8 @@ export default function AddClassModal({
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
+
+                      {getCustomScheduleError(index) && <p id={`class-custom-schedule-${index}-error`} role="alert" className="sm:col-span-12 -mt-1 text-sm text-error-600">{getCustomScheduleError(index)}</p>}
                     </div>
                   ))}
                 </div>
@@ -1176,7 +1178,7 @@ export default function AddClassModal({
         </form>
 
         {/* Footer Section (Sticky at bottom) */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 xl:px-8 xl:py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shrink-0">
+        <FormActions className="shrink-0 bg-gray-50 dark:bg-gray-900">
           <button
             type="button"
             onClick={onClose}
@@ -1197,7 +1199,7 @@ export default function AddClassModal({
             </svg>
             {isSubmitting ? "Saving..." : duplicateFromClass ? "Duplicate Class" : classToEdit ? "Update Class" : "Create Class"}
           </button>
-        </div>
+        </FormActions>
 
       </div>
     </div>

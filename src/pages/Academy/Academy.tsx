@@ -310,23 +310,23 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
     return "BOTH"; // unselected -> show all data
   })();
 
-  const [unallocatedLimit, setUnallocatedLimit] = useState(5);
-  const [allocatedLimit, setAllocatedLimit] = useState(5);
+  const [unallocatedPage, setUnallocatedPage] = useState(1);
+  const [allocatedPage, setAllocatedPage] = useState(1);
 
   const [isUnallocatedModalOpen, setIsUnallocatedModalOpen] = useState(false);
   const [isAllocatedModalOpen, setIsAllocatedModalOpen] = useState(false);
 
   useEffect(() => {
-    setUnallocatedLimit(5);
-    setAllocatedLimit(5);
+    setUnallocatedPage(1);
+    setAllocatedPage(1);
   }, [sidebarCategory, sidebarProgram, sidebarSearch, effectivePlayerType]);
 
   const { data: unallocatedData, isFetching: isUnallocatedFetching } = useUnallocatedPlayers(
     sidebarCategory,
     sidebarProgram,
     sidebarSearch,
-    1,
-    unallocatedLimit,
+    unallocatedPage,
+    5,
     effectivePlayerType === "BOTH" || effectivePlayerType === "UNALLOCATED"
   );
 
@@ -334,8 +334,8 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
     sidebarCategory,
     sidebarProgram,
     sidebarSearch,
-    1,
-    allocatedLimit,
+    allocatedPage,
+    5,
     effectivePlayerType === "BOTH" || effectivePlayerType === "ALLOCATED"
   );
 
@@ -356,6 +356,18 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
     1000,
     isAllocatedModalOpen
   );
+
+  useEffect(() => {
+    if (!isUnallocatedFetching && unallocatedPage > Math.max(1, unallocatedData?.pagination?.totalPages ?? 1)) {
+      setUnallocatedPage(Math.max(1, unallocatedData?.pagination?.totalPages ?? 1));
+    }
+  }, [isUnallocatedFetching, unallocatedData?.pagination?.totalPages, unallocatedPage]);
+
+  useEffect(() => {
+    if (!isAllocatedFetching && allocatedPage > Math.max(1, allocatedData?.pagination?.totalPages ?? 1)) {
+      setAllocatedPage(Math.max(1, allocatedData?.pagination?.totalPages ?? 1));
+    }
+  }, [isAllocatedFetching, allocatedData?.pagination?.totalPages, allocatedPage]);
 
   return (
     <>
@@ -474,9 +486,9 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                 <UnallocatedPlayersCard
                   players={unallocatedData?.players || []}
                   totalCount={unallocatedData?.pagination?.total || 0}
-                  hasMore={unallocatedData ? unallocatedData.players.length < (unallocatedData.pagination?.total ?? 0) : false}
-                  onLoadMore={() => setUnallocatedLimit(prev => prev + 5)}
-                  isLoadingMore={isUnallocatedFetching && unallocatedData.players.length > 0}
+                  page={unallocatedPage}
+                  onPageChange={setUnallocatedPage}
+                  isLoading={isUnallocatedFetching}
                   onAssignPlayer={(player) => setPendingAssignPlayer(player)}
                   onNavigateToTarget={handleNavigateToRequestedTarget}
                   onViewAll={() => setIsUnallocatedModalOpen(true)}
@@ -486,9 +498,9 @@ export default function Academy({ programType = "Academy" }: AcademyProps) {
                 <AllocatedPlayersCard
                   players={allocatedData?.players || []}
                   totalCount={allocatedData?.pagination?.total || 0}
-                  hasMore={allocatedData ? allocatedData.players.length < (allocatedData.pagination?.total ?? 0) : false}
-                  onLoadMore={() => setAllocatedLimit(prev => prev + 5)}
-                  isLoadingMore={isAllocatedFetching && allocatedData.players.length > 0}
+                  page={allocatedPage}
+                  onPageChange={setAllocatedPage}
+                  isLoading={isAllocatedFetching}
                   onAssignPlayer={(player) => setPendingAssignPlayer(player)}
                   onViewAll={() => setIsAllocatedModalOpen(true)}
                 />

@@ -189,8 +189,8 @@ export default function AttendanceTable({ schedule }: AttendanceTableProps) {
                   {row.dob ? formatDateOnly(row.dob, { day: "2-digit", month: "2-digit", year: "numeric" }) || row.dob : "-"}
                 </td>
                 <td className="py-2 px-3 text-center">
-                  <span className={row.medicalConditions && row.medicalConditions !== "None" && row.medicalConditions !== "No" ? "text-rose-600 font-bold text-xs" : "text-slate-500 font-semibold"}>
-                    {row.medicalConditions && row.medicalConditions !== "None" && row.medicalConditions !== "No" ? "Yes" : "No"}
+                  <span className={row.isMedicalCondition === true ? "text-rose-600 font-bold text-xs" : "text-slate-500 font-semibold"}>
+                    {row.isMedicalCondition === true ? "Yes" : "No"}
                   </span>
                 </td>
                 {row.attendance.map((att, i) => (

@@ -72,7 +72,7 @@ export default function ViewTeamPlayersModal({
   const coachName = typeof team.coach === "object" ? team.coach?.name || team.coach?.fullName : team.coach || "Unassigned";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl p-0 overflow-hidden rounded-none shadow-2xl">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl p-0 overflow-hidden rounded-xl shadow-2xl">
       <div className="flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="bg-[#0A1930] px-6 py-4 text-white flex items-center justify-between border-l-4 border-[#0047FF]">

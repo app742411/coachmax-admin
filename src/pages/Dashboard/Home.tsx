@@ -13,7 +13,12 @@ import {
   TrendingUp, 
   FileText, 
   Clock, 
-  ArrowRight
+  ArrowRight,
+  UserPlus,
+  Package,
+  CalendarDays,
+  Shield,
+  Trophy
 } from "lucide-react";
 import { getPlayerStatusTextClass } from "../../components/common/StatusColorCode";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
@@ -22,6 +27,14 @@ export default function Home() {
   const navigate = useNavigate();
   const [attendanceRange, setAttendanceRange] = useState("Last 8 Weeks");
   const [paymentRange, setPaymentRange] = useState("This Month");
+  const quickActions = [
+    { title: "Add Player", description: "Register a player", path: "/add-temporary-players", icon: UserPlus, tone: "text-blue-600 bg-blue-50 dark:bg-blue-950/40" },
+    { title: "Add Product", description: "Create store item", path: "/add-product", icon: Package, tone: "text-violet-600 bg-violet-50 dark:bg-violet-950/40" },
+    { title: "Add Event", description: "Schedule an event", path: "/add-event", icon: CalendarDays, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40" },
+    { title: "Add Team", description: "Manage academy teams", path: "/teams", icon: Shield, tone: "text-amber-600 bg-amber-50 dark:bg-amber-950/40" },
+    { title: "Add League", description: "Manage competitions", path: "/leagues", icon: Trophy, tone: "text-rose-600 bg-rose-50 dark:bg-rose-950/40" },
+    { title: "Add Class", description: "Schedule a class", path: "/classes", icon: Layers, tone: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/40" },
+  ];
 
   const { data: dashboardRes, isLoading } = useQuery({
     queryKey: ["adminDashboard"],
@@ -221,6 +234,35 @@ export default function Home() {
           <span className="text-xs font-semibold text-slate-400">Live Database Overview</span>
         </div>
       </div>
+
+      <section aria-labelledby="dashboard-quick-actions" className="mb-6 border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 id="dashboard-quick-actions" className="text-base font-bold text-slate-900 dark:text-white">Quick actions</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Jump straight to common admin tasks.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          {quickActions.map(({ title, description, path, icon: Icon, tone }, index) => (
+            <button
+              key={title}
+              type="button"
+              onClick={() => navigate(path)}
+              style={{ animationDelay: `${index * 55}ms` }}
+              className="dashboard-quick-action group flex min-h-[92px] items-center gap-3 border border-slate-200 bg-white p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900"
+            >
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center transition-transform duration-200 group-hover:scale-110 ${tone}`}>
+                <Icon size={19} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-slate-800 transition-colors group-hover:text-brand-600 dark:text-slate-100 dark:group-hover:text-brand-400">{title}</span>
+                <span className="mt-1 block text-[11px] leading-4 text-slate-500 dark:text-slate-400">{description}</span>
+              </span>
+              <ArrowRight size={15} aria-hidden="true" className="shrink-0 text-slate-400 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand-600" />
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Metrics Cards Grid */}
       <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">

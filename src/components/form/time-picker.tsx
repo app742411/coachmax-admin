@@ -13,6 +13,7 @@ type TimePickerProps = {
   ariaLabel?: string;
   required?: boolean;
   error?: string;
+  errorId?: string;
 };
 
 export default function TimePicker({
@@ -25,6 +26,7 @@ export default function TimePicker({
   ariaLabel,
   required = false,
   error,
+  errorId,
 }: TimePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -63,7 +65,7 @@ export default function TimePicker({
         aria-label={ariaLabel}
         aria-required={required}
         aria-invalid={Boolean(error)}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={error ? (errorId || `${id}-error`) : undefined}
         placeholder={placeholder}
         className={`h-[46px] w-full rounded-none border appearance-none ${
           leftIcon ? "pl-10" : "px-4"

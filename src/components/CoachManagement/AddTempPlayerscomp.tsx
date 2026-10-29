@@ -14,6 +14,33 @@ import DatePicker from "../form/date-picker";
 import MultiSelect from "../form/MultiSelect";
 import { Image as ImageIcon, X } from "lucide-react";
 import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import FormActions from "../form/FormActions";
+
+const temporaryPlayerSchema = z.object({
+  name: z.string().trim().min(1, "Player name is required."),
+  dob: z.string().min(1, "Date of birth is required."),
+  parentName: z.string().trim().min(1, "Parent name is required."),
+  parentEmail: z.string().trim().email("Enter a valid parent email address."),
+  parentPhone: z.string().trim().min(7, "Enter a valid parent phone number.").max(20, "Phone number must be 20 characters or fewer.").regex(/^[+()\d\s.-]+$/, "Enter a valid parent phone number."),
+  emergencyContact: z.string().trim().min(7, "Enter a valid emergency contact number.").max(20, "Contact number must be 20 characters or fewer.").regex(/^[+()\d\s.-]+$/, "Enter a valid emergency contact number."),
+  isMedicalCondition: z.enum(["YES", "NO"]),
+  medicalConditions: z.string().optional(),
+  allergies: z.string().optional(),
+  classId: z.string().min(1, "Please select at least one class."),
+  sessionDate: z.string().min(1, "Session date is required."),
+  selectedCategory: z.string().min(1, "Please select a main category."),
+  selectedProgram: z.string().min(1, "Please select a program."),
+  selectedYear: z.string().min(1, "Please select a year."),
+  preferredTerm: z.string().min(1, "Please select a term."),
+  gender: z.enum(["MALE", "FEMALE", "OTHER"]).or(z.literal("")).refine((value) => value !== "", "Please select gender."),
+  prefferedFoot: z.enum(["RIGHT", "LEFT", "BOTH"]).or(z.literal("")).refine((value) => value !== "", "Please select preferred foot."),
+  preferredClasses: z.array(z.string()).min(1, "Please select at least one class."),
+}).refine((value) => value.isMedicalCondition !== "YES" || Boolean(value.medicalConditions?.trim()), {
+  path: ["medicalConditions"],
+  message: "Please provide details.",
+});
 
 interface ClassItem {
   classId?: string;
@@ -43,26 +70,10 @@ export default function AddTempPlayerscomp() {
     trigger,
     watch,
     formState: { errors },
-  } = useForm<{
-    name: string;
-    dob: string;
-    parentName: string;
-    parentEmail: string;
-    parentPhone: string;
-    emergencyContact: string;
-    isMedicalCondition: string;
-    medicalConditions?: string;
-    allergies?: string;
-    classId: string;
-    sessionDate: string;
-    selectedCategory: string;
-    selectedProgram: string;
-    selectedYear: string;
-    preferredTerm: string;
-    gender: string;
-    prefferedFoot: string;
-    preferredClasses: string[];
-  }>({
+  } = useForm<z.input<typeof temporaryPlayerSchema>, unknown, z.output<typeof temporaryPlayerSchema>>({
+    resolver: zodResolver(temporaryPlayerSchema),
+    mode: "onTouched",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       dob: "",
@@ -79,7 +90,7 @@ export default function AddTempPlayerscomp() {
       selectedProgram: "",
       selectedYear: "",
       preferredTerm: "",
-      gender: "Male",
+      gender: "MALE",
       prefferedFoot: "",
       preferredClasses: [],
     },
@@ -124,10 +135,6 @@ export default function AddTempPlayerscomp() {
   const { categories, isLoading: loadingCategories } = useCategories({ isEvent: "all" });
   const { allTerms, availableYears: years, currentTerm, isLoading: loadingTerms } = useCurrentTerm();
   const { programs, isLoading: loadingPrograms } = useProgramsByCategory(watchCategory);
-
-  useEffect(() => {
-    register("preferredClasses", { required: "Please select at least one class" });
-  }, [register]);
 
   // Set default preferred term and year if not selected
   useEffect(() => {
@@ -210,7 +217,7 @@ export default function AddTempPlayerscomp() {
     });
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: z.output<typeof temporaryPlayerSchema>) => {
     setSubmitting(true);
     try {
       const payload: TemporaryPlayerPayload = {
@@ -235,11 +242,11 @@ export default function AddTempPlayerscomp() {
         profileImage: profileImageFile || undefined,
       };
       const result = await addTemporaryPlayer(payload);
-      toast.success(result?.message || (result?.emailSent ? "Temporary player added. Parent access email sent." : "Temporary player added. No parent access email was sent."));
+      toast.success(result?.message || (result?.emailSent ? "Player added. Parent access email sent." : "Player added. No parent access email was sent."));
       handleClearForm();
     } catch (error: any) {
       console.error("Failed to add temporary player:", error);
-      const msg = error?.response?.data?.message || "Failed to add temporary player.";
+      const msg = error?.response?.data?.message || "Failed to add player.";
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -248,12 +255,7 @@ export default function AddTempPlayerscomp() {
 
   return (
     <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.05] p-6 sm:p-8 shadow-sm">
-      <div className="mb-6 border-b border-gray-100 dark:border-white/[0.05] pb-4">
-        <h3 className="text-lg font-bold text-gray-800 dark:text-white/90">Add Temporary Player</h3>
-        <p className="text-xs text-gray-500 font-medium">Register a trial or temporary player for a specific class session.</p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form data-coachmax-form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Player details */}
           <div className="space-y-4">
@@ -266,7 +268,7 @@ export default function AddTempPlayerscomp() {
                 placeholder="e.g. Trial Player Name"
                 error={!!errors.name}
                 hint={errors.name?.message}
-                {...register("name", { required: "Player name is required" })}
+                {...register("name")}
               />
             </div>
 
@@ -308,9 +310,12 @@ export default function AddTempPlayerscomp() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <input type="hidden" {...register("dob", { required: "Date of birth is required" })} />
+                <input type="hidden" id="dob-value" {...register("dob")} />
                 <DatePicker
-                  label="Date of Birth"
+                  id="temp-player-dob"
+                  label="Date of Birth *"
+                  required
+                  error={errors.dob?.message}
                   defaultDate={watchDob || undefined}
                   placeholder="Select Date of Birth"
                   options={{ maxDate: "today" }}
@@ -323,7 +328,7 @@ export default function AddTempPlayerscomp() {
                   }}
                 />
                 {errors.dob && (
-                  <p className="mt-1.5 text-xs text-error-500 font-semibold">{errors.dob.message}</p>
+                  <p id="temp-player-dob-error" role="alert" className="mt-1.5 text-xs font-medium text-error-600">{errors.dob.message}</p>
                 )}
               </div>
 
@@ -331,8 +336,10 @@ export default function AddTempPlayerscomp() {
                 <div>
                   <Label>Gender <span className="text-error-500">*</span></Label>
                   <select
-                    className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer"
-                    {...register("gender", { required: "Please select gender" })}
+                    className="h-11 w-full border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all cursor-pointer"
+                    aria-invalid={Boolean(errors.gender)}
+                    aria-describedby={errors.gender ? "temp-player-gender-error" : undefined}
+                    {...register("gender")}
                   >
                     <option value="">Gender</option>
                     <option value="MALE">Male</option>
@@ -340,15 +347,17 @@ export default function AddTempPlayerscomp() {
                     <option value="OTHER">Other</option>
                   </select>
                   {errors.gender && (
-                    <p className="mt-1 text-xs text-error-500 font-semibold">{errors.gender.message}</p>
+                    <p id="temp-player-gender-error" role="alert" className="mt-1 text-xs font-medium text-error-600">{errors.gender.message}</p>
                   )}
                 </div>
 
                 <div>
                   <Label>Foot <span className="text-error-500">*</span></Label>
                   <select
-                    className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer"
-                    {...register("prefferedFoot", { required: "Please select foot" })}
+                    className="h-11 w-full border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all cursor-pointer"
+                    aria-invalid={Boolean(errors.prefferedFoot)}
+                    aria-describedby={errors.prefferedFoot ? "temp-player-foot-error" : undefined}
+                    {...register("prefferedFoot")}
                   >
                     <option value="">Foot</option>
                     <option value="RIGHT">Right</option>
@@ -356,7 +365,7 @@ export default function AddTempPlayerscomp() {
                     <option value="BOTH">Both</option>
                   </select>
                   {errors.prefferedFoot && (
-                    <p className="mt-1 text-xs text-error-500 font-semibold">{errors.prefferedFoot.message}</p>
+                    <p id="temp-player-foot-error" role="alert" className="mt-1 text-xs font-medium text-error-600">{errors.prefferedFoot.message}</p>
                   )}
                 </div>
               </div>
@@ -364,14 +373,14 @@ export default function AddTempPlayerscomp() {
 
             <div>
               <Label>Medical Conditions or Allergies</Label>
-              <select {...register("isMedicalCondition", { required: "Select YES or NO" })} className="h-11 w-full border border-gray-300 px-3 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-white">
+              <select {...register("isMedicalCondition")} className="h-11 w-full border border-gray-300 px-3 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-white">
                 <option value="NO">NO</option><option value="YES">YES</option>
               </select>
             </div>
             {watchMedical === "YES" && <div>
               <Label>Please provide details</Label>
               <Input type="text" placeholder="Describe medical conditions and any allergies" error={!!errors.medicalConditions} hint={errors.medicalConditions?.message}
-                {...register("medicalConditions", { validate: (value) => watchMedical !== "YES" || Boolean(value?.trim()) || "Please provide details" })} />
+                {...register("medicalConditions")} />
             </div>}
           </div>
 
@@ -386,7 +395,7 @@ export default function AddTempPlayerscomp() {
                 placeholder="e.g. Parent Full Name"
                 error={!!errors.parentName}
                 hint={errors.parentName?.message}
-                {...register("parentName", { required: "Parent name is required" })}
+                {...register("parentName")}
               />
             </div>
 
@@ -397,7 +406,7 @@ export default function AddTempPlayerscomp() {
                 placeholder="e.g. parent.trial@example.com"
                 error={!!errors.parentEmail}
                 hint={errors.parentEmail?.message}
-                {...register("parentEmail", { required: "Parent email is required" })}
+                {...register("parentEmail")}
               />
             </div>
 
@@ -408,7 +417,7 @@ export default function AddTempPlayerscomp() {
                 placeholder="e.g. +61400000000"
                 error={!!errors.parentPhone}
                 hint={errors.parentPhone?.message}
-                {...register("parentPhone", { required: "Parent phone is required" })}
+                {...register("parentPhone")}
               />
               <p className="mt-1 text-xs text-gray-500">No email or phone OTP is required here. If an existing parent account is reused, its saved contact details stay unchanged.</p>
             </div>
@@ -420,7 +429,7 @@ export default function AddTempPlayerscomp() {
                 placeholder="e.g. +61400000001"
                 error={!!errors.emergencyContact}
                 hint={errors.emergencyContact?.message}
-                {...register("emergencyContact", { required: "Emergency contact is required" })}
+                {...register("emergencyContact")}
               />
             </div>
           </div>
@@ -434,12 +443,9 @@ export default function AddTempPlayerscomp() {
             <div>
               <Label>Select Year <span className="text-error-500">*</span></Label>
               <select
-                className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer"
+                  className="h-11 w-full border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all cursor-pointer"
                 disabled={loadingTerms}
-                {...register("selectedYear", {
-                  required: "Please select a year",
-                  onChange: () => handleYearChange()
-                })}
+                {...register("selectedYear", { onChange: () => handleYearChange() })}
               >
                 <option value="">{loadingTerms ? "Loading years..." : "Select Year"}</option>
                 {years.map((yr) => (
@@ -456,9 +462,9 @@ export default function AddTempPlayerscomp() {
             <div>
               <Label>Preferred Term <span className="text-error-500">*</span></Label>
               <select
-                className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer disabled:bg-gray-100 disabled:opacity-50 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
+                  className="h-11 w-full border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all cursor-pointer disabled:bg-gray-100 disabled:opacity-50 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
                 disabled={!watchYear}
-                {...register("preferredTerm", { required: watchYear ? "Please select a term" : false })}
+                {...register("preferredTerm")}
               >
                 <option value="">{!watchYear ? "Select Year first" : "Select Term"}</option>
                 {watchYear && allTerms
@@ -479,12 +485,9 @@ export default function AddTempPlayerscomp() {
             <div>
               <Label>Main Category <span className="text-error-500">*</span></Label>
               <select
-                className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer"
+                className="h-11 w-full border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all cursor-pointer"
                 disabled={loadingCategories}
-                {...register("selectedCategory", {
-                  required: "Please select a main category",
-                  onChange: (e) => handleCategoryChange(e.target.value)
-                })}
+                {...register("selectedCategory", { onChange: (e) => handleCategoryChange(e.target.value) })}
               >
                 <option value="">{loadingCategories ? "Loading categories..." : "Select Main Category"}</option>
                 {categories.map((cat) => (
@@ -501,9 +504,9 @@ export default function AddTempPlayerscomp() {
             <div>
               <Label>Sub Category (Program) <span className="text-error-500">*</span></Label>
               <select
-                className="h-11 w-full rounded-none border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all appearance-none cursor-pointer disabled:bg-gray-100 disabled:opacity-50 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
+                className="h-11 w-full border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white/90 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/20 transition-all cursor-pointer disabled:bg-gray-100 disabled:opacity-50 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
                 disabled={!watchCategory || loadingPrograms}
-                {...register("selectedProgram", { required: watchCategory ? "Please select a program" : false })}
+                {...register("selectedProgram")}
               >
                 <option value="">
                   {loadingPrograms
@@ -557,7 +560,7 @@ export default function AddTempPlayerscomp() {
             </div>
 
             <div>
-              <input type="hidden" {...register("sessionDate", { required: "Session date is required" })} />
+              <input type="hidden" {...register("sessionDate")} />
               <DatePicker
                 label="Session Date"
                 defaultDate={watchSessionDate || currentDate}
@@ -578,14 +581,14 @@ export default function AddTempPlayerscomp() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-white/[0.05] pt-6">
+        <FormActions className="-mx-6 -mb-6 mt-6 rounded-b-lg sm:-mx-8 sm:-mb-8">
           <Button variant="outline" type="button" onClick={handleClearForm}>
             Clear Form
           </Button>
           <Button type="submit" disabled={submitting} className="px-10 h-12 rounded-none text-xs font-bold uppercase tracking-widest">
-            {submitting ? "Adding..." : "Add Temporary Player"}
+            {submitting ? "Adding..." : "Add Player"}
           </Button>
-        </div>
+        </FormActions>
       </form>
     </div>
   );

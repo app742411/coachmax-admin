@@ -1,0 +1,1 @@
+import{s as i}from"./schemas-DZHT5zaJ.js";function a(s){return s.issues.reduce((e,r)=>{const t=r.path.map(String).join(".");return t&&!e[t]&&(e[t]=r.message),e},{})}function u(s,e){const r=s.safeParse(e);return r.success?{success:!0,data:r.data,errors:{}}:{success:!1,errors:a(r.error)}}const c=s=>i().trim().min(1,`${s} is required.`);export{c as r,u as v};

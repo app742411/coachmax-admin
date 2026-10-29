@@ -3,7 +3,6 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getUnallocatedPlayers } from "../api/adminApi";
 import { UnallocatedPlayer } from "../types/academy";
 import { getMediaUrl, getMediaFallback } from "../utils/media";
-import { sortPlayersByPaymentStatus } from "../utils/paymentStatus";
 
 const mapUnallocatedToCard = (data: any): UnallocatedPlayer => {
   const avatar = getMediaUrl(data.profileImage, getMediaFallback(data.fullName || "Player"));
@@ -12,7 +11,7 @@ const mapUnallocatedToCard = (data: any): UnallocatedPlayer => {
   const details = data.gender && data.gender !== "Unknown" ? data.gender : (data.dateOfBirth ? `DOB: ${formatDateOnly(data.dateOfBirth)}` : "Player");
 
   // Format requested date/time
-  const requestedDate = new Date(data.joinedDate || data.createdAt || Date.now());
+  const requestedDate = new Date(data.listActivityAt || data.registrationRequest?.createdAt || data.joinedDate || data.createdAt || Date.now());
   const formattedRequested = formatDateTime(requestedDate);
 
   // Extract Category from request or user
@@ -93,10 +92,7 @@ export const useUnallocatedPlayers = (
     queryFn: async () => {
       const response = await getUnallocatedPlayers(category, program, search, page, limit);
       if (response) {
-        const players = sortPlayersByPaymentStatus<UnallocatedPlayer>(
-          (response.data || []).map(mapUnallocatedToCard),
-          (player) => player.paymentStatus
-        );
+        const players: UnallocatedPlayer[] = (response.data || []).map(mapUnallocatedToCard);
         const total = response.pagination?.total ?? response.total ?? players.length;
         const totalPages = response.pagination?.totalPages ?? Math.ceil(total / limit);
         const hasMore = response.pagination?.hasMore ?? (page < totalPages);
@@ -117,6 +113,7 @@ export const useUnallocatedPlayers = (
       };
     },
     enabled: enabled && !isCoach,
+    refetchOnWindowFocus: true,
     placeholderData: keepPreviousData,
     initialData: {
       players: [],

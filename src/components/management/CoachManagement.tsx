@@ -7,10 +7,39 @@ import { Modal } from "../ui/modal";
 import { getAllCoaches, createCoach, updateCoach, deleteCoach, changeCoachPassword, toggleCoachActive } from "../../api/adminApi";
 import { toast } from "react-hot-toast";
 import { User, Mail, Phone, Lock, ShieldCheck } from "../../icons/lucide-icons";
-import { Eye, EyeOff, Pencil, X } from "lucide-react";
+import { Eye, EyeOff, Pencil, ShieldCheck as ShieldCheckIcon, X } from "lucide-react";
 import ConfirmDeleteModal from "../ui/modal/ConfirmDeleteModal";
 import { getMediaUrl, getMediaFallback } from "../../utils/media";
 import { normalizeUploadImage, validateUploadFile } from "../../utils/fileValidation";
+import FormHeader from "../form/FormHeader";
+import { requiredText, validateWithSchema } from "../../utils/formValidation";
+import { z } from "zod";
+import Pagination from "../common/Pagination";
+
+const coachContactSchema = z.object({
+  fullName: requiredText("Full name"),
+  email: z.string().trim().email("Enter a valid email address."),
+  phone: z.string().refine((value) => value.replace(/\D/g, "").length >= 7, "Enter a valid phone number."),
+});
+const coachPasswordSchema = z.string()
+  .min(8, "Use at least 8 characters with uppercase, lowercase, and a special character.")
+  .regex(/[A-Z]/, "Use at least 8 characters with uppercase, lowercase, and a special character.")
+  .regex(/[a-z]/, "Use at least 8 characters with uppercase, lowercase, and a special character.")
+  .regex(/[!@#$%^&*(),.?":{}|<>]/, "Use at least 8 characters with uppercase, lowercase, and a special character.");
+const coachCreateSchema = coachContactSchema.extend({
+  password: coachPasswordSchema,
+  confirmPassword: requiredText("Password confirmation"),
+}).refine((value) => value.password === value.confirmPassword, {
+  path: ["confirmPassword"],
+  message: "Passwords do not match.",
+});
+const coachUpdatePasswordSchema = z.object({
+  password: coachPasswordSchema,
+  confirmPassword: requiredText("Password confirmation"),
+}).refine((value) => value.password === value.confirmPassword, {
+  path: ["confirmPassword"],
+  message: "Passwords do not match.",
+});
 
 const CoachManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -31,9 +60,22 @@ const CoachManagement: React.FC = () => {
   });
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [coachFormErrors, setCoachFormErrors] = useState<Record<string, string>>({});
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  const clearCoachFormError = (field: string, isValid: boolean) => {
+    if (!isValid) return;
+    setCoachFormErrors((previous) => {
+      if (!previous[field]) return previous;
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  };
 
   const getDataArray = (res: any) => {
     if (Array.isArray(res)) return res;
@@ -42,10 +84,12 @@ const CoachManagement: React.FC = () => {
   };
 
   const { data: coachesData, isLoading: loading } = useQuery({
-    queryKey: ["coaches"],
-    queryFn: () => getAllCoaches(),
+    queryKey: ["coaches", page, limit],
+    queryFn: () => getAllCoaches({ page, limit }),
   });
   const coaches = getDataArray(coachesData);
+  const totalCoaches = coachesData?.pagination?.total ?? coaches.length;
+  const totalPages = Math.max(1, coachesData?.pagination?.totalPages || 1);
 
   const createMutation = useMutation({
     mutationFn: createCoach,
@@ -103,6 +147,7 @@ const CoachManagement: React.FC = () => {
     setShowConfirmPassword(false);
     setProfileImageFile(null);
     setProfileImagePreview(null);
+    setCoachFormErrors({});
     setIsEditing(false);
     setSelectedCoachId(null);
     setIsModalOpen(true);
@@ -120,6 +165,7 @@ const CoachManagement: React.FC = () => {
     setShowConfirmPassword(false);
     setProfileImageFile(null);
     setProfileImagePreview(getMediaUrl(coach.profileImage, getMediaFallback(coach.fullName || coach.name || "Coach")));
+    setCoachFormErrors({});
     setIsEditing(true);
     setSelectedCoachId(coach._id);
     setIsModalOpen(true);
@@ -155,6 +201,8 @@ const CoachManagement: React.FC = () => {
     const random = (str: string) => str[Math.floor(Math.random() * str.length)];
     const p = random(caps) + random(chars) + random(symbols) + Math.random().toString(36).slice(-5);
     setFormData({ ...formData, password: p, confirmPassword: p });
+    clearCoachFormError("password", true);
+    clearCoachFormError("confirmPassword", true);
   };
 
   const handleToggleAccess = (coach: any) => {
@@ -167,12 +215,10 @@ const CoachManagement: React.FC = () => {
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password.length < 8 || !/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
-      toast.error("Password must be at least 8 characters and contain uppercase, lowercase, and a special symbol");
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
+    const validation = validateWithSchema(coachCreateSchema, formData);
+    setCoachFormErrors(validation.errors);
+    if (!validation.success) {
+      document.querySelector<HTMLElement>("[aria-invalid='true']")?.focus();
       return;
     }
 
@@ -203,6 +249,13 @@ const CoachManagement: React.FC = () => {
     e.preventDefault();
     if (!selectedCoachId) return;
 
+    const validation = validateWithSchema(coachContactSchema, formData);
+    setCoachFormErrors(validation.errors);
+    if (!validation.success) {
+      document.querySelector<HTMLElement>("[aria-invalid='true']")?.focus();
+      return;
+    }
+
     if (profileImageFile) {
       const payload = new FormData();
       payload.append("name", formData.fullName);
@@ -231,12 +284,10 @@ const CoachManagement: React.FC = () => {
     e.preventDefault();
     if (!selectedCoachId) return;
 
-    if (formData.password.length < 8 || !/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
-      toast.error("Password must be at least 8 characters and contain uppercase, lowercase, and a special symbol");
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
+    const validation = validateWithSchema(coachUpdatePasswordSchema, formData);
+    setCoachFormErrors(validation.errors);
+    if (!validation.success) {
+      document.querySelector<HTMLElement>("[aria-invalid='true']")?.focus();
       return;
     }
 
@@ -345,55 +396,72 @@ const CoachManagement: React.FC = () => {
         </Table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className={`p-6 lg:p-8 rounded-none shadow-2xl transition-all ${isEditing ? "w-[95%] max-w-[1000px] bg-gray-50/50" : "max-w-[500px] bg-white"}`}>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={totalCoaches}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={(nextLimit) => { setLimit(nextLimit); setPage(1); }}
+        limitOptions={[10, 20, 50, 100]}
+      />
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className={`overflow-x-hidden rounded-xl p-6 shadow-2xl transition-all lg:p-8 ${isEditing ? "w-[95%] max-w-[1000px] bg-gray-50/50" : "max-w-[500px] bg-white"}`}>
         {isEditing ? (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xl font-bold tracking-tight">Modify Coach</h4>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
-                <X size={18} />
-              </button>
-            </div>
+            <FormHeader icon={ShieldCheckIcon} title="Modify Coach" description="Update staff details and access settings." className="-mx-6 -mt-6 rounded-t-lg border-b border-[#082269] lg:-mx-8 lg:-mt-8" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Basic Information Card */}
               <div className="bg-white rounded-none border border-gray-200 p-6 shadow-sm flex flex-col h-full">
                 <h5 className="font-bold text-gray-800 mb-1">Coach Information</h5>
                 <p className="text-xs text-gray-500 mb-6">Manage profile details and contact information.</p>
-                <form onSubmit={handleUpdateInfoSubmit}>
+                <form data-coachmax-form noValidate onSubmit={handleUpdateInfoSubmit}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Full Name</label>
+                      <label htmlFor="coach-edit-full-name" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Full Name *</label>
                       <input
+                        id="coach-edit-full-name"
                         type="text"
                         value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        onChange={(e) => { const value = e.target.value; setFormData({ ...formData, fullName: value }); clearCoachFormError("fullName", Boolean(value.trim())); }}
                         className="w-full rounded-none border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                         placeholder="John Coach"
-                        required
+                        aria-required="true"
+                        aria-invalid={Boolean(coachFormErrors.fullName)}
+                        aria-describedby={coachFormErrors.fullName ? "coach-edit-full-name-error" : undefined}
                       />
+                      {coachFormErrors.fullName && <p id="coach-edit-full-name-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.fullName}</p>}
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Email Identity</label>
+                      <label htmlFor="coach-edit-email" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Email Identity *</label>
                       <input
+                        id="coach-edit-email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) => { const value = e.target.value; setFormData({ ...formData, email: value }); clearCoachFormError("email", /^\S+@\S+\.\S+$/.test(value.trim())); }}
                         className="w-full rounded-none border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                         placeholder="coach@academy.com"
-                        required
+                        aria-required="true"
+                        aria-invalid={Boolean(coachFormErrors.email)}
+                        aria-describedby={coachFormErrors.email ? "coach-edit-email-error" : undefined}
                       />
+                      {coachFormErrors.email && <p id="coach-edit-email-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.email}</p>}
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Mobile Access</label>
+                      <label htmlFor="coach-edit-phone" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Mobile Access *</label>
                       <input
+                        id="coach-edit-phone"
                         type="text"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => { const value = e.target.value; setFormData({ ...formData, phone: value }); clearCoachFormError("phone", value.replace(/\D/g, "").length >= 7); }}
                         className="w-full rounded-none border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                         placeholder="+61 000 000 000"
-                        required
+                        aria-required="true"
+                        aria-invalid={Boolean(coachFormErrors.phone)}
+                        aria-describedby={coachFormErrors.phone ? "coach-edit-phone-error" : undefined}
                       />
+                      {coachFormErrors.phone && <p id="coach-edit-phone-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.phone}</p>}
                     </div>
                     <div className="flex items-center gap-3 rounded-none border border-gray-200 bg-gray-50 p-3">
                       <button type="button" onClick={() => profileImageInputRef.current?.click()} className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-brand-200 bg-white">
@@ -419,11 +487,11 @@ const CoachManagement: React.FC = () => {
               <div className="bg-white rounded-none border border-gray-200 p-6 shadow-sm flex flex-col h-full">
                 <h5 className="font-bold text-gray-800 mb-1">Security & Password</h5>
                 <p className="text-xs text-gray-500 mb-6">Update coach login credentials securely.</p>
-                <form onSubmit={handleUpdatePasswordSubmit}>
+                <form data-coachmax-form noValidate onSubmit={handleUpdatePasswordSubmit}>
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">New Password</label>
+                        <label htmlFor="coach-edit-password" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">New Password *</label>
                         <button type="button" onClick={generatePassword} className="text-[10px] font-bold text-brand-500 hover:text-brand-600 transition-colors uppercase tracking-widest">
                           Suggest Password
                         </button>
@@ -431,12 +499,15 @@ const CoachManagement: React.FC = () => {
                       <div className="relative">
                         <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
+                          id="coach-edit-password"
                           type={showPassword ? "text" : "password"}
                           value={formData.password}
-                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          onChange={(e) => { const value = e.target.value; setFormData({ ...formData, password: value }); clearCoachFormError("password", value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /[!@#$%^&*(),.?":{}|<>]/.test(value)); }}
                           className="w-full rounded-none border border-gray-200 bg-gray-50 pl-10 pr-10 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                           placeholder="••••••••"
-                          required
+                          aria-required="true"
+                          aria-invalid={Boolean(coachFormErrors.password)}
+                          aria-describedby={coachFormErrors.password ? "coach-edit-password-error" : "coach-edit-password-help"}
                         />
                         <button
                           type="button"
@@ -446,26 +517,23 @@ const CoachManagement: React.FC = () => {
                           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
-                      {formData.password && (
-                        <div className="text-[10px] text-red-500 mt-1.5 ml-1 font-semibold space-y-0.5">
-                          {formData.password.length < 8 && <p>• Must be at least 8 characters</p>}
-                          {!/[A-Z]/.test(formData.password) && <p>• Must contain an uppercase letter</p>}
-                          {!/[a-z]/.test(formData.password) && <p>• Must contain a lowercase letter</p>}
-                          {!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) && <p>• Must contain a special symbol</p>}
-                        </div>
-                      )}
+                      {coachFormErrors.password && <p id="coach-edit-password-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.password}</p>}
+                      <p id="coach-edit-password-help" className="mt-1 text-xs text-gray-500">Use at least 8 characters with uppercase, lowercase, and a special character.</p>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Confirm Password</label>
+                      <label htmlFor="coach-edit-confirm-password" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Confirm Password *</label>
                       <div className="relative">
                         <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
+                          id="coach-edit-confirm-password"
                           type={showConfirmPassword ? "text" : "password"}
                           value={formData.confirmPassword}
-                          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                          onChange={(e) => { const value = e.target.value; setFormData({ ...formData, confirmPassword: value }); clearCoachFormError("confirmPassword", Boolean(value) && value === formData.password); }}
                           className="w-full rounded-none border border-gray-200 bg-gray-50 pl-10 pr-10 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                           placeholder="Confirm Password"
-                          required
+                          aria-required="true"
+                          aria-invalid={Boolean(coachFormErrors.confirmPassword)}
+                          aria-describedby={coachFormErrors.confirmPassword ? "coach-edit-confirm-password-error" : undefined}
                         />
                         <button
                           type="button"
@@ -475,9 +543,7 @@ const CoachManagement: React.FC = () => {
                           {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
-                      {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                        <p className="text-[10px] text-red-500 mt-1.5 ml-1 font-semibold">Passwords do not match</p>
-                      )}
+                      {coachFormErrors.confirmPassword && <p id="coach-edit-confirm-password-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.confirmPassword}</p>}
                     </div>
                     <p className="text-[10px] text-yellow-600 mt-2 ml-1 font-medium italic">
                       Updating password will immediately replace the coach's existing password.
@@ -494,57 +560,68 @@ const CoachManagement: React.FC = () => {
           </div>
         ) : (
           <>
-            <h4 className="text-xl font-bold mb-2 tracking-tight">New Staff Registration</h4>
-            <p className="text-xs text-gray-500 mb-8 font-medium">Coordinate the administrative credentials for academy staff.</p>
-            <form onSubmit={handleCreateSubmit}>
+            <FormHeader icon={ShieldCheckIcon} title="New Staff Registration" description="Coordinate the administrative credentials for academy staff." className="-mx-6 -mt-6 mb-6 rounded-t-lg border-b border-[#082269] lg:-mx-8 lg:-mt-8" />
+            <form data-coachmax-form noValidate onSubmit={handleCreateSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Full Name</label>
+                  <label htmlFor="coach-full-name" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Full Name *</label>
                   <input
+                    id="coach-full-name"
                     type="text"
                     value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, fullName: value }); clearCoachFormError("fullName", Boolean(value.trim())); }}
                     className="w-full rounded-none border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                     placeholder="John Coach"
-                    required
+                    aria-required="true"
+                    aria-invalid={Boolean(coachFormErrors.fullName)}
+                    aria-describedby={coachFormErrors.fullName ? "coach-full-name-error" : undefined}
                   />
+                  {coachFormErrors.fullName && <p id="coach-full-name-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.fullName}</p>}
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Email Identity</label>
+                  <label htmlFor="coach-email" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Email Identity *</label>
                   <input
+                    id="coach-email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, email: value }); clearCoachFormError("email", /^\S+@\S+\.\S+$/.test(value.trim())); }}
                     className="w-full rounded-none border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                     placeholder="coach@academy.com"
-                    required
+                    aria-required="true"
+                    aria-invalid={Boolean(coachFormErrors.email)}
+                    aria-describedby={coachFormErrors.email ? "coach-email-error" : undefined}
                   />
+                  {coachFormErrors.email && <p id="coach-email-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.email}</p>}
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Mobile Access</label>
+                  <label htmlFor="coach-phone" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Mobile Access *</label>
                   <input
+                    id="coach-phone"
                     type="text"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => { const value = e.target.value; setFormData({ ...formData, phone: value }); clearCoachFormError("phone", value.replace(/\D/g, "").length >= 7); }}
                     className="w-full rounded-none border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                     placeholder="+61 000 000 000"
-                    required
+                    aria-required="true"
+                    aria-invalid={Boolean(coachFormErrors.phone)}
+                    aria-describedby={coachFormErrors.phone ? "coach-phone-error" : undefined}
                   />
+                  {coachFormErrors.phone && <p id="coach-phone-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.phone}</p>}
                 </div>
                 <div className="flex items-center gap-3 rounded-none border border-gray-200 bg-gray-50 p-3">
                   <button type="button" onClick={() => profileImageInputRef.current?.click()} className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-brand-200 bg-white">
                     <img src={profileImagePreview || getMediaFallback(formData.fullName || "Coach")} alt="Coach preview" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getMediaFallback(formData.fullName || "Coach"); }} />
                   </button>
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500">Coach Image</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500">Coach Image <span className="normal-case font-normal">(optional)</span></label>
                     <button type="button" onClick={() => profileImageInputRef.current?.click()} className="mt-1 text-xs font-bold text-brand-500 hover:underline">Choose image</button>
-                    <p className="mt-1 text-[10px] text-gray-500">JPEG, PNG, WebP, HEIC/HEIF · max 5MB</p>
+                    <p className="mt-1 text-[10px] text-gray-500">Square image · 512 × 512 px recommended · JPEG, PNG, WebP, HEIC/HEIF · max 5MB</p>
                     <input ref={profileImageInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={handleProfileImageChange} className="hidden" />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">Secure Password</label>
+                    <label htmlFor="coach-password" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">Secure Password *</label>
                     <button type="button" onClick={generatePassword} className="text-[10px] font-bold text-brand-500 hover:text-brand-600 transition-colors uppercase tracking-widest">
                       Suggest Password
                     </button>
@@ -552,12 +629,15 @@ const CoachManagement: React.FC = () => {
                   <div className="relative">
                     <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
+                      id="coach-password"
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onChange={(e) => { const value = e.target.value; setFormData({ ...formData, password: value }); clearCoachFormError("password", value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /[!@#$%^&*(),.?":{}|<>]/.test(value)); }}
                       className="w-full rounded-none border border-gray-200 bg-gray-50 pl-10 pr-10 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                       placeholder="Target Password"
-                      required
+                      aria-required="true"
+                      aria-invalid={Boolean(coachFormErrors.password)}
+                      aria-describedby={coachFormErrors.password ? "coach-password-error" : "coach-password-help"}
                     />
                     <button
                       type="button"
@@ -567,26 +647,23 @@ const CoachManagement: React.FC = () => {
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {formData.password && (
-                    <div className="text-[10px] text-red-500 mt-1.5 ml-1 font-semibold space-y-0.5">
-                      {formData.password.length < 8 && <p>• Must be at least 8 characters</p>}
-                      {!/[A-Z]/.test(formData.password) && <p>• Must contain an uppercase letter</p>}
-                      {!/[a-z]/.test(formData.password) && <p>• Must contain a lowercase letter</p>}
-                      {!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) && <p>• Must contain a special symbol</p>}
-                    </div>
-                  )}
+                  {coachFormErrors.password && <p id="coach-password-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.password}</p>}
+                  <p id="coach-password-help" className="mt-1 text-xs text-gray-500">Use at least 8 characters with uppercase, lowercase, and a special character.</p>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Confirm Password</label>
+                  <label htmlFor="coach-confirm-password" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Confirm Password *</label>
                   <div className="relative">
                     <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
+                      id="coach-confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
                       value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      onChange={(e) => { const value = e.target.value; setFormData({ ...formData, confirmPassword: value }); clearCoachFormError("confirmPassword", Boolean(value) && value === formData.password); }}
                       className="w-full rounded-none border border-gray-200 bg-gray-50 pl-10 pr-10 py-3 text-sm font-medium focus:bg-white focus:border-brand-500 outline-none transition-all h-12"
                       placeholder="Confirm Password"
-                      required
+                      aria-required="true"
+                      aria-invalid={Boolean(coachFormErrors.confirmPassword)}
+                      aria-describedby={coachFormErrors.confirmPassword ? "coach-confirm-password-error" : undefined}
                     />
                     <button
                       type="button"
@@ -596,13 +673,11 @@ const CoachManagement: React.FC = () => {
                       {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                    <p className="text-[10px] text-red-500 mt-1.5 ml-1 font-semibold">Passwords do not match</p>
-                  )}
+                  {coachFormErrors.confirmPassword && <p id="coach-confirm-password-error" role="alert" className="mt-1 text-sm text-error-600">{coachFormErrors.confirmPassword}</p>}
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-gray-100">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)} className="rounded-none h-11 px-6">Discard</Button>
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="rounded-none h-11 px-6">Discard</Button>
                 <Button type="submit" disabled={createMutation.isPending} className="px-8 h-11 rounded-none text-sm font-medium">
                   {createMutation.isPending ? "Saving..." : "Add Coach"}
                 </Button>

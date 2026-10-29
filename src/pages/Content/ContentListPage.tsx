@@ -9,7 +9,8 @@ import {
   Trash2,
   Clock,
   Bookmark,
-  Search
+  Search,
+  Plus
 } from "lucide-react";
 import toast from "react-hot-toast";
 import EditNewsModal from "../../components/ContentManagement/EditNewsModal";
@@ -183,7 +184,17 @@ const ContentListPage = ({ type = "news" }) => {
         description={`Manage the coachmax ${type} platform.`}
       />
       <div className="space-y-6">
-        <PageBreadcrumb pageTitle={type === "news" ? "News & Updates" : "Blogs & Hub"} />
+        <PageBreadcrumb pageTitle={type === "news" ? "News & Updates" : "Blogs & Hub"}>
+          {type === "news" && (
+            <Link
+              to="/add-content"
+              className="inline-flex items-center justify-center gap-2 bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-theme-xs transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Add News
+            </Link>
+          )}
+        </PageBreadcrumb>
 
         {/* Categories Tab Bar & Search Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-2">
